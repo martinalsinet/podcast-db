@@ -6,7 +6,7 @@
 
 * Motivación
 
-Me gusta escuchar podcasts de [[https://franceinter.fr][France Inter]], y en su momento me armé un script que me genera los links para descargar los episodios usando cURL.
+Me gusta escuchar podcasts de [[https://franceinter.fr][France Inter]] cuando salgo a caminar, y en su momento me armé un script que me genera los links para descargar los episodios usando cURL.
 
 Quiero mejorar ese script y transformarlo en una aplicación que me permita buscar podcasts, generar una base de datos con podcasts de distintas fuentes (p.ej. YouTube) y armar una cola de descargas.
 
@@ -36,8 +36,17 @@ Quiero que mi base de datos pueda consultar las siguientes fuentes de podcasts:
 - Filtrar los episodios según algún criterio (año, mes, palabra clave)
 - Generar una playlist o feed RSS de los episodios filtrados
 - Crear una cola de descarga a partir de una playlist
+- Procesar los archivos descargados (p.ej, cambiar el bitrate a 64k)
 
 * Implementación
+** Literate Programming
+
+La idea de la programación literaria es que el código fuente de la aplicación sale de la documentación. Esto quiere decir que para poder hacer un build de una aplicación hecha "literariamente" es necesario procesar la documentación, extraer de ella los fragmentos de código fuente que corresponden a la aplicación (en [[https://orgmode.org][Org-mode]] este proceso se denomina /tangle/) y luego generar el build correspondiente con ese código.
+
+En nuestro caso, la documentación a procesar es /este documento/. Todo el código fuente de la aplicación está contenido en este documento, dentro de los fragmentos de código delimitados por las etiquetas =#+begin_src= y =#+end_src=. Los bloques de código que tienen el parámetro =:tangle path/to/file= en el tag de inicio son exportados al archivo que indica el path. De esta manera, podemos generar todos los archivos con el código fuente de la aplicación /tangleando/ la documentación. El comando =org-babel-tangle= dispara la generación de los archivos en cualquier momento.
+
+El hecho de generar el código fuente desde este documento permite que no sea necesario guardar en el repositorio los archivos con el código fuente. Las carpetas con los archivos fuente de la aplicación se pueden agregar al archivo =.gitignore= sin problemas, dado que la fuente canónica del código fuente se encuentra en este documento. Cada vez que es necesario ejecutar la aplicación, o generar un build, se exporta el código fuente desde este documento.
+
 ** Setup
 *** .gitignore
 
