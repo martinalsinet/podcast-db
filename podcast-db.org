@@ -1,0 +1,578 @@
+#+TITLE: Podcast Database
+#+AUTHOR: Martín Alsinet
+#+DATE: 2019
+#+PROPERTY: header-args:python :python python-3.6 :results drawer :mkdirp yes
+#+PROPERTY: header-args:sh :results raw drawer
+
+* Motivación
+
+Me gusta escuchar podcasts de [[https://franceinter.fr][France Inter]], y en su momento me armé un script que me genera los links para descargar los episodios usando cURL.
+
+Quiero mejorar ese script y transformarlo en una aplicación que me permita buscar podcasts, generar una base de datos con podcasts de distintas fuentes (p.ej. YouTube) y armar una cola de descargas.
+
+Además, me gustaría usar este proyecto para probar dos enfoques de programación que me están interesando últimamente:
+
+- [[http://www.literateprogramming.com/][Literate Programming]] :: Es una manera de programar en la que el código de la aplicación es un subproducto del documento (en este caso de este documento) que explica cómo está hecha
+
+- [[https://htdp.org/2018-01-06/Book/part_preface.html][How to Design Programs]] :: En este libro se define una receta para la construcción de programas en forma iterativa usando el paradigma de programación funcional
+
+* Diseño de alto nivel
+** Fuentes de podcasts
+
+Quiero que mi base de datos pueda consultar las siguientes fuentes de podcasts:
+
+- FranceInter
+- FranceCulture
+- RFI
+- Youtube
+- PBS
+- BBC
+
+** Funcionalidades
+
+- Listar los podcasts de distintas fuentes
+- Listar los episodios de un podcast
+- Obtener el detalle de un episodio
+- Filtrar los episodios según algún criterio (año, mes, palabra clave)
+- Generar una playlist o feed RSS de los episodios filtrados
+- Crear una cola de descarga a partir de una playlist
+
+* Implementación
+** Setup
+*** .gitignore
+
+#+begin_src text :tangle .gitignore
+__pycache__
+venv
+downloads
+#+end_src
+
+*** Dependencias
+
+Vamos a usar las siguientes bibliotecas
+
+- requests :: Para realizar las peticiones http
+- requests-cache :: Para cachear las peticiones http
+- beautifulsoup4 :: Para parsear html
+- slugify :: Para generar el nombre del archivo a descargar
+- pytest :: Para ejecutar los casos de prueba
+
+*** requirements.txt
+
+#+begin_src txt :tangle requirements.txt
+beautifulsoup4
+slugify
+requests
+requests-cache
+pytest
+#+end_src
+
+*** Instalación de dependencias
+
+#+begin_src sh
+rm -Rf ./venv
+virtualenv-3.6 ./venv
+pip-3.6 install -r requirements.txt
+#+end_src
+
+** France Inter
+*** Submódulos
+
+Vamos a organizar el código en paquetes (carpetas) que permiten usar namespaces para importar las funcionalidades. Para ello, necesitamos crear un archivo =__init__.py= en cada carpeta que tenga módulos para declarar los módulos que forman parte del paquete.
+
+#+begin_src python :tangle franceinter/__init__.py
+__all__ = ["podcasts", "episodes"]
+#+end_src
+
+#+begin_src python :tangle franceinter/podcasts/__init__.py
+__all__ = [
+    "author_from_tag", 
+    "title_from_tag", 
+    "href_from_tag", 
+    "podcast_from_tag", 
+    "divs_from_html", 
+    "podcasts_from_tags", 
+    "podcasts_from_file", 
+    "podcasts_from_url", 
+    "podcast_search"
+]
+#+end_src
+
+#+begin_src python :tangle franceinter/podcasts/tests/__init__.py
+__all__ = [
+    "test_author_from_tag", 
+    "test_title_from_tag", 
+    "test_href_from_tag", 
+    "test_podcast_from_tag", 
+    "test_divs_from_html", 
+    "test_podcasts_from_tags", 
+    "test_podcasts_from_file", 
+    "test_podcasts_from_url", 
+    "test_podcast_search",
+    "examples_author_from_tag", 
+]
+#+end_src
+
+*** Podcasts
+
+France Inter publica en una sola página (enorme) el listado de todas sus emisiones. El html está bastante fácil de parsear, dado que los datos cada emisión se encuentran dentro de un =div= con la clase =rich-section-list-item-content=. Revisando el contenido de ese div, nos traemos el título del podcast, su URL y el autor (que es opcional).
+
+**** author_from_tag
+***** 1. Objetivo
+
+Obtiene el autor del podcast de un fragmento de html. 
+
+El autor se encuentra en el atributo =title= de un =a= que está dentro de un =span= que tiene la clase =rich-section-list-item-content-infos-author=
+
+***** 2. Parámetros
+
+La funcion recibe un objeto =bs4.element.Tag= y devuelve un =string=
+
+***** 3. Ejemplos
+
+Aquí vamos a crear diferentes ejemplos para usar como parámetro de entrada de nuestra función, que luego vamos a utilizar en los casos de prueba.
+
+#+begin_src python :tangle franceinter/podcasts/tests/examples_author_from_tag.py
+from bs4 import BeautifulSoup
+
+def tag_without_span():
+    html = '''<b class="boldest">
+Extremely bold
+    </b>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.b
+    return tag
+
+def tag_with_author():
+    html = '''<div>
+<p>Lorem ipsum</p>
+<span class="rich-section-list-item-content-infos-author">
+<a title="William Shakespeare"></a>
+</span>
+    /div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def tag_without_link():
+    html = '''<div>
+<p>Lorem ipsum</p>
+<span class="rich-section-list-item-content-infos-author">
+<p title="William Shakespeare"></p>
+</span>
+    /div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def tag_without_title():
+    html = '''<div>
+<p>Lorem ipsum</p>
+<span class="rich-section-list-item-content-infos-author">
+<a subtitle="William Shakespeare"></a>
+</span>
+    /div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+#+end_src
+
+#+RESULTS:
+:results:
+True
+:end:
+
+***** 4. Template
+
+#+begin_src python
+
+def author_from_tag(tag):
+    # devuelve un string
+    author = ""
+    # hay que buscar un span con la clase "rich-section..."
+    # si existe el span hay que buscar un a
+    # si existe el a hay que revisar si tiene el atributo title
+    # si tiene el atributo title se guarda en la variable author
+    return author
+    
+#+end_src
+
+#+RESULTS:
+:results:
+None
+:end:
+
+***** 5. Definición
+
+#+begin_src python :tangle franceinter/podcasts/author_from_tag.py
+import bs4
+
+def author_from_tag(tag):
+    assert isinstance(tag, bs4.element.Tag), msg(tag)
+    cls = "rich-section-list-item-content-infos-author"
+    span = tag.find("span", class_=cls)
+    author = ""
+    if span:
+        link = span.find("a")
+        if link and "title" in link.attrs:
+            author = link.attrs["title"]
+    return author
+
+def msg(tag):
+    return "tag parameter must be an instance of bs4.element.Tag, received %s instead" % str(type(tag))
+#+end_src
+
+***** 6. Casos de prueba
+
+1. Caso exitoso, devuelve el autor
+2. El parámetro tag no es un bs4.element.tag
+3. El html no tiene un tag =span= con la clase buscada
+4. El html tiene el =span= pero no tiene un =a= dentro
+5. El html tiene el =span= y el =a= pero éste último no tiene el atributo =title=
+
+#+begin_src python :tangle franceinter/podcasts/tests/test_author_from_tag.py
+from bs4 import BeautifulSoup
+import franceinter.podcasts.author_from_tag
+from franceinter.podcasts.tests.examples_author_from_tag import (
+    tag_with_author,
+    tag_without_span,
+    tag_without_link,
+    tag_without_title
+)
+
+def test_author_ok():
+    tag = tag_with_author()
+    assert ("William Shakespeare" == author_from_tag(tag))
+
+def test_tag_not_bs4tag():
+    try:
+        author_from_tag(5)
+    except AssertionError:
+        assert(True)
+
+def test_span_not_found():
+    tag = tag_without_span()
+    assert ("" == author_from_tag(tag))
+
+def test_a_not_found():
+    tag = tag_without_link()
+    assert ("" == author_from_tag(tag))
+
+def test_title_not_found():
+    tag = tag_without_title()
+    assert ("" == author_from_tag(tag))
+
+#+end_src
+
+#+RESULTS:
+:results:
+None
+:end:
+
+****** Run tests
+
+#+begin_src sh :results output drawer
+./pytest ./franceinter/podcasts/test_author_from_tag.py
+#+end_src
+
+#+RESULTS:
+:results:
+============================= test session starts ==============================
+platform linux -- Python 3.6.8, pytest-4.2.0, py-1.7.0, pluggy-0.8.1
+rootdir: /app, inifile:
+collected 5 items
+
+franceinter/podcasts/tests/test_author_from_tag.py .....                 [100%]
+
+=========================== 5 passed in 0.42 seconds ===========================
+:end:
+
+**** title_from_tag
+***** 1. Objetivo
+
+Obtiene el título del podcast de un fragmento de html.
+
+El título se encuentra en el atributo =title= de un =a= que está dentro de un =span= que tiene la clase =rich-section-list-item-content-title=
+
+***** 2. Parámetros
+
+La función recibe un objeto =bs4.element.Tag= y devuelve un =string=
+
+***** 3. Ejemplos
+
+
+***** 4. Template
+
+
+***** 5. Definición
+
+
+***** 6. Casos de prueba
+
+**** href_from_tag
+***** 1. Objetivo
+***** 2. Parámetros
+***** 3. Ejemplos
+***** 4. Template
+***** 5. Definición
+***** 6. Casos de prueba
+**** podcast_from_tag
+***** 1. Objetivo
+***** 2. Parámetros
+***** 3. Ejemplos
+***** 4. Template
+***** 5. Definición
+***** 6. Casos de prueba
+**** tags_from_html
+***** 1. Objetivo
+***** 2. Parámetros
+***** 3. Ejemplos
+***** 4. Template
+***** 5. Definición
+***** 6. Casos de prueba
+**** podcasts_from_tags
+***** 1. Objetivo
+***** 2. Parámetros
+***** 3. Ejemplos
+***** 4. Template
+***** 5. Definición
+***** 6. Casos de prueba
+**** podcasts_from_file
+***** 1. Objetivo
+***** 2. Parámetros
+***** 3. Ejemplos
+***** 4. Template
+***** 5. Definición
+***** 6. Casos de prueba
+**** podcasts_from_url
+***** 1. Objetivo
+***** 2. Parámetros
+***** 3. Ejemplos
+***** 4. Template
+***** 5. Definición
+***** 6. Casos de prueba
+**** podcast_search
+***** 1. Objetivo
+***** 2. Parámetros
+***** 3. Ejemplos
+***** 4. Template
+***** 5. Definición
+***** 6. Casos de prueba
+**** Implementación completa
+
+#+begin_src python :tangle franceinter/podcasts.py 
+from bs4 import BeautifulSoup
+from urllib.request import urlopen
+import re
+
+def div_author(div):
+    cls = "rich-section-list-item-content-infos-author"
+    span = div.find("span", class_=cls)
+    author = ''
+    if span:
+        author = span.find("a").attrs["title"]
+    return author
+
+def div_title(div):
+    cls = "rich-section-list-item-content-title"
+    link = div.find("a", class_=cls)
+    title = ''
+    if link:
+        title = link.attrs["title"]
+    return title
+
+def div_href(div):
+    cls = "rich-section-list-item-content-title"
+    link = div.find("a", class_=cls)
+    href = ''
+    if link:
+        href = "https://franceinter.fr/" + link.attrs["href"]
+    return href
+
+def div_to_podcast(div):
+    return {
+        'author': div_author(div),
+        'title': div_title(div),
+        'url': div_href(div)
+    }
+
+def divs(html):
+    soup = BeautifulSoup(html, "html.parser")
+    cls = "rich-section-list-item-content"
+    return soup.find_all("div", class_=cls)
+
+def podcasts():
+    for div in divs():
+        yield div_to_podcast(div)
+
+def podcasts_from_file(filename):
+    with open(filename) as html:
+        for div in divs(html.read()):
+            yield div_to_podcast(div)
+
+def podcasts_from_url(url):
+    with urlopen(url) as html:
+        for div in divs(html.read()):
+            yield div_to_podcast(div)
+
+def podcast_search(query, podcasts):
+    return filter(lambda p: re.search(query, p["title"], re.IGNORECASE) 
+                  or re.search(query, p["author"], re.IGNORECASE), 
+                  podcasts)
+
+#+end_src
+
+*** Episodios
+
+En el URL de un podcast vemos el listado de los últimos episodios disponibles. Al final del listado hay un selector de páginas para acceder al historial de episodios. Para poder obtener el historial completo necesitamos la cantidad de páginas, que está en un tag ~<li>~ que tiene la clase =last=. Una vez que tengamos la cantidad de páginas podemos obtener el listado de episodios, parseando cada una de las páginas del historial.
+
+#+begin_src python :tangle franceinter/episodes.py
+from bs4 import BeautifulSoup
+from urllib.request import urlopen
+from franceinter import podcasts as p
+import re
+
+def lastpage_from_filename(filename):
+    with open(filename) as html:
+        soup = BeautifulSoup(html, "html.parser")
+        lastpage = 1
+        item = soup.find("li", class_="last")
+        if item:
+            href = item.find("a").attrs["href"]
+            match = re.search("([0-9]+)$", href)
+            if match:
+                lastpage = int(match.groups()[0])
+        return lastpage
+
+def page_list(podcast):
+    lastpage = lastpage_from_filename("episodes.html")
+    for pagenum in range(1, lastpage+1):
+        yield podcast["url"] + "?p=" + str(pagenum)
+
+#return lastpage_from_filename("episodes.html")
+
+podcasts = p.podcasts_from_file('emissions.html')
+darwin = list(p.podcast_search("darwin", podcasts))[0]
+
+return list(page_list(darwin))
+#+end_src
+
+#+RESULTS:
+:results:
+:end:
+
+#+begin_src sh
+#curl -o episodes.html https://franceinter.fr/emissions/sur-les-epaules-de-darwin
+#ls -alh *.html
+cat episodes.html | grep "pager-item"
+#+end_src
+
+#+RESULTS:
+:results:
+                                    <li class="pager-item active">
+                                    <li class="pager-item">
+                                    <li class="pager-item">
+                                    <li class="pager-item">
+                                    <li class="pager-item">
+                                    <li class="pager-item">
+                                    <li class="pager-item">
+                                    <li class="pager-item">
+                                    <li class="pager-item">
+                                    <li class="pager-item">
+                                                                            <li class="pager-item show-hidden">
+                                        <li class="pager-item next">
+                    <li class="pager-item last">
+                            <li class="pager-item">
+:end:
+
+** test
+*** shell
+
+#+begin_src sh
+ls -alh ./franceinter
+#+end_src
+
+#+RESULTS:
+:results:
+total 16
+drwxr-xr-x   5 martin  staff   160B Feb  3 12:19 .
+drwxr-xr-x  19 martin  staff   608B Feb  3 12:22 ..
+-rw-r--r--   1 martin  staff    23B Feb  3 12:18 __init__.py
+drwxr-xr-x   4 martin  staff   128B Feb  3 12:19 __pycache__
+-rw-r--r--   1 martin  staff   1.5K Feb  3 12:18 podcasts.py
+:end:
+
+*** listar podcasts
+
+#+begin_src python :python python-3.6 :results drawer
+import franceinter.podcasts as fr
+
+podcasts = fr.podcasts_from_file('emissions.html')
+#podcasts = fr.podcasts_from_url('https://www.franceinter.fr/emissions')
+
+#return list(podcasts)[39]
+return list(fr.podcast_search("darwin", podcasts))
+#+end_src
+
+#+RESULTS:
+:results:
+[{'author': 'Jean Claude Ameisen', 'title': 'Sur les épaules de Darwin', 'url': 'https://franceinter.fr/emissions/emissions/sur-les-epaules-de-darwin'}]
+:end:
+
+*** implementación anterior
+
+#+begin_src python :python python-3.6 :results output
+from bs4 import BeautifulSoup
+from urllib.request import urlopen
+import re
+
+def slugify(string):
+    return re.sub(r'[-\s]+', '-',
+                  (re.sub(r'[^\w\s-]', '',string).strip().lower()))
+
+def linkToDate(link):
+    date = ""
+    rd = re.search("([0-9]{2})-([a-z]+)-([0-9]{4})$", link)
+    if rd:
+        date = rd.group(3) + "-" + monthNumber(rd.group(2)) + "-" + rd.group(1)
+    return date
+        
+def monthNumber(month):
+    return {
+        'janvier': "01",
+        'fevrier': "02",
+        'mars': "03",
+        'avril': "04",
+        'mai': "05",
+        'juin': "06",
+        'juillet': "07",
+        'aout': "08",
+        'septembre': "09",
+        'octobre': "10",
+        'novembre': "11",
+        'decembre': "12"
+    }[month]
+
+    
+r = urlopen('https://www.franceinter.fr/emissions/sur-les-epaules-de-darwin?p=2').read()
+soup = BeautifulSoup(r, "html.parser")
+#print(soup.prettify())
+buttons = soup.find_all("button", class_="replay-button")
+
+for button in buttons:
+    if "data-url" in button.attrs:
+        #print(button.attrs)
+        link = button.attrs["data-diffusion-path"]
+        date = linkToDate(link)
+        filename = date + "-" + slugify(button.attrs["data-diffusion-title"]) + ".mp3"
+        #print(filename)
+        print("curl -o " + filename + " " + button.attrs["data-url"])
+        #print("")
+
+#+end_src
+
+#+RESULTS:
+:results:
+:end:
+
