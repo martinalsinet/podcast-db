@@ -43,9 +43,11 @@ Quiero que mi base de datos pueda consultar las siguientes fuentes de podcasts:
 
 #+begin_src text :tangle .gitignore
 .DS_Store
+.pytest_cache
 __pycache__
-venv
 downloads
+franceinter
+venv
 #+end_src
 
 *** Dependencias
