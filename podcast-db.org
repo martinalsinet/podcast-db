@@ -42,6 +42,7 @@ Quiero que mi base de datos pueda consultar las siguientes fuentes de podcasts:
 *** .gitignore
 
 #+begin_src text :tangle .gitignore
+.DS_Store
 __pycache__
 venv
 downloads
@@ -78,7 +79,7 @@ pip-3.6 install -r requirements.txt
 ** France Inter
 *** Submódulos
 
-Vamos a organizar el código en paquetes (carpetas) que permiten usar namespaces para importar las funcionalidades. Para ello, necesitamos crear un archivo =__init__.py= en cada carpeta que tenga módulos para declarar los módulos que forman parte del paquete.
+Vamos a organizar el código en paquetes (carpetas) que permiten usar namespaces para importar las funcionalidades. Para ello, necesitamos crear un archivo =__init__.py= en cada carpeta que tenga módulos para que python sepa cuáles son los módulos que forman parte del paquete y podamos usarlos en el =import=.
 
 #+begin_src python :tangle franceinter/__init__.py
 __all__ = ["podcasts", "episodes"]
@@ -110,6 +111,7 @@ __all__ = [
     "test_podcasts_from_url", 
     "test_podcast_search",
     "examples_author_from_tag", 
+    "examples_title_from_tag"
 ]
 #+end_src
 
@@ -226,14 +228,14 @@ def msg(tag):
 ***** 6. Casos de prueba
 
 1. Caso exitoso, devuelve el autor
-2. El parámetro tag no es un bs4.element.tag
-3. El html no tiene un tag =span= con la clase buscada
-4. El html tiene el =span= pero no tiene un =a= dentro
-5. El html tiene el =span= y el =a= pero éste último no tiene el atributo =title=
+2. El parámetro tag no es un bs4.element.tag, lanza un =AssertionError=
+3. El html no tiene un tag =span= con la clase buscada, devuelve un string vacío
+4. El html tiene el =span= pero no tiene un =a= dentro, devuelve un string vacío
+5. El html tiene el =span= y el =a= pero éste último no tiene el atributo =title=, devuelve un string vacío
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_author_from_tag.py
 from bs4 import BeautifulSoup
-import franceinter.podcasts.author_from_tag
+from franceinter.podcasts.author_from_tag import author_from_tag
 from franceinter.podcasts.tests.examples_author_from_tag import (
     tag_with_author,
     tag_without_span,
@@ -273,7 +275,7 @@ None
 ****** Run tests
 
 #+begin_src sh :results output drawer
-./pytest ./franceinter/podcasts/test_author_from_tag.py
+./pytest franceinter/podcasts/tests/test_author_from_tag.py
 #+end_src
 
 #+RESULTS:
@@ -285,7 +287,7 @@ collected 5 items
 
 franceinter/podcasts/tests/test_author_from_tag.py .....                 [100%]
 
-=========================== 5 passed in 0.42 seconds ===========================
+=========================== 5 passed in 0.30 seconds ===========================
 :end:
 
 **** title_from_tag
@@ -302,13 +304,138 @@ La función recibe un objeto =bs4.element.Tag= y devuelve un =string=
 ***** 3. Ejemplos
 
 
-***** 4. Template
+#+begin_src python :tangle franceinter/podcasts/tests/examples_title_from_tag.py
+from bs4 import BeautifulSoup
 
+def tag_without_span():
+    html = '''<b class="boldest">
+Extremely bold
+    </b>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.b
+    return tag
+
+def tag_with_title():
+    html = '''<div>
+<p>Lorem ipsum</p>
+<span class="rich-section-list-item-content-title">
+<a title="Sur les épaules de Darwin"></a>
+</span>
+    /div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def tag_without_link():
+    html = '''<div>
+<p>Lorem ipsum</p>
+<span class="rich-section-list-item-content-title">
+<p title="Sur les épaules de Darwin"></p>
+</span>
+    /div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def tag_without_title():
+    html = '''<div>
+<p>Lorem ipsum</p>
+<span class="rich-section-list-item-content-title">
+<a subtitle="Sur les épaules de Darwin"></a>
+</span>
+    /div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+#+end_src
+
+***** 4. Template
 
 ***** 5. Definición
 
+#+begin_src python :tangle franceinter/podcasts/title_from_tag.py
+import bs4
+
+def title_from_tag(tag):
+    assert isinstance(tag, bs4.element.Tag), msg(tag)
+    cls = "rich-section-list-item-content-title"
+    span = tag.find("span", class_=cls)
+    title = ""
+    if span:
+        link = span.find("a")
+        if link and "title" in link.attrs:
+            title = link.attrs["title"]
+    return title
+
+def msg(tag):
+    return "tag parameter must be an instance of bs4.element.Tag, received %s instead" % str(type(tag))
+#+end_src
 
 ***** 6. Casos de prueba
+
+1. Caso exitoso, devuelve el título
+2. El parámetro tag no es un bs4.element.tag, lanza un =AssertionError=
+3. El html no tiene un tag =span= con la clase buscada, devuelve un string vacío
+4. El html tiene el =span= pero no tiene un =a= dentro, devuelve un string vacío
+5. El html tiene el =span= y el =a= pero éste último no tiene el atributo =title=, devuelve un string vacío
+
+#+begin_src python :tangle franceinter/podcasts/tests/test_title_from_tag.py
+from bs4 import BeautifulSoup
+from franceinter.podcasts.title_from_tag import title_from_tag
+from franceinter.podcasts.tests.examples_title_from_tag import (
+    tag_with_title,
+    tag_without_span,
+    tag_without_link,
+    tag_without_title
+)
+
+def test_author_ok():
+    tag = tag_with_title()
+    assert ("Sur les épaules de Darwin" == title_from_tag(tag))
+
+def test_tag_not_bs4tag():
+    try:
+        title_from_tag(5)
+    except AssertionError:
+        assert(True)
+
+def test_span_not_found():
+    tag = tag_without_span()
+    assert ("" == title_from_tag(tag))
+
+def test_a_not_found():
+    tag = tag_without_link()
+    assert ("" == title_from_tag(tag))
+
+def test_title_not_found():
+    tag = tag_without_title()
+    assert ("" == title_from_tag(tag))
+
+#+end_src
+
+#+RESULTS:
+:results:
+None
+:end:
+
+****** Run tests
+
+#+begin_src sh :results output drawer
+./pytest ./franceinter/podcasts/tests/test_title_from_tag.py
+#+end_src
+
+#+RESULTS:
+:results:
+============================= test session starts ==============================
+platform linux -- Python 3.6.8, pytest-4.2.0, py-1.7.0, pluggy-0.8.1
+rootdir: /app, inifile:
+collected 5 items
+
+franceinter/podcasts/tests/test_title_from_tag.py .....                  [100%]
+
+=========================== 5 passed in 0.32 seconds ===========================
+:end:
 
 **** href_from_tag
 ***** 1. Objetivo
