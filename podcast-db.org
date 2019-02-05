@@ -20,15 +20,39 @@ Además, me gustaría usar este proyecto para probar dos enfoques de programaci�
 
 La idea de la programación literaria es que el código fuente de la aplicación sale de la documentación. Esto quiere decir que para poder generar un ejecutable (un /build/) de una aplicación hecha "literariamente" es necesario procesar la documentación, extraer de ella los fragmentos de código fuente que corresponden a la aplicación (en [[https://orgmode.org][Org-mode]] este proceso se denomina /tangle/) y luego generar el ejecutable correspondiente con ese código.
 
-En nuestro caso, la documentación a procesar es /este documento/. Todo el código fuente de la aplicación está contenido en este documento, dentro de los fragmentos de código delimitados por las etiquetas =#+begin_src= y =#+end_src=. Los bloques de código que tienen el parámetro =:tangle path/to/file= en el tag de inicio son exportados al archivo que indica el path. De esta manera, podemos generar todos los archivos con el código fuente de la aplicación /tangleando/ la documentación. El comando =org-babel-tangle= dispara la generación de los archivos en cualquier momento.
+En nuestro caso, la documentación a procesar es /este documento/. Todo el código fuente de la aplicación está contenido en este documento, dentro de los fragmentos de código delimitados por las etiquetas =#+begin_src= y =#+end_src=. Los bloques de código que tienen el parámetro =:tangle path/to/file= en el tag de inicio son exportados al archivo que indica el path. De esta manera, podemos generar todos los archivos del código fuente de la aplicación /tangleando/ la documentación. El comando =org-babel-tangle= dispara la generación de los archivos en cualquier momento.
 
-El hecho de generar el código fuente desde este documento permite que no sea necesario guardar en el repositorio los archivos con el código fuente. Las carpetas con el código fuente de la aplicación se pueden agregar al archivo =.gitignore= sin problemas, dado que la fuente canónica del código se encuentra en este documento. Cada vez que es necesario ejecutar la aplicación, o generar un ejecutable de una versión determinada, se exporta el código desde este documento.
+El hecho de generar el código fuente desde este documento permite que no sea necesario guardarlo en el repositorio. Las carpetas con los fuentes de la aplicación se pueden agregar al archivo =.gitignore= sin problemas, dado que la fuente canónica del código se encuentra en este documento. Cada vez que es necesario ejecutar la aplicación, o generar un build para una versión determinada, se exporta el código desde este documento.
+
+*** ¿Y qué hago si no sé (o no quiero) usar emacs?
+
+Dado que el código fuente está en este documento, para poder obtener los fuentes es necesario procesarlo (tanglearlo) con emacs. Así, podemos extraer el código de la aplicación desde el documento y ejecutarlo como haríamos con cualquier otro programa. 
+
+Vamos a usar [[https://www.docker.com/][Docker]] para bajar una imagen de Emacs y usar esa imagen para tanglear nuestro documento. 
+
+#+begin_src sh :eval never
+# descarga la imagen de emacs
+docker pull silex/emacs:26-alpine
+
+# lanza emacs en modo batch, 
+# carga el archivo ./podcast-db.org del directorio actual,
+# y ejecuta org-babel tangle
+docker run --rm -i -v $(pwd):/app -w /app silex/emacs:26-alpine emacs --batch -l org podcast-db.org -f org-babel-tangle
+#+end_src
+
+Vemos que los fuentes se generan en la carpeta =franceinter=
+
+#+begin_src sh :eval never
+find ./franceinter
+#+end_src
+
+En teoría podríamos modificar el documento con otro editor de texto y regenerar los fuentes usando este método luego de editarlo, pero el procedimiento sería demasiado engorroso como para usarlo en la práctica.
 
 ** How to Design Programs
 
 La otra fuente de inspiración para la metodología utilizada en este proyecto es el libro [[https://htdp.org/2018-01-06/Book/part_preface.html][How to Design Programs]]. Hay un video---[[https://media.ccc.de/v/35c3-9800-how_to_teach_programming_to_your_loved_ones][How to teach programming to your loved ones]]---en el que Mike Sperber explica la técnica utilizada para construir programas que se describe en el libro.
 
-La idea es construir una aplicación a partir de funciones elementales que se usan como piezas para ir armando componentes más complejos. El libro ofrece una receta para desarrollar una función, que es la unidad mínima de código recomendada. Vamos a elaborar cada una de las funciones de nuestra aplicación de acuerdo a los pasos de la siguiente receta:
+La idea es desarrollar una aplicación a partir de funciones elementales que se usan como piezas para ir armando componentes más complejos. El libro ofrece una receta para elaborar una función, que es la unidad mínima de código recomendada. Vamos a escribir cada una de las funciones de nuestra aplicación de acuerdo a los pasos de la siguiente receta:
 
 - 1. Objetivo :: Identificar brevemente el propósito de la función. Nombrar las estructuras de datos que la función va a manipular 
 - 2. Firma :: Definir formalmente los parámetros de entrada y la salida de la función
