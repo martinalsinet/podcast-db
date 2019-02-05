@@ -18,7 +18,9 @@ Además, me gustaría usar este proyecto para probar dos enfoques de programaci�
 
 ** Literate Programming
 
-La idea de la programación literaria es que el código fuente de la aplicación sale de la documentación. Esto quiere decir que para poder generar un ejecutable (un /build/) de una aplicación hecha "literariamente" es necesario procesar la documentación, extraer de ella los fragmentos de código fuente que corresponden a la aplicación (en [[https://orgmode.org][Org-mode]] este proceso se denomina /tangle/) y luego generar el ejecutable correspondiente con ese código.
+Para escribir este documento estoy usando [[https://www.gnu.org/software/emacs][Emacs]] y [[https://orgmode.org][Org mode]], que es un modo de Emacs que tiene funcionalidades para literate programming.
+
+La idea de la programación literaria consiste en que el código fuente de la aplicación sale de la documentación. Esto quiere decir que para poder generar un ejecutable (un /build/) de una aplicación hecha "literariamente" es necesario procesar la documentación, extraer de ella los fragmentos de código fuente que constituyen la aplicación (en org-mode este proceso se denomina /tangle/) y luego generar el ejecutable correspondiente con ese código.
 
 En nuestro caso, la documentación a procesar es /este documento/. Todo el código fuente de la aplicación está contenido en este documento, dentro de los fragmentos de código delimitados por las etiquetas =#+begin_src= y =#+end_src=. Los bloques de código que tienen el parámetro =:tangle path/to/file= en el tag de inicio son exportados al archivo que indica el path. De esta manera, podemos generar todos los archivos del código fuente de la aplicación /tangleando/ la documentación. El comando =org-babel-tangle= dispara la generación de los archivos en cualquier momento.
 
@@ -93,6 +95,7 @@ Quiero que mi base de datos pueda consultar las siguientes fuentes de podcasts:
 __pycache__
 downloads
 franceinter
+requirements.txt
 venv
 #+end_src
 
