@@ -145,7 +145,7 @@ __all__ = ["podcasts", "episodes"]
 __all__ = [
     "author_from_tag", 
     "title_from_tag", 
-    "href_from_tag", 
+    "url_from_tag", 
     "podcast_from_tag", 
     "divs_from_html", 
     "podcasts_from_tags", 
@@ -159,7 +159,7 @@ __all__ = [
 __all__ = [
     "test_author_from_tag", 
     "test_title_from_tag", 
-    "test_href_from_tag", 
+    "test_url_from_tag", 
     "test_podcast_from_tag", 
     "test_divs_from_html", 
     "test_podcasts_from_tags", 
@@ -167,7 +167,8 @@ __all__ = [
     "test_podcasts_from_url", 
     "test_podcast_search",
     "examples_author_from_tag", 
-    "examples_title_from_tag"
+    "examples_title_from_tag",
+    "examples_url_from_tag"
 ]
 #+end_src
 
@@ -178,7 +179,7 @@ France Inter publica en una sola página (enorme) el listado de todas sus emisio
 **** author_from_tag
 ***** 1. Objetivo
 
-Obtiene el autor del podcast de un fragmento de html. 
+Obtener el autor del podcast de un fragmento de html. 
 
 El autor se encuentra en el atributo =title= de un =a= que está dentro de un =span= que tiene la clase =rich-section-list-item-content-infos-author=
 
@@ -344,7 +345,7 @@ franceinter/podcasts/tests/test_author_from_tag.py .....                 [100%]
 **** title_from_tag
 ***** 1. Objetivo
 
-Obtiene el título del podcast de un fragmento de html.
+Obtener el título del podcast de un fragmento de html.
 
 El título se encuentra en el atributo =title= de un =a= que está dentro de un =span= que tiene la clase =rich-section-list-item-content-title=
 
@@ -402,6 +403,20 @@ def tag_without_title():
 #+end_src
 
 ***** 4. Boceto
+
+#+begin_src python
+
+def author_from_tag(tag):
+    # devuelve un string
+    title = ""
+    # hay que buscar un span con la clase "rich-section..."
+    # si existe el span hay que buscar un a
+    # si existe el a hay que revisar si tiene el atributo title
+    # si tiene el atributo title se guarda en la variable title
+    return title
+    
+#+end_src
+
 ***** 5. Definición
 
 #+begin_src python :tangle franceinter/podcasts/title_from_tag.py
@@ -498,13 +513,148 @@ franceinter/podcasts/tests/test_title_from_tag.py .....                  [100%]
 =========================== 5 passed in 0.32 seconds ===========================
 :end:
 
-**** href_from_tag
+**** url_from_tag
 ***** 1. Objetivo
+
+Obtener el URL del podcast de un fragmento de html.
+
+El URL se encuentra en el atributo =href= de un tag =a= que está dentro de un =span= que tiene la clase =rich-section-list-item-content-title=. 
+
+El URL es relativo, por lo que hay que agregarle baseUrl de France Inter (https://www.franceinter.fr).
+
 ***** 2. Firma
+
+La función recibe un objeto =bs4.element.Tag= y devuelve un =string=
+
 ***** 3. Ejemplos
+
+#+begin_src python :tangle franceinter/podcasts/tests/examples_url_from_tag.py
+from bs4 import BeautifulSoup
+
+def tag_without_span():
+    html = '''<b class="boldest">
+Extremely bold
+    </b>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.b
+    return tag
+
+def tag_with_url():
+    html = '''<div>
+<p>Lorem ipsum</p>
+<span class="rich-section-list-item-content-title">
+<a href="emissions/la-tete-au-carre"></a>
+</span>
+    /div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def tag_without_link():
+    html = '''<div>
+<p>Lorem ipsum</p>
+<span class="rich-section-list-item-content-title">
+<p href="emissions/la-tete-au-carre"></p>
+</span>
+    /div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def tag_without_href():
+    html = '''<div>
+<p>Lorem ipsum</p>
+<span class="rich-section-list-item-content-title">
+<a src="emissions/la-tete-au-carre"></a>
+</span>
+    /div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+#+end_src
+
 ***** 4. Boceto
+
+#+begin_src python
+
+def url_from_tag(tag):
+    # devuelve un string
+    url = ""
+    # hay que buscar un span con la clase "rich-section..."
+    # si existe el span hay que buscar un a
+    # si existe el a hay que revisar si tiene el atributo href
+    # si tiene el atributo href 
+    #     - se le agrega "https://www.franceinter.fr/" adelante
+    #     - se guarda en la variable url
+    return url
+    
+#+end_src
+
 ***** 5. Definición
+
+#+begin_src python :tangle franceinter/podcasts/url_from_tag.py
+import bs4
+
+def url_from_tag(tag):
+    assert isinstance(tag, bs4.element.Tag), msg(tag)
+    cls = "rich-section-list-item-content-title"
+    span = tag.find("span", class_=cls)
+    url = ""
+    if span:
+        link = span.find("a")
+        if link and "href" in link.attrs:
+            url = "https://www.franceinter.fr/" + link.attrs["href"]
+    return url
+
+def msg(tag):
+    return "tag parameter must be an instance of bs4.element.Tag, received %s instead" % str(type(tag))
+#+end_src
+
 ***** 6. Casos de prueba
+
+1. Caso exitoso, devuelve el url
+2. El parámetro tag no es un bs4.element.tag, lanza un =AssertionError=
+3. El html no tiene un tag =span= con la clase buscada, devuelve un string vacío
+4. El html tiene el =span= pero no tiene un =a= dentro, devuelve un string vacío
+5. El html tiene el =span= y el =a= pero éste último no tiene el atributo =href=, devuelve un string vacío
+
+#+begin_src python :tangle franceinter/podcasts/tests/test_url_from_tag.py
+from bs4 import BeautifulSoup
+from franceinter.podcasts.url_from_tag import *
+from franceinter.podcasts.tests.examples_url_from_tag import *
+
+def test_url_ok():
+    tag = tag_with_url()
+    url = "https://www.franceinter.fr/emissions/la-tete-au-carre"
+    assert (url == url_from_tag(tag))
+
+def test_tag_not_bs4tag():
+    try:
+        url_from_tag(5)
+    except AssertionError:
+        assert(True)
+
+def test_span_not_found():
+    tag = tag_without_span()
+    assert ("" == url_from_tag(tag))
+
+def test_a_not_found():
+    tag = tag_without_link()
+    assert ("" == url_from_tag(tag))
+
+def test_title_not_found():
+    tag = tag_without_href()
+    assert ("" == url_from_tag(tag))
+
+#+end_src
+
+****** Run tests
+
+#+begin_src sh :results output drawer
+./pytest ./franceinter/podcasts/tests/test_url_from_tag.py
+#+end_src
+
 **** podcast_from_tag
 ***** 1. Objetivo
 ***** 2. Firma
