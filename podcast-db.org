@@ -12,7 +12,7 @@ Quiero mejorar ese script y transformarlo en una aplicación que me permita busc
 
 Además, me gustaría usar este proyecto para probar dos enfoques de programación que me están interesando últimamente:
 
-- [[http://www.literateprogramming.com/][Literate Programming]] :: Es una manera de programar en la que el código de la aplicación es un subproducto del documento (en este caso de este documento) que explica cómo está hecha
+- [[http://www.literateprogramming.com/][Literate Programming]] :: Es una manera de programar en la que el código de la aplicación es un subproducto del documento que explica cómo está hecha
 
 - [[https://htdp.org/2018-01-06/Book/part_preface.html][How to Design Programs]] :: En este libro se define una receta para la construcción de programas en forma iterativa usando el paradigma de programación funcional
 
@@ -62,6 +62,8 @@ La idea es desarrollar una aplicación a partir de funciones elementales que se 
 - 4. Boceto :: Traducir la firma de la función en un boceto de la implementación
 - 5. Definición :: Completar el boceto usando como base los ejemplos para cumplir el propósito de la función
 - 6. Casos de prueba :: Transformar los ejemplos en casos de prueba y asegurarse de que la función los cumpla a todos
+
+En este caso, vamos a desarrollar nuestra aplicación usando [[https://python.org][Python]] bajo el paradigma de programación funcional. Esto quiere decir que nuestra aplicación va a estar mayormente compuesta de funciones (=def my_func():=) que vamos a combinar para realizar tareas complejas.
 
 * Diseño
 ** Fuentes de podcasts
@@ -176,39 +178,51 @@ __all__ = [
 
 France Inter publica en una sola página (enorme) el listado de todas sus emisiones. El html está bastante fácil de parsear, dado que los datos cada emisión se encuentran dentro de un =div= con la clase =rich-section-list-item-content=. Revisando el contenido de ese div, nos traemos el título del podcast, su URL y el autor (que es opcional).
 
-**** author_from_tag
+Este implementa las siguentes funcionalidades:
+
+- Obtener el listado de los podcasts de France Inter
+- Para cada podcast obtener el nombre, el url y el autor
+- Filtrar el listado de podcasts por una palabra clave
+
+**** title_from_tag
 ***** 1. Objetivo
 
-Obtener el autor del podcast de un fragmento de html. 
+Obtener el título del podcast de un fragmento de html.
 
-El autor se encuentra en el atributo =title= de un =a= que está dentro de un =span= que tiene la clase =rich-section-list-item-content-infos-author=
+El título se encuentra en el atributo =title= de un =a= que tiene la clase =rich-section-list-item-content-title=
 
 ***** 2. Firma
 
-La funcion recibe un objeto =bs4.element.Tag= y devuelve un =string=
+La función recibe un objeto =bs4.element.Tag= y devuelve un =string=
 
 ***** 3. Ejemplos
 
-Aquí vamos a crear diferentes ejemplos para usar como parámetro de entrada de nuestra función, que luego vamos a utilizar en los casos de prueba.
+1. Un div que tiene el ~<a>~ con la clase correcta y el atributo =title=
+2. Un div que no tiene el tag ~<a>~
+3. Un div que tiene el tag ~<a>~ pero éste no la clase =rich-section...=
+4. Un div que tiene el tag ~<a>~ pero éste no tiene el atributo =title=
 
-#+begin_src python :tangle franceinter/podcasts/tests/examples_author_from_tag.py
+#+begin_src python :tangle franceinter/podcasts/tests/examples_title_from_tag.py
 from bs4 import BeautifulSoup
 
-def tag_without_span():
-    html = '''<b class="boldest">
-Extremely bold
-    </b>'''
-    soup = BeautifulSoup(html, "html.parser")
-    tag = soup.b
-    return tag
-
-def tag_with_author():
+def tag_with_title():
     html = '''<div>
 <p>Lorem ipsum</p>
-<span class="rich-section-list-item-content-infos-author">
-<a title="William Shakespeare"></a>
+<a class="rich-section-list-item-content-title" 
+    title="Sur les épaules de Darwin">
+</a>
+    </div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def tag_without_class():
+    html = '''<div>
+<p>Lorem ipsum</p>
+<a title="Sur les épaules de Darwin">
+</a>
 </span>
-    /div>'''
+    </div>'''
     soup = BeautifulSoup(html, "html.parser")
     tag = soup.div
     return tag
@@ -216,10 +230,11 @@ def tag_with_author():
 def tag_without_link():
     html = '''<div>
 <p>Lorem ipsum</p>
-<span class="rich-section-list-item-content-infos-author">
-<p title="William Shakespeare"></p>
+<p class="rich-section-list-item-content-title" 
+    title="Sur les épaules de Darwin">
+</p>
 </span>
-    /div>'''
+    </div>'''
     soup = BeautifulSoup(html, "html.parser")
     tag = soup.div
     return tag
@@ -227,20 +242,15 @@ def tag_without_link():
 def tag_without_title():
     html = '''<div>
 <p>Lorem ipsum</p>
-<span class="rich-section-list-item-content-infos-author">
-<a subtitle="William Shakespeare"></a>
+<p class="rich-section-list-item-content-title">
+</p>
 </span>
-    /div>'''
+    </div>'''
     soup = BeautifulSoup(html, "html.parser")
     tag = soup.div
     return tag
 
 #+end_src
-
-#+RESULTS:
-:results:
-True
-:end:
 
 ***** 4. Boceto
 
@@ -248,35 +258,27 @@ True
 
 def author_from_tag(tag):
     # devuelve un string
-    author = ""
-    # hay que buscar un span con la clase "rich-section..."
-    # si existe el span hay que buscar un a
+    title = ""
+    # hay que buscar un <a> con la clase "rich-section-list-item-content-title"
     # si existe el a hay que revisar si tiene el atributo title
-    # si tiene el atributo title se guarda en la variable author
-    return author
+    # si tiene el atributo title se guarda en la variable title
+    return title
     
 #+end_src
 
-#+RESULTS:
-:results:
-None
-:end:
-
 ***** 5. Definición
 
-#+begin_src python :tangle franceinter/podcasts/author_from_tag.py
+#+begin_src python :tangle franceinter/podcasts/title_from_tag.py
 import bs4
 
-def author_from_tag(tag):
+def title_from_tag(tag):
     assert isinstance(tag, bs4.element.Tag), msg(tag)
-    cls = "rich-section-list-item-content-infos-author"
-    span = tag.find("span", class_=cls)
-    author = ""
-    if span:
-        link = span.find("a")
-        if link and "title" in link.attrs:
-            author = link.attrs["title"]
-    return author
+    title = ""
+    cls = "rich-section-list-item-content-title"
+    link = tag.find("a", class_=cls)
+    if link and "title" in link.attrs:
+        title = link.attrs["title"]
+    return title
 
 def msg(tag):
     return "tag parameter must be an instance of bs4.element.Tag, received %s instead" % str(type(tag))
@@ -284,70 +286,68 @@ def msg(tag):
 
 ***** 6. Casos de prueba
 
-1. Caso exitoso, devuelve el autor
+1. Caso exitoso, devuelve el título
 2. El parámetro tag no es un bs4.element.tag, lanza un =AssertionError=
-3. El html no tiene un tag =span= con la clase buscada, devuelve un string vacío
-4. El html tiene el =span= pero no tiene un =a= dentro, devuelve un string vacío
-5. El html tiene el =span= y el =a= pero éste último no tiene el atributo =title=, devuelve un string vacío
+3. El html no contiene un tag ~<a>~ devuelve un string vacío
+4. El html tiene el tag ~<a>~ y pero éste no tiene la clase correcta, devuelve un string vacío
+5. El html tiene el tag ~<a>~ y pero éste no tiene el atributo =title=, devuelve un string vacío
 
-#+begin_src python :tangle franceinter/podcasts/tests/test_author_from_tag.py
-from bs4 import BeautifulSoup
-from franceinter.podcasts.author_from_tag import *
-from franceinter.podcasts.tests.examples_author_from_tag import *
+#+begin_src python :tangle franceinter/podcasts/tests/test_title_from_tag.py
+from franceinter.podcasts.title_from_tag import title_from_tag
+from franceinter.podcasts.tests.examples_title_from_tag import *
 
 def test_author_ok():
-    tag = tag_with_author()
-    assert ("William Shakespeare" == author_from_tag(tag))
+    tag = tag_with_title()
+    assert ("Sur les épaules de Darwin" == title_from_tag(tag))
 
 def test_tag_not_bs4tag():
     try:
-        author_from_tag(5)
+        title_from_tag(5)
     except AssertionError:
         assert(True)
 
-def test_span_not_found():
-    tag = tag_without_span()
-    assert ("" == author_from_tag(tag))
-
-def test_a_not_found():
+def test_link_not_found():
     tag = tag_without_link()
-    assert ("" == author_from_tag(tag))
+    assert ("" == title_from_tag(tag))
+
+def test_class_not_found():
+    tag = tag_without_class()
+    assert ("" == title_from_tag(tag))
 
 def test_title_not_found():
     tag = tag_without_title()
-    assert ("" == author_from_tag(tag))
+    assert ("" == title_from_tag(tag))
 
 #+end_src
 
-#+RESULTS:
-:results:
-None
-:end:
+#+begin_src python
+from bs4 import BeautifulSoup
+from franceinter.podcasts.title_from_tag import title_from_tag
+from franceinter.podcasts.tests.examples_title_from_tag import *
+
+tag = tag_with_title()
+title = title_from_tag(tag)
+print(title)
+#+end_src
 
 ****** Run tests
 
 #+begin_src sh :results output drawer
-./pytest franceinter/podcasts/tests/test_author_from_tag.py
+./pytest ./franceinter/podcasts/tests/test_title_from_tag.py
 #+end_src
 
 #+RESULTS:
 :results:
-============================= test session starts ==============================
-platform linux -- Python 3.6.8, pytest-4.2.0, py-1.7.0, pluggy-0.8.1
-rootdir: /app, inifile:
-collected 5 items
-
-franceinter/podcasts/tests/test_author_from_tag.py .....                 [100%]
-
-=========================== 5 passed in 0.30 seconds ===========================
 :end:
 
-**** title_from_tag
+**** url_from_tag
 ***** 1. Objetivo
 
-Obtener el título del podcast de un fragmento de html.
+Obtener el URL del podcast de un fragmento de html.
 
-El título se encuentra en el atributo =title= de un =a= que está dentro de un =span= que tiene la clase =rich-section-list-item-content-title=
+El URL se encuentra en el atributo =href= de un tag =a= que está dentro de un =span= que tiene la clase =rich-section-list-item-content-title=. 
+
+El URL es relativo, por lo que hay que agregarle baseUrl de France Inter (https://www.franceinter.fr).
 
 ***** 2. Firma
 
