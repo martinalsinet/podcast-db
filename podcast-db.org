@@ -119,13 +119,20 @@ slugify
 requests
 requests-cache
 pytest
+validators
 #+end_src
 
 *** Instalación de dependencias
+**** Inicializar carpeta =./venv=
 
 #+begin_src sh
 rm -Rf ./venv
 virtualenv-3.6 ./venv
+#+end_src
+
+**** Instalar dependencias con =pip=
+
+#+begin_src sh
 pip-3.6 install -r requirements.txt
 #+end_src
 
@@ -153,7 +160,8 @@ __all__ = [
     "podcasts_from_tags", 
     "podcasts_from_file", 
     "podcasts_from_url", 
-    "podcast_search"
+    "podcast_search",
+    "podcast"
 ]
 #+end_src
 
@@ -170,7 +178,8 @@ __all__ = [
     "test_podcast_search",
     "examples_author_from_tag", 
     "examples_title_from_tag",
-    "examples_url_from_tag"
+    "examples_url_from_tag",
+    "examples_podcast_from_tag"
 ]
 #+end_src
 
@@ -504,13 +513,13 @@ Extremely bold
     tag = soup.b
     return tag
 
-def tag_with_url():
+def tag_with_author():
     html = '''<div>
 <p>Lorem ipsum</p>
-<span class="rich-section-list-item-content-title">
-<a href="emissions/la-tete-au-carre"></a>
+<span class="rich-section-list-item-content-infos-author">
+<a title="William Shakespeare"></a>
 </span>
-    /div>'''
+    </div>'''
     soup = BeautifulSoup(html, "html.parser")
     tag = soup.div
     return tag
@@ -518,21 +527,287 @@ def tag_with_url():
 def tag_without_link():
     html = '''<div>
 <p>Lorem ipsum</p>
-<span class="rich-section-list-item-content-title">
-<p href="emissions/la-tete-au-carre"></p>
+<span class="rich-section-list-item-content-infos-author">
+<p title="William Shakespeare"></p>
 </span>
-    /div>'''
+    </div>'''
     soup = BeautifulSoup(html, "html.parser")
     tag = soup.div
     return tag
 
-def tag_without_href():
+def tag_without_title():
     html = '''<div>
 <p>Lorem ipsum</p>
-<span class="rich-section-list-item-content-title">
-<a src="emissions/la-tete-au-carre"></a>
+<span class="rich-section-list-item-content-infos-author">
+<a subtitle="William Shakespeare"></a>
 </span>
-    /div>'''
+    </div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+#+end_src
+
+#+RESULTS:
+:results:
+True
+:end:
+
+***** 4. Boceto
+
+#+begin_src python
+
+def author_from_tag(tag):
+    # devuelve un string
+    author = ""
+    # hay que buscar un span con la clase "rich-section..."
+    # si existe el span hay que buscar un a
+    # si existe el a hay que revisar si tiene el atributo title
+    # si tiene el atributo title se guarda en la variable author
+    return author
+    
+#+end_src
+
+#+RESULTS:
+:results:
+None
+:end:
+
+***** 5. Definición
+
+#+begin_src python :tangle franceinter/podcasts/author_from_tag.py
+import bs4
+
+def author_from_tag(tag):
+    assert isinstance(tag, bs4.element.Tag), msg(tag)
+    cls = "rich-section-list-item-content-infos-author"
+    span = tag.find("span", class_=cls)
+    author = ""
+    if span:
+        link = span.find("a")
+        if link and "title" in link.attrs:
+            author = link.attrs["title"]
+    return author
+
+def msg(tag):
+    return "tag parameter must be an instance of bs4.element.Tag, received %s instead" % str(type(tag))
+#+end_src
+
+***** 6. Casos de prueba
+
+1. Caso exitoso, devuelve el autor
+2. El parámetro tag no es un bs4.element.tag, lanza un =AssertionError=
+3. El html no tiene un tag =span= con la clase buscada, devuelve un string vacío
+4. El html tiene el =span= pero no tiene un =a= dentro, devuelve un string vacío
+5. El html tiene el =span= y el =a= pero éste último no tiene el atributo =title=, devuelve un string vacío
+
+#+begin_src python :tangle franceinter/podcasts/tests/test_author_from_tag.py
+from franceinter.podcasts.author_from_tag import author_from_tag
+from franceinter.podcasts.tests.examples_author_from_tag import *
+
+def test_author_ok():
+    tag = tag_with_author()
+    assert ("William Shakespeare" == author_from_tag(tag))
+
+def test_tag_not_bs4tag():
+    try:
+        author_from_tag(5)
+    except AssertionError:
+        assert True
+
+def test_span_not_found():
+    tag = tag_without_span()
+    assert ("" == author_from_tag(tag))
+
+def test_a_not_found():
+    tag = tag_without_link()
+    assert ("" == author_from_tag(tag))
+
+def test_title_not_found():
+    tag = tag_without_title()
+    assert ("" == author_from_tag(tag))
+
+#+end_src
+
+#+RESULTS:
+:results:
+None
+:end:
+
+****** Run tests
+
+#+begin_src sh :results output drawer
+./pytest franceinter/podcasts/tests/test_author_from_tag.py
+#+end_src
+
+#+RESULTS:
+:results:
+============================= test session starts ==============================
+platform linux -- Python 3.6.8, pytest-4.2.0, py-1.7.0, pluggy-0.8.1
+rootdir: /app, inifile:
+collected 5 items
+
+franceinter/podcasts/tests/test_author_from_tag.py .....                 [100%]
+
+=========================== 5 passed in 0.30 seconds ===========================
+:end:
+
+**** podcast_from_tag
+***** 1. Objetivo
+
+Obtener un podcast de un fragmento de html.
+
+Un podcast tiene tres propiedades, a saber:
+
+- título :: es un =string= y es obligatorio
+- url :: es un =string=, debe ser un URL válido y también es obligatorio
+- autor :: es un string, pero puede estar vacío
+
+***** 2. Firma
+
+La función recibe un objeto =bs4.element.Tag= y devuelve un objeto =franceinter.podcasts.podcast=
+
+Necesitamos entonces definir la clase =podcast=
+
+#+begin_src python :tangle franceinter/podcasts/podcast.py
+
+class Podcast:
+    def __init__(self, title, url, author=""):
+        self.title = title
+        self.url = url
+        self.author = author
+
+    def __repr__(self):
+        return "Podcast(title='%s', url='%s')" % (self.title, self.url)
+
+#+end_src
+
+***** 3. Ejemplos
+
+Vamos a generar los diferentes ejemplos de tags que nuestra función puede llegar a recibir:
+
+- Un tag que tenga todos los elementos para generar un podcast válido (título, URL y autor)
+- Un tag al que le falte el elemento del título
+- Un tag que le falte el elemento del URL
+- Un tag que tenga el elemento del URL, pero que éste no sea válido
+- Un tag que no tenga autor
+
+#+begin_src python :tangle franceinter/podcasts/tests/examples_podcast_from_tag.py
+from bs4 import BeautifulSoup
+
+def tag_ok():
+    html = '''<div class="rich-section-list-item-content">
+  <div class="rich-section-list-item-content-show">
+    <header>
+      <div>
+        <a href="emissions/au-fil-de-l-histoire"
+           itemprop="name"
+           title="Au fil de l&#039;histoire"
+           class="rich-section-list-item-content-title">
+          Au fil de l&#039;histoire
+        </a>
+      </div>
+    </header>
+    <div class="rich-section-list-item-content-infos">
+      <span class="rich-section-list-item-content-infos-author">
+        Par <a href="personnes/patrick-liegibel" title="Patrick Liegibel">Patrick Liegibel</a>
+      </span>
+    </div>
+  </div>
+</div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def tag_without_title():
+    html = '''<div class="rich-section-list-item-content">
+  <div class="rich-section-list-item-content-show">
+    <header>
+      <div>
+        <a href="emissions/au-fil-de-l-histoire"
+           itemprop="name"
+           class="rich-section-list-item-content-title">
+          Au fil de l&#039;histoire
+        </a>
+      </div>
+    </header>
+    <div class="rich-section-list-item-content-infos">
+      <span class="rich-section-list-item-content-infos-author">
+        Par <a href="personnes/patrick-liegibel" title="Patrick Liegibel">Patrick Liegibel</a>
+      </span>
+    </div>
+  </div>
+</div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def tag_without_url():
+    html = '''<div class="rich-section-list-item-content">
+  <div class="rich-section-list-item-content-show">
+    <header>
+      <div>
+        <a itemprop="name"
+           title="Au fil de l&#039;histoire"
+           class="rich-section-list-item-content-title">
+          Au fil de l&#039;histoire
+        </a>
+      </div>
+    </header>
+    <div class="rich-section-list-item-content-infos">
+      <span class="rich-section-list-item-content-infos-author">
+        Par <a href="personnes/patrick-liegibel" title="Patrick Liegibel">Patrick Liegibel</a>
+      </span>
+    </div>
+  </div>
+</div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def tag_with_invalid_url():
+    html = '''<div class="rich-section-list-item-content">
+  <div class="rich-section-list-item-content-show">
+    <header>
+      <div>
+        <a href="this://isnot[?=>avalid[[/\\url"
+           itemprop="name"
+           title="Au fil de l&#039;histoire"
+           class="rich-section-list-item-content-title">
+          Au fil de l&#039;histoire
+        </a>
+      </div>
+    </header>
+    <div class="rich-section-list-item-content-infos">
+      <span class="rich-section-list-item-content-infos-author">
+        Par <a href="personnes/patrick-liegibel" title="Patrick Liegibel">Patrick Liegibel</a>
+      </span>
+    </div>
+  </div>
+</div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def tag_without_author():
+    html = '''<div class="rich-section-list-item-content">
+  <div class="rich-section-list-item-content-show">
+    <header>
+      <div>
+        <a href="emissions/au-fil-de-l-histoire"
+           itemprop="name"
+           title="Au fil de l&#039;histoire"
+           class="rich-section-list-item-content-title">
+          Au fil de l&#039;histoire
+        </a>
+      </div>
+    </header>
+    <div class="rich-section-list-item-content-infos">
+      <span class="rich-section-list-item-content-infos-author">
+      </span>
+    </div>
+  </div>
+</div>'''
     soup = BeautifulSoup(html, "html.parser")
     tag = soup.div
     return tag
@@ -543,90 +818,127 @@ def tag_without_href():
 
 #+begin_src python
 
-def url_from_tag(tag):
-    # devuelve un string
-    url = ""
-    # hay que buscar un span con la clase "rich-section..."
-    # si existe el span hay que buscar un a
-    # si existe el a hay que revisar si tiene el atributo href
-    # si tiene el atributo href 
-    #     - se le agrega "https://www.franceinter.fr/" adelante
-    #     - se guarda en la variable url
-    return url
+def podcast_from_tag(tag):
+    # extraer el título con title_from_tag
+    # validar que el autor no sea un string vacío
+
+    # extraer el url con url_from_tag
+    # validar que el url no sea un string vacío
+    # validar el url
+
+    # extraer el autor con author_from_tag
+
+    # crear una instancia de franceinter.podcasts.podcast
+    # con el título, el url y el autor
+    return podcast
+
+#+end_src
+
+***** 5. Definición
+
+Usamos la biblioteca [[https://validators.readthedocs.io/][validators]] para validar el URL del podcast
+
+#+begin_src python :tangle franceinter/podcasts/podcast_from_tag.py
+from franceinter.podcasts.title_from_tag import title_from_tag
+from franceinter.podcasts.url_from_tag import url_from_tag
+from franceinter.podcasts.author_from_tag import author_from_tag
+from franceinter.podcasts.podcast import Podcast
+from validators.url import url as is_valid_url
+
+def podcast_from_tag(tag):
+    title = title_from_tag(tag)
+    assert (title != ""), no_title(tag)
+
+    url = url_from_tag(tag)
+    assert (url != ""), no_url(tag)
+    assert is_valid_url(url), invalid_url(tag)
+
+    author = author_from_tag(tag)
+
+    return Podcast(title, url, author)
     
-#+end_src
 
-***** 5. Definición
+def no_title(tag):
+    return "received tag does not have a podcast title\n %s" % str(tag)
 
-#+begin_src python :tangle franceinter/podcasts/url_from_tag.py
-import bs4
+def no_url(tag):
+    return "received tag does not have a podcast url\n %s" % str(tag)
 
-def url_from_tag(tag):
-    assert isinstance(tag, bs4.element.Tag), msg(tag)
-    cls = "rich-section-list-item-content-title"
-    span = tag.find("span", class_=cls)
-    url = ""
-    if span:
-        link = span.find("a")
-        if link and "href" in link.attrs:
-            url = "https://www.franceinter.fr/" + link.attrs["href"]
-    return url
+def invalid_url(tag):
+    return "received tag has an invalid podcast url\n %s" % str(tag)
 
-def msg(tag):
-    return "tag parameter must be an instance of bs4.element.Tag, received %s instead" % str(type(tag))
 #+end_src
 
 ***** 6. Casos de prueba
 
-1. Caso exitoso, devuelve el url
-2. El parámetro tag no es un bs4.element.tag, lanza un =AssertionError=
-3. El html no tiene un tag =span= con la clase buscada, devuelve un string vacío
-4. El html tiene el =span= pero no tiene un =a= dentro, devuelve un string vacío
-5. El html tiene el =span= y el =a= pero éste último no tiene el atributo =href=, devuelve un string vacío
+1. Caso exitoso, devuelve un podcast
+2. El tag no tiene título, lanza un =AssertionError=
+3. El tag no tiene url, lanza un =AssertionError=
+4. El tag tiene un url pero es inválido, lanza un =AssertionError=
+5. El tag no tiene autor, devuelve un podcast con un =string= vacío en la propiedad author
 
-#+begin_src python :tangle franceinter/podcasts/tests/test_url_from_tag.py
-from bs4 import BeautifulSoup
-from franceinter.podcasts.url_from_tag import *
-from franceinter.podcasts.tests.examples_url_from_tag import *
+#+begin_src python :tangle franceinter/podcasts/tests/test_podcast_from_tag.py
+from franceinter.podcasts import podcast
+from franceinter.podcasts.podcast_from_tag import podcast_from_tag
+from franceinter.podcasts.tests.examples_podcast_from_tag import *
 
-def test_url_ok():
-    tag = tag_with_url()
-    url = "https://www.franceinter.fr/emissions/la-tete-au-carre"
-    assert (url == url_from_tag(tag))
+def test_podcast_ok():
+    tag = tag_ok()
+    podcast = podcast_from_tag(tag)
+    assert len(podcast.title)>0
+    assert len(podcast.url)>0
+    assert len(podcast.author)>0
 
-def test_tag_not_bs4tag():
+def test_podcast_without_title():
+    tag = tag_without_title()
     try:
-        url_from_tag(5)
+        podcast = podcast_from_tag(tag)
     except AssertionError:
-        assert(True)
+        assert True
 
-def test_span_not_found():
-    tag = tag_without_span()
-    assert ("" == url_from_tag(tag))
+def test_podcast_without_url():
+    tag = tag_without_url()
+    try:
+        podcast = podcast_from_tag(tag)
+    except AssertionError:
+        assert True
 
-def test_a_not_found():
-    tag = tag_without_link()
-    assert ("" == url_from_tag(tag))
+def test_podcast_with_invalid_url():
+    tag = tag_with_invalid_url()
+    try:
+        podcast = podcast_from_tag(tag)
+    except AssertionError:
+        assert True
 
-def test_title_not_found():
-    tag = tag_without_href()
-    assert ("" == url_from_tag(tag))
+def test_podcast_without_author():
+    tag = tag_without_author()
+    podcast = podcast_from_tag(tag)
+    assert len(podcast.title) > 0
+    assert len(podcast.url) > 0
+    assert len(podcast.author) == 0
 
 #+end_src
 
-****** Run tests
+#+RESULTS:
+:results:
+:end:
 
-#+begin_src sh :results output drawer
-./pytest ./franceinter/podcasts/tests/test_url_from_tag.py
+#+begin_src sh
+pytest ./franceinter/podcasts/tests/test_podcast_from_tag.py
 #+end_src
 
-**** podcast_from_tag
-***** 1. Objetivo
-***** 2. Firma
-***** 3. Ejemplos
-***** 4. Boceto
-***** 5. Definición
-***** 6. Casos de prueba
+#+RESULTS:
+:results:
+============================= test session starts ==============================
+platform linux -- Python 3.6.8, pytest-4.2.0, py-1.7.0, pluggy-0.8.1
+rootdir: /app, inifile:
+collected 5 items
+
+franceinter/podcasts/tests/test_podcast_from_tag.py .....                [100%]
+
+=========================== 5 passed in 0.52 seconds ===========================
+:end:
+
 **** tags_from_html
 ***** 1. Objetivo
 ***** 2. Firma
