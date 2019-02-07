@@ -159,8 +159,6 @@ __all__ = [
     "podcast_from_tag", 
     "tags_from_html", 
     "podcasts_from_tags", 
-    "podcasts_from_file", 
-    "podcasts_from_url", 
     "podcast_search",
     "podcast"
 ]
@@ -174,14 +172,14 @@ __all__ = [
     "test_podcast_from_tag", 
     "test_tags_from_html", 
     "test_podcasts_from_tags", 
-    "test_podcasts_from_file", 
-    "test_podcasts_from_url", 
     "test_podcast_search",
     "examples_author_from_tag", 
     "examples_title_from_tag",
     "examples_url_from_tag",
     "examples_podcast_from_tag",
-    "examples_tags_from_html"
+    "examples_tags_from_html",
+    "examples_podcasts_from_tags",
+    "examples_podcast_search"
 ]
 #+end_src
 
@@ -1116,26 +1114,112 @@ def test_html_is_not_string():
 
 **** podcasts_from_tags
 ***** 1. Objetivo
+
+Generar un listado de podcasts a partir de un listado de fragmentos de HTML tomados de la página
+
 ***** 2. Firma
+
+La función recibe un listado de objetos =bs4.element.Tag= y devuelve un listado de objetos =franceinter.podcasts.Podcast=
+
 ***** 3. Ejemplos
+
+1. Una lista vacía
+2. Una lista con objetos que no son del tipo =bs4.element.Tag=
+3. Una lista con un número exacto de tags
+
+#+begin_src python :tangle franceinter/podcasts/tests/examples_podcasts_from_tags.py
+from franceinter.podcasts.tags_from_html import tags_from_html
+from franceinter.podcasts.tests.examples_tags_from_html import *
+from franceinter.podcasts.tests.examples_podcast_from_tag import tag_ok
+
+def empty_list():
+    return []
+
+def list_without_tags():
+    return [1, 2, 3, 4, 5]
+
+def list_with_tags(how_many):
+    html = ""
+    for item in range(1, how_many):
+        html+= str(tag_ok())
+    tags = tags_from_html(html)
+    return tags
+
+#+end_src
+
 ***** 4. Boceto
+
+#+begin_src python
+from franceinter.podcasts.tags_from_html import tags_from_html
+
+def podcasts_from_tags(tags):
+    # validar que tags sea una lista
+    # para cada tag de la lista
+    # usar podcast_from_tag() para obtener un podcast
+    # yield posdcast
+
+#+end_src
+
 ***** 5. Definición
+
+#+begin_src python :tangle franceinter/podcasts/podcasts_from_tags.py
+from franceinter.podcasts.podcast_from_tag import podcast_from_tag
+
+def podcasts_from_tags(tags):
+    assert isinstance(tags, list), invalid_tags(tags)
+    for tag in tags:
+        yield podcast_from_tag(tag)
+
+def invalid_tags(tags):
+    return "tags parameter must be a list, received %s instead" % type(tags)
+#+end_src
+
 ***** 6. Casos de prueba
-**** podcasts_from_file
+
+1. Si recibe una lista vacía, devuelve una lista vacía
+2. Si recibe una lista con objetos que no son del tipo =bs4.element.Tag=, lanza un =AssertionError=
+3. Si recibe una lista de tags, devuelve una lista de objetos =franceinter.podcasts.Podcast=
+
+#+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_tags.py
+from franceinter.podcasts.podcasts_from_tags import podcasts_from_tags
+from franceinter.podcasts.tests.examples_podcasts_from_tags import *
+from franceinter.podcasts.podcast import Podcast
+
+def test_empty_list():
+    tags = empty_list()
+    podcasts = list(podcasts_from_tags(tags))
+    assert (len(podcasts)==0)
+
+def test_list_without_tags():
+    tags = list_without_tags()
+    try:
+        podcasts = podcasts_from_tags(tags)
+    except AssertionError:
+        assert True
+
+def test_list_with_tags():
+    tags = list_with_tags(6)
+    podcasts = podcasts_from_tags(tags)
+    for p in podcasts:
+        assert (isinstance(p, Podcast))
+
+#+end_src
+
+**** TODO podcasts_from_file
 ***** 1. Objetivo
 ***** 2. Firma
 ***** 3. Ejemplos
 ***** 4. Boceto
 ***** 5. Definición
 ***** 6. Casos de prueba
-**** podcasts_from_url
+**** TODO podcasts_from_url
 ***** 1. Objetivo
 ***** 2. Firma
 ***** 3. Ejemplos
 ***** 4. Boceto
 ***** 5. Definición
 ***** 6. Casos de prueba
-**** podcast_search
+**** TODO podcast_search
 ***** 1. Objetivo
 ***** 2. Firma
 ***** 3. Ejemplos
