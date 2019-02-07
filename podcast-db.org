@@ -198,7 +198,7 @@ En este submódulo se implementan las siguentes funcionalidades:
 
 Obtener el título del podcast de un fragmento de html.
 
-El título se encuentra en el atributo =title= de un =a= que tiene la clase =rich-section-list-item-content-title=
+El título se encuentra en el atributo =title= de un =<a>= que tiene la clase =rich-section-list-item-content-title=
 
 ***** 2. Firma
 
@@ -206,10 +206,10 @@ La función recibe un objeto =bs4.element.Tag= y devuelve un =string=
 
 ***** 3. Ejemplos
 
-1. Un div que tiene el ~<a>~ con la clase correcta y el atributo =title=
-2. Un div que no tiene el tag ~<a>~
-3. Un div que tiene el tag ~<a>~ pero éste no la clase =rich-section...=
-4. Un div que tiene el tag ~<a>~ pero éste no tiene el atributo =title=
+1. Caso exitoso, Un tag que contiene un =<a>= con la clase correcta y el atributo =title=
+2. Un tag que no tiene el =<a>=
+3. Un tag que tiene el =<a>= pero éste no tiene la clase =rich-section...=
+4. Un tag que tiene el =<a>= pero éste no tiene el atributo =title=
 
 #+begin_src python :tangle franceinter/podcasts/tests/examples_title_from_tag.py
 from bs4 import BeautifulSoup
@@ -282,7 +282,7 @@ def author_from_tag(tag):
 import bs4
 
 def title_from_tag(tag):
-    assert isinstance(tag, bs4.element.Tag), msg(tag)
+    assert isinstance(tag, bs4.element.Tag), invalid_tag(tag)
     title = ""
     cls = "rich-section-list-item-content-title"
     link = tag.find("a", class_=cls)
@@ -290,7 +290,7 @@ def title_from_tag(tag):
         title = link.attrs["title"]
     return title
 
-def msg(tag):
+def invalid_tag(tag):
     return "tag parameter must be an instance of bs4.element.Tag, received %s instead" % str(type(tag))
 #+end_src
 
@@ -298,9 +298,9 @@ def msg(tag):
 
 1. Caso exitoso, devuelve el título
 2. El parámetro tag no es un bs4.element.tag, lanza un =AssertionError=
-3. El html no contiene un tag ~<a>~ devuelve un string vacío
-4. El html tiene el tag ~<a>~ y pero éste no tiene la clase correcta, devuelve un string vacío
-5. El html tiene el tag ~<a>~ y pero éste no tiene el atributo =title=, devuelve un string vacío
+3. El tag no contiene un =<a>=, devuelve un string vacío
+4. El tag tiene el =<a>= pero éste no tiene la clase correcta, devuelve un string vacío
+5. El tag tiene el =<a>= pero éste no tiene el atributo =title=, devuelve un string vacío
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_title_from_tag.py
 from franceinter.podcasts.title_from_tag import title_from_tag
@@ -310,7 +310,7 @@ def test_author_ok():
     tag = tag_with_title()
     assert ("Sur les épaules de Darwin" == title_from_tag(tag))
 
-def test_tag_not_bs4tag():
+def test_invalid_tag():
     try:
         title_from_tag(5)
     except AssertionError:
@@ -355,7 +355,7 @@ print(title)
 
 Obtener el URL del podcast de un fragmento de html.
 
-El URL se encuentra en el atributo =href= de un tag =a= que tiene la clase =rich-section-list-item-content-title=. 
+El URL se encuentra en el atributo =href= de un tag =<a>= que tiene la clase =rich-section-list-item-content-title=. 
 
 El URL es relativo, por lo que hay que agregarle baseUrl de France Inter (https://www.franceinter.fr).
 
@@ -364,6 +364,11 @@ El URL es relativo, por lo que hay que agregarle baseUrl de France Inter (https:
 La función recibe un objeto =bs4.element.Tag= y devuelve un =string=
 
 ***** 3. Ejemplos
+
+1. Caso exitoso, un tag que contiene un =<a>= con la clase =rich-section-list-item-content-title= y el atributo =href=
+2. Un tag que no tiene el =<a>=
+3. Un tag que tiene el =<a>= pero el link no tiene clase
+4. Un tag que tiene el =<a>= pero el link no tiene el atributo =href=
 
 #+begin_src python :tangle franceinter/podcasts/tests/examples_url_from_tag.py
 from bs4 import BeautifulSoup
@@ -379,21 +384,21 @@ def tag_with_url():
     tag = soup.div
     return tag
 
-def tag_without_class():
-    html = '''<div>
-<p>Lorem ipsum</p>
-<a href="emissions/la-tete-au-carre"></a>
-    </div>'''
-    soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
-    return tag
-
 def tag_without_link():
     html = '''<div>
 <p>Lorem ipsum</p>
 <p class="rich-section-list-item-content-title" 
     href="emissions/la-tete-au-carre">
 </p>
+    </div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def tag_without_class():
+    html = '''<div>
+<p>Lorem ipsum</p>
+<a href="emissions/la-tete-au-carre"></a>
     </div>'''
     soup = BeautifulSoup(html, "html.parser")
     tag = soup.div
@@ -449,10 +454,10 @@ def invalid_tag(tag):
 ***** 6. Casos de prueba
 
 1. Caso exitoso, devuelve el url
-2. El parámetro tag no es un bs4.element.tag, lanza un =AssertionError=
-3. El html no tiene un tag ~<a>~, devuelve un string vacío
-4. El html tiene el tag ~<a>~ pero éste no tiene la clase buscada, devuelve un string vacío
-5. El html tiene el tag ~<a>~ pero éste no tiene el atributo =href=, devuelve un string vacío
+2. El tag no es un bs4.element.tag, lanza un =AssertionError=
+3. El tag no contiene un =<a>=, devuelve un string vacío
+4. El tag tiene el =<a>= pero éste no tiene la clase buscada, devuelve un string vacío
+5. El tag tiene el =<a>= pero éste no tiene el atributo =href=, devuelve un string vacío
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_url_from_tag.py
 from franceinter.podcasts.url_from_tag import url_from_tag
@@ -463,7 +468,7 @@ def test_url_ok():
     url = "https://www.franceinter.fr/emissions/la-tete-au-carre"
     assert (url == url_from_tag(tag))
 
-def test_tag_not_bs4tag():
+def test_invalid_tag():
     try:
         url_from_tag(5)
     except AssertionError:
@@ -494,7 +499,7 @@ def test_title_not_found():
 
 Obtener el autor del podcast de un fragmento de html. 
 
-El autor se encuentra en el atributo =title= de un =a= que está dentro de un =span= que tiene la clase =rich-section-list-item-content-infos-author=
+El autor se encuentra en el atributo =title= de un =<a>= que está dentro de un =<span>= que tiene la clase =rich-section-list-item-content-infos-author=
 
 ***** 2. Firma
 
@@ -502,18 +507,13 @@ La funcion recibe un objeto =bs4.element.Tag= y devuelve un =string=
 
 ***** 3. Ejemplos
 
-Aquí vamos a crear diferentes ejemplos para usar como parámetro de entrada de nuestra función, que luego vamos a utilizar en los casos de prueba.
+1. Caso exitoso, el tag tiene un =<span>= con la clase =rich-section-list-item-content-infos-author= que contiene un =<a>= con el atributo =title=
+2. El tag no tiene un =<span>=
+3. El tag tiene un =<span>=, pero éste no tiene un =<a>=
+4. El tag tiene un =<span>= que contiene un =<a>=, pero éste no tiene el atributo =title=
 
 #+begin_src python :tangle franceinter/podcasts/tests/examples_author_from_tag.py
 from bs4 import BeautifulSoup
-
-def tag_without_span():
-    html = '''<b class="boldest">
-Extremely bold
-    </b>'''
-    soup = BeautifulSoup(html, "html.parser")
-    tag = soup.b
-    return tag
 
 def tag_with_author():
     html = '''<div>
@@ -521,6 +521,14 @@ def tag_with_author():
 <span class="rich-section-list-item-content-infos-author">
 <a title="William Shakespeare"></a>
 </span>
+    </div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def tag_without_span():
+    html = '''<div class="boldest">
+Extremely bold
     </div>'''
     soup = BeautifulSoup(html, "html.parser")
     tag = soup.div
@@ -600,9 +608,9 @@ def invalid_tag(tag):
 
 1. Caso exitoso, devuelve el autor
 2. El parámetro tag no es un bs4.element.tag, lanza un =AssertionError=
-3. El html no tiene un tag =span= con la clase buscada, devuelve un string vacío
-4. El html tiene el =span= pero no tiene un =a= dentro, devuelve un string vacío
-5. El html tiene el =span= y el =a= pero éste último no tiene el atributo =title=, devuelve un string vacío
+3. El tag no tiene un tag =<span>= con la clase buscada, devuelve un string vacío
+4. El tag tiene el =<span>= pero éste no contiene un =<a>=, devuelve un string vacío
+5. El tag tiene el =<span>= y el =<a>= pero éste último no tiene el atributo =title=, devuelve un string vacío
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_author_from_tag.py
 from franceinter.podcasts.author_from_tag import author_from_tag
@@ -612,7 +620,7 @@ def test_author_ok():
     tag = tag_with_author()
     assert ("William Shakespeare" == author_from_tag(tag))
 
-def test_tag_not_bs4tag():
+def test_invalid_tag():
     try:
         author_from_tag(5)
     except AssertionError:
@@ -663,8 +671,8 @@ Obtener un podcast de un fragmento de html.
 Un podcast tiene tres propiedades, a saber:
 
 - título :: es un =string= y es obligatorio
-- url :: es un =string=, debe ser un URL válido y también es obligatorio
-- autor :: es un string, pero puede estar vacío
+- url :: es un =string=, es obligatorio y debe ser un URL válido
+- autor :: es un =string=, pero puede estar vacío
 
 ***** 2. Firma
 
@@ -687,14 +695,12 @@ class Podcast:
 
 ***** 3. Ejemplos
 
-Vamos a generar los diferentes ejemplos de tags que nuestra función puede llegar a recibir:
-
-- Un tag que tenga todos los elementos para generar un podcast válido (título, URL y autor)
-- Un tag al que le falte el elemento del título
-- Un tag que le falte el elemento del URL
-- Un tag que tenga el elemento del URL, pero que éste no sea válido
-- Un tag que no tenga autor
-- Un tag que no sea un =bs4.element.Tag=
+1. Un tag que tiene todos los elementos para generar un podcast válido (título, URL y autor)
+2. Un tag que no es un =bs4.element.Tag=
+3. Un tag que no tiene el elemento del título
+4. Un tag que no tiene el elemento del URL
+5. Un tag que tiene el elemento del URL, pero el URL no es válido
+6. Un tag que no tiene el elemento del autor
 
 #+begin_src python :tangle franceinter/podcasts/tests/examples_podcast_from_tag.py
 from bs4 import BeautifulSoup
@@ -722,6 +728,9 @@ def tag_ok():
     soup = BeautifulSoup(html, "html.parser")
     tag = soup.div
     return tag
+
+def invalid_tag():
+    return "I am not a tag"
 
 def tag_without_title():
     html = '''<div class="rich-section-list-item-content">
@@ -816,9 +825,6 @@ def tag_without_author():
     tag = soup.div
     return tag
 
-def invalid_tag():
-    return "I am not a tag"
-
 #+end_src
 
 ***** 4. Boceto
@@ -835,7 +841,7 @@ def podcast_from_tag(tag):
     # validar que el url no sea un string vacío
     # validar el url
 
-    # extraer el autor con author_from_tag
+    # extraer el autor usando author_from_tag
 
     # crear una instancia de franceinter.podcasts.podcast
     # con el título, el url y el autor
@@ -888,11 +894,11 @@ def invalid_tag(tag):
 ***** 6. Casos de prueba
 
 1. Caso exitoso, devuelve un podcast
-2. El tag no tiene título, lanza un =AssertionError=
-3. El tag no tiene url, lanza un =AssertionError=
-4. El tag tiene un url pero es inválido, lanza un =AssertionError=
-5. El tag no tiene autor, devuelve un podcast con un =string= vacío en la propiedad author
-6. El tag no es un =bs4.element.Tag=, lanza un =AssertionError=
+2. El tag no es un =bs4.element.Tag=, lanza un =AssertionError=
+3. El tag no tiene título, lanza un =AssertionError=
+4. El tag no tiene url, lanza un =AssertionError=
+5. El tag tiene un url pero es inválido, lanza un =AssertionError=
+6. El tag no tiene autor, devuelve un podcast con un =string= vacío en la propiedad author
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_podcast_from_tag.py
 from franceinter.podcasts import podcast
@@ -968,7 +974,7 @@ franceinter/podcasts/tests/test_podcast_from_tag.py .....                [100%]
 
 Obtener un array de tags con el fragmento de html que tiene el detalle del podcast (título, URL y autor) a partir del html de la página con el listado de podcasts
 
-Hay que extraer todos los ~<div>~ que tengan la clase =rich-section-list-item-content=
+Hay que extraer todos los =<div>= que tengan la clase =rich-section-list-item-content=
 
 ***** 2. Firma
 
@@ -976,15 +982,23 @@ La función recibe un =string= con el html de la página y devuelve una lista de
 
 ***** 3. Ejemplos
 
-1. Un html que no tenga ningún ~<div>~
-2. Un html que tenga varios ~<div>~ pero que ninguno tenga la clase =rich-section-list-item-content=
-3. Un html que tenga algunos ~<div>~ con la clase buscada y otros que no la tienen
-4. Un html que tenga varios ~<div>~ con la clase buscada
-5. Un html que no sea un =string=
+1. Un html que tiene varios =<div>= con la clase buscada
+2. Un html que no es un =string=
+3. Un html que no tiene ningún =<div>=
+4. Un html que tiene varios =<div>= pero que ninguno tenga la clase =rich-section-list-item-content=
+5. Un html que tiene algunos =<div>= con la clase buscada y otros que no la tienen
 
 #+begin_src python :tangle franceinter/podcasts/tests/examples_tags_from_html.py
 from bs4 import BeautifulSoup
 from random import shuffle
+
+def html_with_divs(how_many):
+    class_name = "rich-section-list-item-content"
+    divs = map(lambda x: div(class_name), range(how_many))
+    return html(divs)
+
+def html_is_not_string():
+    return 42
 
 def html_without_divs():
     html = '''<header><h1>dummy title</h1></header>
@@ -1007,14 +1021,6 @@ def html_some_divs_with_class(how_many_with, how_many_without):
     divs = divs_with + divs_without
     shuffle(divs)
     return html(divs)
-
-def html_with_divs(how_many):
-    class_name = "rich-section-list-item-content"
-    divs = map(lambda x: div(class_name), range(how_many))
-    return html(divs)
-
-def html_not_string():
-    return 55
 
 def div(class_name=""):
     attr = ""
@@ -1074,15 +1080,27 @@ def invalid_html(html):
 
 ***** 6. Casos de prueba
 
-1. Cuando recibe un html que no tenga ningún ~<div>~, devuelve una lista vacía
-2. Cuando recibe un html que tenga varios ~<div>~ pero ninguno tiene la clase =rich-section-list-item-content=, devuelve una lista vacía
-3. Cuando recibe un html que tiene algunos ~<div>~ con la clase buscada y otros que no la tienen, devuelve una lista con solamente los ~<div>~ que tienen la clase
-4. Cuando recibe un html que tiene varios ~<div>~ con la clase buscada, devuelve una lista de tantos elementos como ~<div>~ hay en el html
-5. Cuando recibe un html que no es un string, lanza un =AssertionError=
+1. Caso exitoso, cuando recibe un html que tiene varios =<div>= con la clase buscada, devuelve una lista de tantos elementos como =<div>= hay en el html
+2. Cuando recibe un html que no es un string, lanza un =AssertionError=
+3. Cuando recibe un html que no tiene ningún =<div>=, devuelve una lista vacía
+4. Cuando recibe un html que tiene varios =<div>= pero ninguno tiene la clase =rich-section-list-item-content=, devuelve una lista vacía
+5. Cuando recibe un html que tiene algunos =<div>= con la clase buscada y otros que no la tienen, devuelve una lista con solamente los =<div>= que tienen la clase
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_tags_from_html.py
 from franceinter.podcasts.tags_from_html import tags_from_html
 from franceinter.podcasts.tests.examples_tags_from_html import *
+
+def test_html_with_divs():
+    html = html_with_divs(5)
+    tags = tags_from_html(html)
+    assert (len(tags) == 5)
+
+def test_html_is_not_string():
+    try:
+        html = html_is_not_string()
+        tags = tags_from_html(33)
+    except AssertionError:
+        assert True
 
 def test_html_without_divs():
     html = html_without_divs()
@@ -1099,17 +1117,6 @@ def test_some_divs_with_class():
     tags = tags_from_html(html)
     assert (len(tags) == 2)
 
-def test_html_with_divs():
-    html = html_with_divs(5)
-    tags = tags_from_html(html)
-    assert (len(tags) == 5)
-
-def test_html_is_not_string():
-    try:
-        tags = tags_from_html(33)
-    except AssertionError:
-        assert True
-
 #+end_src
 
 **** podcasts_from_tags
@@ -1123,14 +1130,22 @@ La función recibe un listado de objetos =bs4.element.Tag= y devuelve un listado
 
 ***** 3. Ejemplos
 
-1. Una lista vacía
-2. Una lista con objetos que no son del tipo =bs4.element.Tag=
-3. Una lista con un número exacto de tags
+1. Un objeto que no es un =list=
+2. Una lista vacía
+3. Una lista con tags válidos
+4. Una lista con objetos que no son del tipo =bs4.element.Tag=
+5. Una lista con tags válidos y un tag inválido (sin el título o el URL)
 
 #+begin_src python :tangle franceinter/podcasts/tests/examples_podcasts_from_tags.py
 from franceinter.podcasts.tags_from_html import tags_from_html
 from franceinter.podcasts.tests.examples_tags_from_html import *
-from franceinter.podcasts.tests.examples_podcast_from_tag import tag_ok
+from franceinter.podcasts.tests.examples_podcast_from_tag import (
+    tag_ok, 
+    tag_without_url
+)
+
+def invalid_list():
+    return "I am not a list"
 
 def empty_list():
     return []
@@ -1138,10 +1153,16 @@ def empty_list():
 def list_without_tags():
     return [1, 2, 3, 4, 5]
 
-def list_with_tags(how_many):
+def list_with_valid_tags(how_many):
     html = ""
     for item in range(1, how_many):
         html+= str(tag_ok())
+    tags = tags_from_html(html)
+    return tags
+
+def list_with_invalid_tag(how_many):
+    html = list_with_valid_tags(how_many - 1)
+    html+= str(tag_without_url())
     tags = tags_from_html(html)
     return tags
 
@@ -1176,19 +1197,34 @@ def invalid_tags(tags):
 
 ***** 6. Casos de prueba
 
-1. Si recibe una lista vacía, devuelve una lista vacía
-2. Si recibe una lista con objetos que no son del tipo =bs4.element.Tag=, lanza un =AssertionError=
-3. Si recibe una lista de tags, devuelve una lista de objetos =franceinter.podcasts.Podcast=
+1. Si recibe un objeto que no es un =list=, lanza un =AssertionError=
+2. Si recibe una lista vacía, devuelve una lista vacía
+3. Si recibe una lista de tags válidos, devuelve una lista de objetos =franceinter.podcasts.Podcast=
+4. Si recibe una lista con objetos que no son del tipo =bs4.element.Tag=, lanza un =AssertionError=
+5. Si recibe una lista con algún tag inválido (que no tenga el título o el URL), lanza un =AssertionError=
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_tags.py
 from franceinter.podcasts.podcasts_from_tags import podcasts_from_tags
 from franceinter.podcasts.tests.examples_podcasts_from_tags import *
 from franceinter.podcasts.podcast import Podcast
 
+def test_invalid_list():
+    tags = invalid_list()
+    try:
+        podcasts = list(podcasts_from_tags(tags))
+    except AssertionError:
+        assert True
+
 def test_empty_list():
     tags = empty_list()
     podcasts = list(podcasts_from_tags(tags))
     assert (len(podcasts)==0)
+
+def test_list_with_valid_tags():
+    tags = list_with_valid_tags(6)
+    podcasts = podcasts_from_tags(tags)
+    for p in podcasts:
+        assert (isinstance(p, Podcast))
 
 def test_list_without_tags():
     tags = list_without_tags()
@@ -1197,11 +1233,14 @@ def test_list_without_tags():
     except AssertionError:
         assert True
 
-def test_list_with_tags():
-    tags = list_with_tags(6)
+def test_list_with_invalid_tag():
+    tags = list_with_valid_tags(6)
     podcasts = podcasts_from_tags(tags)
-    for p in podcasts:
-        assert (isinstance(p, Podcast))
+    try:
+        for p in podcasts:
+            assert (isinstance(p, Podcast))
+    except AssertionError:
+        assert True
 
 #+end_src
 
