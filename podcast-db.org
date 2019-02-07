@@ -56,14 +56,14 @@ La otra fuente de inspiración para la metodología utilizada en este proyecto e
 
 La idea es desarrollar una aplicación a partir de funciones elementales que se usan como piezas para ir armando componentes más complejos. El libro ofrece una receta para elaborar una función, que es la unidad mínima de código recomendada. Vamos a escribir cada una de las funciones de nuestra aplicación de acuerdo a los pasos de la siguiente receta:
 
-- 1. Objetivo :: Identificar brevemente el propósito de la función. Nombrar las estructuras de datos que la función va a manipular 
+- 1. Objetivo :: Identificar brevemente el propósito de la función. Nombrar las estructuras de datos que va a manipular
 - 2. Firma :: Definir formalmente los parámetros de entrada y la salida de la función
 - 3. Ejemplos :: Confeccionar un listado de ejemplos de parámetros de entrada que podría recibir la función y analizar cuál debería ser la salida para cada uno
 - 4. Boceto :: Traducir la firma de la función en un boceto de la implementación
-- 5. Definición :: Completar el boceto usando como base los ejemplos para cumplir el propósito de la función
-- 6. Casos de prueba :: Transformar los ejemplos en casos de prueba y asegurarse de que la función los cumpla a todos
+- 5. Definición :: Completar el boceto teniendo en cuenta el análisis y los ejemplos para lograr cumplir el propósito de la función
+- 6. Casos de prueba :: Transformar los ejemplos en casos de prueba y asegurarse de que la función los pase a todos
 
-En este caso, vamos a desarrollar nuestra aplicación usando [[https://python.org][Python]] bajo el paradigma de programación funcional. Esto quiere decir que nuestra aplicación va a estar mayormente compuesta de funciones (=def my_func():=) que vamos a combinar para realizar tareas complejas.
+En este caso, vamos a desarrollar nuestra aplicación en el lenguaje [[https://python.org][Python]] usando el paradigma de programación funcional. Esto quiere decir que nuestra aplicación va a estar mayormente compuesta de funciones (=def my_func():=) que vamos a ir combinando para realizar tareas complejas.
 
 * Diseño
 ** Fuentes de podcasts
@@ -110,6 +110,7 @@ Vamos a usar las siguientes bibliotecas
 - beautifulsoup4 :: Para parsear html
 - slugify :: Para generar el nombre del archivo a descargar
 - pytest :: Para ejecutar los casos de prueba
+- validators :: Para validar URLs
 
 *** requirements.txt
 
@@ -123,14 +124,14 @@ validators
 #+end_src
 
 *** Instalación de dependencias
-**** Inicializar carpeta =./venv=
+**** 1. Inicializar la carpeta =./venv=
 
 #+begin_src sh
 rm -Rf ./venv
 virtualenv-3.6 ./venv
 #+end_src
 
-**** Instalar dependencias con =pip=
+**** 2. Instalar dependencias con =pip=
 
 #+begin_src sh
 pip-3.6 install -r requirements.txt
@@ -156,7 +157,7 @@ __all__ = [
     "title_from_tag", 
     "url_from_tag", 
     "podcast_from_tag", 
-    "divs_from_html", 
+    "tags_from_html", 
     "podcasts_from_tags", 
     "podcasts_from_file", 
     "podcasts_from_url", 
@@ -171,7 +172,7 @@ __all__ = [
     "test_title_from_tag", 
     "test_url_from_tag", 
     "test_podcast_from_tag", 
-    "test_divs_from_html", 
+    "test_tags_from_html", 
     "test_podcasts_from_tags", 
     "test_podcasts_from_file", 
     "test_podcasts_from_url", 
@@ -179,15 +180,16 @@ __all__ = [
     "examples_author_from_tag", 
     "examples_title_from_tag",
     "examples_url_from_tag",
-    "examples_podcast_from_tag"
+    "examples_podcast_from_tag",
+    "examples_tags_from_html"
 ]
 #+end_src
 
 *** Podcasts
 
-France Inter publica en una sola página (enorme) el listado de todas sus emisiones. El html está bastante fácil de parsear, dado que los datos cada emisión se encuentran dentro de un =div= con la clase =rich-section-list-item-content=. Revisando el contenido de ese div, nos traemos el título del podcast, su URL y el autor (que es opcional).
+France Inter publica en una sola página (enorme) el listado de todas sus emisiones. El html está bastante fácil de parsear, dado que los datos cada emisión se encuentran dentro de un =div= con la clase =rich-section-list-item-content=. Revisando el contenido de ese div, podemos obtener el título del podcast, su URL y el autor (que es opcional).
 
-Este implementa las siguentes funcionalidades:
+En este submódulo se implementan las siguentes funcionalidades:
 
 - Obtener el listado de los podcasts de France Inter
 - Para cada podcast obtener el nombre, el url y el autor
@@ -266,6 +268,7 @@ def tag_without_title():
 #+begin_src python
 
 def author_from_tag(tag):
+    # validar que el tag sea un bs4.element.Tag
     # devuelve un string
     title = ""
     # hay que buscar un <a> con la clase "rich-section-list-item-content-title"
@@ -415,6 +418,7 @@ def tag_without_href():
 #+begin_src python
 
 def url_from_tag(tag):
+    # validar que el tag sea un bs4.element.Tag
     # devuelve un string
     url = ""
     # hay que buscar un <a> con la clase "rich-section-list-item-content-title"
@@ -432,7 +436,7 @@ def url_from_tag(tag):
 import bs4
 
 def url_from_tag(tag):
-    assert isinstance(tag, bs4.element.Tag), msg(tag)
+    assert isinstance(tag, bs4.element.Tag), invalid_tag(tag)
     url = ""
     cls = "rich-section-list-item-content-title"
     link = tag.find("a", class_=cls)
@@ -440,7 +444,7 @@ def url_from_tag(tag):
         url = "https://www.franceinter.fr/" + link.attrs["href"]
     return url
 
-def msg(tag):
+def invalid_tag(tag):
     return "tag parameter must be an instance of bs4.element.Tag, received %s instead" % str(type(tag))
 #+end_src
 
@@ -558,6 +562,7 @@ True
 #+begin_src python
 
 def author_from_tag(tag):
+    # validar que el tag sea un bs4.element.Tag
     # devuelve un string
     author = ""
     # hay que buscar un span con la clase "rich-section..."
@@ -579,7 +584,7 @@ None
 import bs4
 
 def author_from_tag(tag):
-    assert isinstance(tag, bs4.element.Tag), msg(tag)
+    assert isinstance(tag, bs4.element.Tag), invalid_tag(tag)
     cls = "rich-section-list-item-content-infos-author"
     span = tag.find("span", class_=cls)
     author = ""
@@ -589,7 +594,7 @@ def author_from_tag(tag):
             author = link.attrs["title"]
     return author
 
-def msg(tag):
+def invalid_tag(tag):
     return "tag parameter must be an instance of bs4.element.Tag, received %s instead" % str(type(tag))
 #+end_src
 
@@ -691,6 +696,7 @@ Vamos a generar los diferentes ejemplos de tags que nuestra función puede llega
 - Un tag que le falte el elemento del URL
 - Un tag que tenga el elemento del URL, pero que éste no sea válido
 - Un tag que no tenga autor
+- Un tag que no sea un =bs4.element.Tag=
 
 #+begin_src python :tangle franceinter/podcasts/tests/examples_podcast_from_tag.py
 from bs4 import BeautifulSoup
@@ -812,6 +818,9 @@ def tag_without_author():
     tag = soup.div
     return tag
 
+def invalid_tag():
+    return "I am not a tag"
+
 #+end_src
 
 ***** 4. Boceto
@@ -819,6 +828,8 @@ def tag_without_author():
 #+begin_src python
 
 def podcast_from_tag(tag):
+    # validar que el tag sea un bs4.element.Tag
+
     # extraer el título con title_from_tag
     # validar que el autor no sea un string vacío
 
@@ -844,8 +855,10 @@ from franceinter.podcasts.url_from_tag import url_from_tag
 from franceinter.podcasts.author_from_tag import author_from_tag
 from franceinter.podcasts.podcast import Podcast
 from validators.url import url as is_valid_url
+import bs4
 
 def podcast_from_tag(tag):
+    assert isinstance(tag, bs4.element.Tag), invalid_tag(tag)
     title = title_from_tag(tag)
     assert (title != ""), no_title(tag)
 
@@ -856,7 +869,7 @@ def podcast_from_tag(tag):
     author = author_from_tag(tag)
 
     return Podcast(title, url, author)
-    
+
 
 def no_title(tag):
     return "received tag does not have a podcast title\n %s" % str(tag)
@@ -867,6 +880,11 @@ def no_url(tag):
 def invalid_url(tag):
     return "received tag has an invalid podcast url\n %s" % str(tag)
 
+def no_title(tag):
+    return "received tag does not have a podcast title\n %s" % str(tag)
+
+def invalid_tag(tag):
+    return "tag parameter must be an instance of bs4.element.Tag, received %s instead" % str(type(tag))
 #+end_src
 
 ***** 6. Casos de prueba
@@ -876,6 +894,7 @@ def invalid_url(tag):
 3. El tag no tiene url, lanza un =AssertionError=
 4. El tag tiene un url pero es inválido, lanza un =AssertionError=
 5. El tag no tiene autor, devuelve un podcast con un =string= vacío en la propiedad author
+6. El tag no es un =bs4.element.Tag=, lanza un =AssertionError=
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_podcast_from_tag.py
 from franceinter.podcasts import podcast
@@ -917,6 +936,13 @@ def test_podcast_without_author():
     assert len(podcast.url) > 0
     assert len(podcast.author) == 0
 
+def test_invalid_tag():
+    tag = invalid_tag()
+    try:
+        podcast_from_tag(tag)
+    except AssertionError:
+        assert True
+
 #+end_src
 
 #+RESULTS:
@@ -941,11 +967,153 @@ franceinter/podcasts/tests/test_podcast_from_tag.py .....                [100%]
 
 **** tags_from_html
 ***** 1. Objetivo
+
+Obtener un array de tags con el fragmento de html que tiene el detalle del podcast (título, URL y autor) a partir del html de la página con el listado de podcasts
+
+Hay que extraer todos los ~<div>~ que tengan la clase =rich-section-list-item-content=
+
 ***** 2. Firma
+
+La función recibe un =string= con el html de la página y devuelve una lista de elementos =bs4.element.Tag=
+
 ***** 3. Ejemplos
+
+1. Un html que no tenga ningún ~<div>~
+2. Un html que tenga varios ~<div>~ pero que ninguno tenga la clase =rich-section-list-item-content=
+3. Un html que tenga algunos ~<div>~ con la clase buscada y otros que no la tienen
+4. Un html que tenga varios ~<div>~ con la clase buscada
+5. Un html que no sea un =string=
+
+#+begin_src python :tangle franceinter/podcasts/tests/examples_tags_from_html.py
+from bs4 import BeautifulSoup
+from random import shuffle
+
+def html_without_divs():
+    html = '''<header><h1>dummy title</h1></header>
+<p>bla bla bla</p>
+<ul>
+  <li> item 1 </li>
+  <li> item 2 </li>
+</ul>
+<footer>All rights reserved!</footer>'''
+    return html
+
+def html_divs_without_class(how_many):
+    divs = map(lambda x: div(), range(how_many))
+    return html(divs)
+
+def html_some_divs_with_class(how_many_with, how_many_without):
+    class_name = "rich-section-list-item-content"
+    divs_with = list(map(lambda x: div(class_name), range(how_many_with)))
+    divs_without = list(map(lambda x: div(), range(how_many_without)))
+    divs = divs_with + divs_without
+    shuffle(divs)
+    return html(divs)
+
+def html_with_divs(how_many):
+    class_name = "rich-section-list-item-content"
+    divs = map(lambda x: div(class_name), range(how_many))
+    return html(divs)
+
+def html_not_string():
+    return 55
+
+def div(class_name=""):
+    attr = ""
+    if class_name:
+        attr = "class=%s" % class_name
+    html = '''<div %s>
+    here goes the div body
+</div>''' % attr
+    soup = BeautifulSoup(html, "html.parser")
+    return soup.div
+
+def html(divs):
+    div_str = "".join(map(lambda div: str(div), divs))
+    html = '''<header><h1>dummy title</h1></header>
+<p>bla bla bla</p>
+%s
+<ul>
+  <li> item 1 </li>
+  <li> item 2 </li>
+</ul>
+<footer>All rights reserved!</footer>
+    ''' % div_str
+    return html
+    
+#+end_src
+
 ***** 4. Boceto
+
+#+begin_src python
+from bs4 import BeautifulSoup
+
+def tags_from_html(html):
+    # validar que el html sea un string
+    tags = []
+    # instanciar un objeto BeautifulSoup
+    # filtrar los tag <div> que tienen la clase "rich-section-list-item-content"
+    return tags
+
+#+end_src
+
 ***** 5. Definición
+
+#+begin_src python :tangle franceinter/podcasts/tags_from_html.py
+from bs4 import BeautifulSoup
+
+def tags_from_html(html):
+    assert isinstance(html, str), invalid_html(html)
+    soup = BeautifulSoup(html, "html.parser")
+    cls = "rich-section-list-item-content"
+    tags = soup.find_all("div", class_=cls)
+    return tags
+
+def invalid_html(html):
+    return "html parameter must be a string, received %s instead" % type(html)
+
+#+end_src
+
 ***** 6. Casos de prueba
+
+1. Cuando recibe un html que no tenga ningún ~<div>~, devuelve una lista vacía
+2. Cuando recibe un html que tenga varios ~<div>~ pero ninguno tiene la clase =rich-section-list-item-content=, devuelve una lista vacía
+3. Cuando recibe un html que tiene algunos ~<div>~ con la clase buscada y otros que no la tienen, devuelve una lista con solamente los ~<div>~ que tienen la clase
+4. Cuando recibe un html que tiene varios ~<div>~ con la clase buscada, devuelve una lista de tantos elementos como ~<div>~ hay en el html
+5. Cuando recibe un html que no es un string, lanza un =AssertionError=
+
+#+begin_src python :tangle franceinter/podcasts/tests/test_tags_from_html.py
+from franceinter.podcasts.tags_from_html import tags_from_html
+from franceinter.podcasts.tests.examples_tags_from_html import *
+
+def test_html_without_divs():
+    html = html_without_divs()
+    tags = tags_from_html(html)
+    assert (len(tags) == 0)
+
+def test_divs_without_class():
+    html = html_divs_without_class(4)
+    tags = tags_from_html(html)
+    assert (len(tags) == 0)
+
+def test_some_divs_with_class():
+    html = html_some_divs_with_class(2,3)
+    tags = tags_from_html(html)
+    assert (len(tags) == 2)
+
+def test_html_with_divs():
+    html = html_with_divs(5)
+    tags = tags_from_html(html)
+    assert (len(tags) == 5)
+
+def test_html_is_not_string():
+    try:
+        tags = tags_from_html(33)
+    except AssertionError:
+        assert True
+
+#+end_src
+
 **** podcasts_from_tags
 ***** 1. Objetivo
 ***** 2. Firma
@@ -976,7 +1144,7 @@ franceinter/podcasts/tests/test_podcast_from_tag.py .....                [100%]
 ***** 6. Casos de prueba
 **** Implementación completa
 
-#+begin_src python :tangle franceinter/podcasts.py 
+#+begin_src python :tangle franceinter/podcasts_old.py 
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
 import re
@@ -1121,18 +1289,18 @@ drwxr-xr-x   4 martin  staff   128B Feb  3 12:19 __pycache__
 *** listar podcasts
 
 #+begin_src python :python python-3.6 :results drawer
-import franceinter.podcasts as fr
+import franceinter.podcasts_old as fr
 
-podcasts = fr.podcasts_from_file('emissions.html')
+podcasts = fr.podcasts_from_file('./downloads/emissions.html')
 #podcasts = fr.podcasts_from_url('https://www.franceinter.fr/emissions')
 
 #return list(podcasts)[39]
-return list(fr.podcast_search("darwin", podcasts))
+print(list(fr.podcast_search("darwin", podcasts)))
 #+end_src
 
 #+RESULTS:
 :results:
-[{'author': 'Jean Claude Ameisen', 'title': 'Sur les épaules de Darwin', 'url': 'https://franceinter.fr/emissions/emissions/sur-les-epaules-de-darwin'}]
+[{'author': 'Jean Claude Ameisen', 'title': 'Sur les épaules de Darwin', 'url': 'https://franceinter.fr/emissions/sur-les-epaules-de-darwin'}]
 :end:
 
 *** implementación anterior
