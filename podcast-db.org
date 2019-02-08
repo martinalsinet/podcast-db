@@ -127,6 +127,22 @@ Vamos a usar las siguientes bibliotecas
 - pytest :: Para ejecutar los casos de prueba
 - validators :: Para validar URLs
 
+**** TODO evaluar [[https://html.python-requests.org/][Requests-HTML]]
+
+Parece que sería una alternativa interesante a BeautifulSoup4. 
+
+Ventajas:
+
+- Automatic following of redirects
+- Pagination support
+- Mocked user-agent (like a real web browser)
+
+Desventajas:
+
+- Solamente funciona con Python >= 3.6
+- Tiene apenas un año de desarrollo (bs4 está /battle-tested/)
+- Depende de muchos módulos (bloated?)
+
 *** requirements.txt
 
 #+begin_src txt :tangle requirements.txt
