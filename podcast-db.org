@@ -190,6 +190,7 @@ __all__ = [
     "podcast_from_tag", 
     "tags_from_html", 
     "podcasts_from_tags", 
+    "podcasts_from_response", 
     "podcast_search",
     "podcast"
 ]
@@ -203,12 +204,14 @@ __all__ = [
     "test_podcast_from_tag", 
     "test_tags_from_html", 
     "test_podcasts_from_tags", 
+    "test_podcasts_from_response", 
     "test_podcast_search",
     "examples_author_from_tag", 
     "examples_title_from_tag",
     "examples_url_from_tag",
     "examples_podcast_from_tag",
     "examples_tags_from_html",
+    "examples_podcasts_from_response",
     "examples_podcasts_from_tags",
     "examples_podcast_search"
 ]
@@ -233,7 +236,7 @@ El título se encuentra en el atributo =title= de un =<a>= que tiene la clase =r
 
 ***** 2. Firma
 
-La función recibe un objeto =bs4.element.Tag= y devuelve un =string=
+La función recibe un objeto =bs4.element.Tag= y devuelve un =str=
 
 ***** 3. Ejemplos
 
@@ -249,7 +252,7 @@ def tag_with_title():
     html = '''<div>
 <p>Lorem ipsum</p>
 <a class="rich-section-list-item-content-title" 
-    title="Sur les épaules de Darwin">
+    title="Sur les epaules de Darwin">
 </a>
     </div>'''
     soup = BeautifulSoup(html, "html.parser")
@@ -259,7 +262,7 @@ def tag_with_title():
 def tag_without_class():
     html = '''<div>
 <p>Lorem ipsum</p>
-<a title="Sur les épaules de Darwin">
+<a title="Sur les epaules de Darwin">
 </a>
 </span>
     </div>'''
@@ -271,7 +274,7 @@ def tag_without_link():
     html = '''<div>
 <p>Lorem ipsum</p>
 <p class="rich-section-list-item-content-title" 
-    title="Sur les épaules de Darwin">
+    title="Sur les epaules de Darwin">
 </p>
 </span>
     </div>'''
@@ -339,7 +342,7 @@ from franceinter.podcasts.tests.examples_title_from_tag import *
 
 def test_author_ok():
     tag = tag_with_title()
-    assert ("Sur les épaules de Darwin" == title_from_tag(tag))
+    assert ("Sur les epaules de Darwin" == title_from_tag(tag))
 
 def test_invalid_tag():
     try:
@@ -392,7 +395,7 @@ El URL es relativo, por lo que hay que agregarle baseUrl de France Inter (https:
 
 ***** 2. Firma
 
-La función recibe un objeto =bs4.element.Tag= y devuelve un =string=
+La función recibe un objeto =bs4.element.Tag= y devuelve un =str=
 
 ***** 3. Ejemplos
 
@@ -534,7 +537,7 @@ El autor se encuentra en el atributo =title= de un =<a>= que está dentro de un 
 
 ***** 2. Firma
 
-La funcion recibe un objeto =bs4.element.Tag= y devuelve un =string=
+La funcion recibe un objeto =bs4.element.Tag= y devuelve un =str=
 
 ***** 3. Ejemplos
 
@@ -701,9 +704,9 @@ Obtener un podcast de un fragmento de html.
 
 Un podcast tiene tres propiedades, a saber:
 
-- título :: es un =string= y es obligatorio
-- url :: es un =string=, es obligatorio y debe ser un URL válido
-- autor :: es un =string=, pero puede estar vacío
+- título :: es un =str= y es obligatorio
+- url :: es un =str=, es obligatorio y debe ser un URL válido
+- autor :: es un =str=, pero puede estar vacío
 
 ***** 2. Firma
 
@@ -929,7 +932,7 @@ def invalid_tag(tag):
 3. El tag no tiene título, lanza un =AssertionError=
 4. El tag no tiene url, lanza un =AssertionError=
 5. El tag tiene un url pero es inválido, lanza un =AssertionError=
-6. El tag no tiene autor, devuelve un podcast con un =string= vacío en la propiedad author
+6. El tag no tiene autor, devuelve un podcast con un =str= vacío en la propiedad author
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_podcast_from_tag.py
 from franceinter.podcasts import podcast
@@ -1009,12 +1012,12 @@ Hay que extraer todos los =<div>= que tengan la clase =rich-section-list-item-co
 
 ***** 2. Firma
 
-La función recibe un =string= con el html de la página y devuelve una lista de elementos =bs4.element.Tag=
+La función recibe un =str= con el html de la página y devuelve una lista de elementos =bs4.element.Tag=
 
 ***** 3. Ejemplos
 
 1. Un html que tiene varios =<div>= con la clase buscada
-2. Un html que no es un =string=
+2. Un html que no es un =str=
 3. Un html que no tiene ningún =<div>=
 4. Un html que tiene varios =<div>= pero que ninguno tenga la clase =rich-section-list-item-content=
 5. Un html que tiene algunos =<div>= con la clase buscada y otros que no la tienen
@@ -1275,6 +1278,112 @@ def test_list_with_invalid_tag():
 
 #+end_src
 
+**** podcasts_from_response
+***** 1. Objetivo
+
+Extraer el listado de podcasts de la respuesta de una petición HTTP
+
+***** 2. Firma
+
+La función recibe una =requests.model.Response= y devuelve una lista de objetos =franceinter.podcasts.Podcast=
+
+***** 3. Ejemplos
+
+1. Una respuesta válida, con el HTML de la página del listado de podcasts
+2. Una respuesta inválida, que no es de la clase =requests.model.Response=
+3. Una respuesta válida, pero que tiene el HTML de otra página
+
+#+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_response.py
+from requests.models import Response
+
+def resp_ok():
+    resp = Response()
+    resp.status_code = 200
+    filename = "./franceinter/html/podcast-list-short.html" 
+    with open(filename, "rb") as f:
+        resp._content = f.read()
+    return resp
+
+def invalid_resp():
+    return "i am not a Response"
+
+def resp_wrong_page():
+    resp = Response()
+    resp.status_code = 200
+    filename = "./franceinter/html/wrong-page.html" 
+    with open(filename, "rb") as f:
+        resp._content = f.read()
+    return resp
+
+#+end_src
+
+#+RESULTS:
+:results:
+:end:
+
+***** 4. Boceto
+
+#+begin_src python
+import requests
+
+def podcasts_from_response(resp):
+    # validar la respuesta
+    # obtener el HTML de resp.text
+    # extraer los tags usando tags_from_html
+    # obtener los podcasts usando podcasts_from_html
+
+#+end_src
+
+***** 5. Definición
+
+#+begin_src python :tangle franceinter/podcasts/podcasts_from_response.py
+import requests
+from franceinter.podcasts.tags_from_html import tags_from_html
+from franceinter.podcasts.podcasts_from_tags import podcasts_from_tags
+
+def podcasts_from_response(resp):
+    assert isinstance(resp, requests.models.Response), invalid_type(resp)
+    html = resp.text
+    tags = tags_from_html(html)
+    podcasts = podcasts_from_tags(tags)
+    return podcasts
+    
+def invalid_type(resp):
+    return "resp parameter must be a requests.models.Response, received %s instead" % type(resp)
+
+#+end_src
+
+***** 6. Casos de prueba
+
+1. Cuando recibe una respuesta válida, devuelve un listado de =franceinter.podcastns.Podcast=
+2. Cuando recibe una respuesta que no es de la clase =requests.model.Response=, lanza un =AssertionError=
+3. Cuando recibe una respuesta válida que tiene el HTML de otra página, devuelve una lista vacía
+
+#+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_response.py
+from franceinter.podcasts.podcast import Podcast
+from franceinter.podcasts.podcasts_from_response import podcasts_from_response
+from franceinter.podcasts.tests.test_podcasts_from_response import *
+
+def test_resp_ok():
+    resp = resp_ok()
+    podcasts = list(podcasts_from_response(resp))
+    assert (len(podcasts) > 0)
+    for p in podcasts:
+        assert isinstance(p, Podcast)
+
+#+end_src
+
+#+RESULTS:
+:results:
+:end:
+
+**** TODO podcasts_from_cached_url
+***** 1. Objetivo
+***** 2. Firma
+***** 3. Ejemplos
+***** 4. Boceto
+***** 5. Definición
+***** 6. Casos de prueba
 **** TODO podcasts_from_file
 ***** 1. Objetivo
 ***** 2. Firma
@@ -1282,14 +1391,8 @@ def test_list_with_invalid_tag():
 ***** 4. Boceto
 ***** 5. Definición
 ***** 6. Casos de prueba
-**** TODO podcasts_from_url
-***** 1. Objetivo
-***** 2. Firma
-***** 3. Ejemplos
-***** 4. Boceto
-***** 5. Definición
-***** 6. Casos de prueba
-**** TODO podcast_search
+**** TODO podcasts_fetch_all
+**** TODO podcasts_search
 ***** 1. Objetivo
 ***** 2. Firma
 ***** 3. Ejemplos
@@ -1421,6 +1524,29 @@ cat episodes.html | grep "pager-item"
                                         <li class="pager-item next">
                     <li class="pager-item last">
                             <li class="pager-item">
+:end:
+
+*** HTML
+
+Vamos a usar cURL para descargar el HTML de las diferentes páginas que necesitamos parsear, así podemos desarrollar y ejecutar los casos de prueba sin tener conexión a Internet. Guardamos los archivos en la carpeta =franceinter/html=.
+
+#+begin_src sh
+mkdir -p ./franceinter/html
+curl -o ./franceinter/html/podcast-list.html https://www.franceinter.fr/emissions
+curl -o ./franceinter/html/episode-list.html https://www.franceinter.fr/emissions/sur-les-epaules-de-darwin
+curl -o ./franceinter/html/wrong-page.html https://www.pagina12.com.ar
+ls -alh ./franceinter/html
+#+end_src
+
+#+RESULTS:
+:results:
+total 11104
+drwxr-xr-x   6 martin  staff   192B Feb  8 16:54 .
+drwxr-xr-x  10 martin  staff   320B Feb  8 16:44 ..
+-rw-r--r--   1 martin  staff   281K Feb  8 16:54 episode-list.html
+-rw-r--r--   1 martin  staff    24K Feb  8 16:49 podcast-list-short.html
+-rw-r--r--   1 martin  staff   4.1M Feb  8 16:54 podcast-list.html
+-rw-r--r--   1 martin  staff    20K Feb  8 16:54 wrong-page.html
 :end:
 
 ** test
