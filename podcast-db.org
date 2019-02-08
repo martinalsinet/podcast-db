@@ -110,6 +110,8 @@ Quiero que mi base de datos pueda consultar las siguientes fuentes de podcasts:
 .DS_Store
 .pytest_cache
 __pycache__
+.coverage
+coverage
 downloads
 franceinter
 requirements.txt
@@ -125,6 +127,7 @@ Vamos a usar las siguientes bibliotecas
 - beautifulsoup4 :: Para parsear html
 - slugify :: Para generar el nombre del archivo a descargar
 - pytest :: Para ejecutar los casos de prueba
+- pytest-cov :: Para generar el reporte de cobertura de tests
 - validators :: Para validar URLs
 
 **** TODO evaluar [[https://html.python-requests.org/][Requests-HTML]]
@@ -151,6 +154,7 @@ slugify
 requests
 requests-cache
 pytest
+pytest-cov
 validators
 #+end_src
 
@@ -1533,6 +1537,7 @@ Vamos a usar cURL para descargar el HTML de las diferentes páginas que necesita
 #+begin_src sh
 mkdir -p ./franceinter/html
 curl -o ./franceinter/html/podcast-list.html https://www.franceinter.fr/emissions
+head -n 1000 ./franceinter/html/podcast-list.html > franceinter/html/podcast-list-short.html
 curl -o ./franceinter/html/episode-list.html https://www.franceinter.fr/emissions/sur-les-epaules-de-darwin
 curl -o ./franceinter/html/wrong-page.html https://www.pagina12.com.ar
 ls -alh ./franceinter/html
@@ -1540,14 +1545,32 @@ ls -alh ./franceinter/html
 
 #+RESULTS:
 :results:
-total 11104
-drwxr-xr-x   6 martin  staff   192B Feb  8 16:54 .
-drwxr-xr-x  10 martin  staff   320B Feb  8 16:44 ..
--rw-r--r--   1 martin  staff   281K Feb  8 16:54 episode-list.html
--rw-r--r--   1 martin  staff    24K Feb  8 16:49 podcast-list-short.html
--rw-r--r--   1 martin  staff   4.1M Feb  8 16:54 podcast-list.html
--rw-r--r--   1 martin  staff    20K Feb  8 16:54 wrong-page.html
+total 10968
+drwxr-xr-x  5 martin  staff   160B Feb  8 17:18 .
+drwxr-xr-x  7 martin  staff   224B Feb  8 17:18 ..
+-rw-r--r--  1 martin  staff   276K Feb  8 17:18 episode-list.html
+-rw-r--r--  1 martin  staff   4.1M Feb  8 17:18 podcast-list.html
+-rw-r--r--  1 martin  staff    20K Feb  8 17:18 wrong-page.html
 :end:
+
+** Tests
+*** Ejecutar los casos de prueba
+
+#+begin_src sh
+pytest
+#+end_src
+
+*** Generar el reporte de cobertura
+
+#+begin_src sh
+pytest --cov-report html:coverage --cov ./franceinter/ 
+#+end_src
+
+Para visualizar el reporte se debe abrir el archivo =./coverage/index.html= con el navegador
+
+#+begin_src sh
+firefox --new-tab ./coverage/index.html
+#+end_src
 
 ** test
 *** shell
