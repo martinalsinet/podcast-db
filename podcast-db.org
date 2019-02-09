@@ -942,9 +942,10 @@ from franceinter.podcasts.tests.examples_podcast_from_tag import *
 def test_podcast_ok():
     tag = tag_ok()
     podcast = podcast_from_tag(tag)
-    assert len(podcast.title)>0
-    assert len(podcast.url)>0
-    assert len(podcast.author)>0
+    assert (len(podcast.title) > 0)
+    assert (len(podcast.url) > 0)
+    assert (len(podcast.author) >0
+    assert (len(str(podcast)) > 0)
 
 def test_podcast_without_title():
     tag = tag_without_title()
@@ -1135,7 +1136,7 @@ def test_html_with_divs():
 def test_html_is_not_string():
     try:
         html = html_is_not_string()
-        tags = tags_from_html(33)
+        tags = list(tags_from_html(html))
     except AssertionError:
         assert True
 
@@ -1203,9 +1204,8 @@ def list_with_valid_tags(how_many):
     return tags
 
 def list_with_invalid_tag(how_many):
-    html = list_with_valid_tags(how_many - 1)
-    html+= str(tag_without_url())
-    tags = tags_from_html(html)
+    tags = list(list_with_valid_tags(how_many - 1))
+    tags+= tag_without_url()
     return tags
 
 #+end_src
@@ -1277,12 +1277,12 @@ def test_list_with_valid_tags():
 def test_list_without_tags():
     tags = list_without_tags()
     try:
-        podcasts = podcasts_from_tags(tags)
+        podcasts = list(podcasts_from_tags(tags))
     except AssertionError:
         assert True
 
 def test_list_with_invalid_tag():
-    tags = list_with_valid_tags(6)
+    tags = list_with_invalid_tag(6)
     podcasts = podcasts_from_tags(tags)
     try:
         for p in podcasts:
@@ -1383,7 +1383,6 @@ def test_response_ok():
     resp = response_ok()
     podcasts = podcasts_from_response(resp)
     assert isinstance(podcasts, types.GeneratorType)
-    assert (len(list(podcasts)) > 0)
     for p in podcasts:
         assert isinstance(p, Podcast)
 
