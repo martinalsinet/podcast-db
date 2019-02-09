@@ -912,10 +912,6 @@ def podcast_from_tag(tag):
 
     return Podcast(title, url, author)
 
-
-def no_title(tag):
-    return "received tag does not have a podcast title\n %s" % str(tag)
-
 def no_url(tag):
     return "received tag does not have a podcast url\n %s" % str(tag)
 
@@ -1016,7 +1012,7 @@ Hay que extraer todos los =<div>= que tengan la clase =rich-section-list-item-co
 
 ***** 2. Firma
 
-La función recibe un =str= con el html de la página y devuelve una lista de elementos =bs4.element.Tag=
+La función recibe un =str= con el html de la página y devuelve un =GeneratorType= de elementos =bs4.element.Tag=
 
 ***** 3. Ejemplos
 
@@ -1109,7 +1105,8 @@ def tags_from_html(html):
     soup = BeautifulSoup(html, "html.parser")
     cls = "rich-section-list-item-content"
     tags = soup.find_all("div", class_=cls)
-    return tags
+    for tag in tags:
+        yield tag
 
 def invalid_html(html):
     return "html parameter must be a string, received %s instead" % type(html)
@@ -1118,20 +1115,22 @@ def invalid_html(html):
 
 ***** 6. Casos de prueba
 
-1. Caso exitoso, cuando recibe un html que tiene varios =<div>= con la clase buscada, devuelve una lista de tantos elementos como =<div>= hay en el html
+1. Caso exitoso, cuando recibe un html que tiene varios =<div>= con la clase buscada, devuelve un =GeneratorType= de tantos elementos como =<div>= hay en el html
 2. Cuando recibe un html que no es un string, lanza un =AssertionError=
-3. Cuando recibe un html que no tiene ningún =<div>=, devuelve una lista vacía
-4. Cuando recibe un html que tiene varios =<div>= pero ninguno tiene la clase =rich-section-list-item-content=, devuelve una lista vacía
-5. Cuando recibe un html que tiene algunos =<div>= con la clase buscada y otros que no la tienen, devuelve una lista con solamente los =<div>= que tienen la clase
+3. Cuando recibe un html que no tiene ningún =<div>=, devuelve un =GeneratorType= vacío
+4. Cuando recibe un html que tiene varios =<div>= pero ninguno tiene la clase =rich-section-list-item-content=, devuelve un =GeneratorType= vacío
+5. Cuando recibe un html que tiene algunos =<div>= con la clase buscada y otros que no la tienen, devuelve un =GeneratorType= con solamente los =<div>= que tienen la clase
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_tags_from_html.py
+import types
 from franceinter.podcasts.tags_from_html import tags_from_html
 from franceinter.podcasts.tests.examples_tags_from_html import *
 
 def test_html_with_divs():
     html = html_with_divs(5)
     tags = tags_from_html(html)
-    assert (len(tags) == 5)
+    assert isinstance(tags, types.GeneratorType)
+    assert (len(list(tags)) == 5)
 
 def test_html_is_not_string():
     try:
@@ -1143,17 +1142,20 @@ def test_html_is_not_string():
 def test_html_without_divs():
     html = html_without_divs()
     tags = tags_from_html(html)
-    assert (len(tags) == 0)
+    assert isinstance(tags, types.GeneratorType)
+    assert (len(list(tags)) == 0)
 
 def test_divs_without_class():
     html = html_divs_without_class(4)
     tags = tags_from_html(html)
-    assert (len(tags) == 0)
+    assert isinstance(tags, types.GeneratorType)
+    assert (len(list(tags)) == 0)
 
 def test_some_divs_with_class():
     html = html_some_divs_with_class(2,3)
     tags = tags_from_html(html)
-    assert (len(tags) == 2)
+    assert isinstance(tags, types.GeneratorType)
+    assert (len(list(tags)) == 2)
 
 #+end_src
 
@@ -1164,11 +1166,13 @@ Generar un listado de podcasts a partir de un listado de fragmentos de HTML toma
 
 ***** 2. Firma
 
-La función recibe un listado de objetos =bs4.element.Tag= y devuelve un listado de objetos =franceinter.podcasts.Podcast=
+La función recibe un listado de objetos =bs4.element.Tag= y devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
+
+Vamos a aceptar tanto un =list= como un =GeneratorType=
 
 ***** 3. Ejemplos
 
-1. Un objeto que no es un =list=
+1. Un objeto que no es iterable
 2. Una lista vacía
 3. Una lista con tags válidos
 4. Una lista con objetos que no son del tipo =bs4.element.Tag=
@@ -1183,7 +1187,7 @@ from franceinter.podcasts.tests.examples_podcast_from_tag import (
 )
 
 def invalid_list():
-    return "I am not a list"
+    return 123
 
 def empty_list():
     return []
@@ -1212,7 +1216,7 @@ def list_with_invalid_tag(how_many):
 from franceinter.podcasts.tags_from_html import tags_from_html
 
 def podcasts_from_tags(tags):
-    # validar que tags sea una lista
+    # validar que tags sea un GeneratorType
     # para cada tag de la lista
     # usar podcast_from_tag() para obtener un podcast
     # yield posdcast
@@ -1225,23 +1229,27 @@ def podcasts_from_tags(tags):
 from franceinter.podcasts.podcast_from_tag import podcast_from_tag
 
 def podcasts_from_tags(tags):
-    assert isinstance(tags, list), invalid_tags(tags)
+    try:
+        it = iter(tags)
+    except TypeError:
+        assert False, invalid_tags(tags)
     for tag in tags:
         yield podcast_from_tag(tag)
 
 def invalid_tags(tags):
-    return "tags parameter must be a list, received %s instead" % type(tags)
+    return "tags parameter must be iterable, received %s instead" % type(tags)
 #+end_src
 
 ***** 6. Casos de prueba
 
-1. Si recibe un objeto que no es un =list=, lanza un =AssertionError=
-2. Si recibe una lista vacía, devuelve una lista vacía
-3. Si recibe una lista de tags válidos, devuelve una lista de objetos =franceinter.podcasts.Podcast=
+1. Si recibe un objeto que no es iterable, lanza un =AssertionError=
+2. Si recibe una lista vacía, devuelve un =GeneratorType= vacío
+3. Si recibe una lista de tags válidos, devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
 4. Si recibe una lista con objetos que no son del tipo =bs4.element.Tag=, lanza un =AssertionError=
 5. Si recibe una lista con algún tag inválido (que no tenga el título o el URL), lanza un =AssertionError=
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_tags.py
+import types
 from franceinter.podcasts.podcasts_from_tags import podcasts_from_tags
 from franceinter.podcasts.tests.examples_podcasts_from_tags import *
 from franceinter.podcasts.podcast import Podcast
@@ -1255,12 +1263,14 @@ def test_invalid_list():
 
 def test_empty_list():
     tags = empty_list()
-    podcasts = list(podcasts_from_tags(tags))
-    assert (len(podcasts)==0)
+    podcasts = podcasts_from_tags(tags)
+    assert isinstance(podcasts, types.GeneratorType)
+    assert (len(list(podcasts))==0)
 
 def test_list_with_valid_tags():
     tags = list_with_valid_tags(6)
     podcasts = podcasts_from_tags(tags)
+    assert isinstance(podcasts, types.GeneratorType)
     for p in podcasts:
         assert (isinstance(p, Podcast))
 
@@ -1289,7 +1299,7 @@ Extraer el listado de podcasts de la respuesta de una petición HTTP
 
 ***** 2. Firma
 
-La función recibe una =requests.model.Response= y devuelve una lista de objetos =franceinter.podcasts.Podcast=
+La función recibe una =requests.model.Response= y devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
 
 ***** 3. Ejemplos
 
@@ -1300,7 +1310,7 @@ La función recibe una =requests.model.Response= y devuelve una lista de objetos
 #+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_response.py
 from requests.models import Response
 
-def resp_ok():
+def response_ok():
     resp = Response()
     resp.status_code = 200
     filename = "./franceinter/html/podcast-list-short.html" 
@@ -1308,10 +1318,10 @@ def resp_ok():
         resp._content = f.read()
     return resp
 
-def invalid_resp():
+def invalid_response():
     return "i am not a Response"
 
-def resp_wrong_page():
+def wrong_page_response():
     resp = Response()
     resp.status_code = 200
     filename = "./franceinter/html/wrong-page.html" 
@@ -1359,26 +1369,43 @@ def invalid_type(resp):
 
 ***** 6. Casos de prueba
 
-1. Cuando recibe una respuesta válida, devuelve un listado de =franceinter.podcastns.Podcast=
+1. Cuando recibe una respuesta válida, devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
 2. Cuando recibe una respuesta que no es de la clase =requests.model.Response=, lanza un =AssertionError=
-3. Cuando recibe una respuesta válida que tiene el HTML de otra página, devuelve una lista vacía
+3. Cuando recibe una respuesta válida que tiene el HTML de otra página, devuelve un =GeneratorType= vacío
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_response.py
+import types
 from franceinter.podcasts.podcast import Podcast
 from franceinter.podcasts.podcasts_from_response import podcasts_from_response
 from franceinter.podcasts.tests.test_podcasts_from_response import *
 
-def test_resp_ok():
-    resp = resp_ok()
-    podcasts = list(podcasts_from_response(resp))
-    assert (len(podcasts) > 0)
+def test_response_ok():
+    resp = response_ok()
+    podcasts = podcasts_from_response(resp)
+    assert isinstance(podcasts, types.GeneratorType)
+    assert (len(list(podcasts)) > 0)
     for p in podcasts:
         assert isinstance(p, Podcast)
+
+def test_invalid_response():
+    resp = invalid_response()
+    try:
+        podcasts = podcasts_from_response(resp)
+    except AssertionError:
+        assert True
+    
+def test_wrong_page_response():
+    resp = wrong_page_response()
+    podcasts = podcasts_from_response(resp)
+    assert isinstance(podcasts, types.GeneratorType)
+    assert (len(list(podcasts)) == 0)
 
 #+end_src
 
 #+RESULTS:
 :results:
+<class 'generator'>
+<class 'generator'>
 :end:
 
 **** TODO podcasts_from_cached_url
@@ -1405,7 +1432,7 @@ def test_resp_ok():
 ***** 6. Casos de prueba
 **** Implementación completa
 
-#+begin_src python :tangle franceinter/podcasts_old.py 
+#+begin_src python
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
 import re
@@ -1471,7 +1498,7 @@ def podcast_search(query, podcasts):
 
 En el URL de un podcast vemos el listado de los últimos episodios disponibles. Al final del listado hay un selector de páginas para acceder al historial de episodios. Para poder obtener el historial completo necesitamos la cantidad de páginas, que está en un tag ~<li>~ que tiene la clase =last=. Una vez que tengamos la cantidad de páginas podemos obtener el listado de episodios, parseando cada una de las páginas del historial.
 
-#+begin_src python :tangle franceinter/episodes.py
+#+begin_src python
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
 from franceinter import podcasts as p
