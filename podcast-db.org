@@ -3,6 +3,8 @@
 #+DATE: 2019
 #+OPTIONS: ^:nil num:nil ':t
 #+LANGUAGE: es
+#+PROPERTY: header-args:python :python python-3.6 :results output drawer :mkdirp yes
+#+PROPERTY: header-args:sh :results raw drawer
 
 * Motivación
 
@@ -89,7 +91,6 @@ Quiero que mi base de datos pueda consultar las siguientes fuentes de podcasts:
 - PBS
 - BBC
 - Team Human
-- Penn Jillette
 - Radiolab
 
 ** Funcionalidades
@@ -334,11 +335,11 @@ def invalid_tag(tag):
 
 **** 6. Casos de prueba
 
-1. Caso exitoso, devuelve el título
-2. El parámetro tag no es un bs4.element.tag, lanza un =AssertionError=
-3. El tag no contiene un =<a>=, devuelve un string vacío
-4. El tag tiene el =<a>= pero éste no tiene la clase correcta, devuelve un string vacío
-5. El tag tiene el =<a>= pero éste no tiene el atributo =title=, devuelve un string vacío
+- Caso exitoso, devuelve el título
+- El parámetro tag no es un bs4.element.tag, lanza un =AssertionError=
+- El tag no contiene un =<a>=, devuelve un string vacío
+- El tag tiene el =<a>= pero éste no tiene la clase correcta, devuelve un string vacío
+- El tag tiene el =<a>= pero éste no tiene el atributo =title=, devuelve un string vacío
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_title_from_tag.py
 from franceinter.podcasts.title_from_tag import title_from_tag
@@ -491,11 +492,11 @@ def invalid_tag(tag):
 
 **** 6. Casos de prueba
 
-1. Caso exitoso, devuelve el url
-2. El tag no es un bs4.element.tag, lanza un =AssertionError=
-3. El tag no contiene un =<a>=, devuelve un string vacío
-4. El tag tiene el =<a>= pero éste no tiene la clase buscada, devuelve un string vacío
-5. El tag tiene el =<a>= pero éste no tiene el atributo =href=, devuelve un string vacío
+- Caso exitoso, devuelve el url
+- El tag no es un bs4.element.tag, lanza un =AssertionError=
+- El tag no contiene un =<a>=, devuelve un string vacío
+- El tag tiene el =<a>= pero éste no tiene la clase buscada, devuelve un string vacío
+- El tag tiene el =<a>= pero éste no tiene el atributo =href=, devuelve un string vacío
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_url_from_tag.py
 from franceinter.podcasts.url_from_tag import url_from_tag
@@ -644,11 +645,11 @@ def invalid_tag(tag):
 
 **** 6. Casos de prueba
 
-1. Caso exitoso, devuelve el autor
-2. El parámetro tag no es un bs4.element.tag, lanza un =AssertionError=
-3. El tag no tiene un tag =<span>= con la clase buscada, devuelve un string vacío
-4. El tag tiene el =<span>= pero éste no contiene un =<a>=, devuelve un string vacío
-5. El tag tiene el =<span>= y el =<a>= pero éste último no tiene el atributo =title=, devuelve un string vacío
+- Caso exitoso, devuelve el autor
+- El parámetro tag no es un bs4.element.tag, lanza un =AssertionError=
+- El tag no tiene un tag =<span>= con la clase buscada, devuelve un string vacío
+- El tag tiene el =<span>= pero éste no contiene un =<a>=, devuelve un string vacío
+- El tag tiene el =<span>= y el =<a>= pero éste último no tiene el atributo =title=, devuelve un string vacío
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_author_from_tag.py
 from franceinter.podcasts.author_from_tag import author_from_tag
@@ -927,12 +928,12 @@ def invalid_tag(tag):
 
 **** 6. Casos de prueba
 
-1. Caso exitoso, devuelve un podcast
-2. El tag no es un =bs4.element.Tag=, lanza un =AssertionError=
-3. El tag no tiene título, lanza un =AssertionError=
-4. El tag no tiene url, lanza un =AssertionError=
-5. El tag tiene un url pero es inválido, lanza un =AssertionError=
-6. El tag no tiene autor, devuelve un podcast con un =str= vacío en la propiedad author
+- Caso exitoso, devuelve un podcast
+- El tag no es un =bs4.element.Tag=, lanza un =AssertionError=
+- El tag no tiene título, lanza un =AssertionError=
+- El tag no tiene url, lanza un =AssertionError=
+- El tag tiene un url pero es inválido, lanza un =AssertionError=
+- El tag no tiene autor, devuelve un podcast con un =str= vacío en la propiedad author
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_podcast_from_tag.py
 from franceinter.podcasts import podcast
@@ -944,7 +945,7 @@ def test_podcast_ok():
     podcast = podcast_from_tag(tag)
     assert (len(podcast.title) > 0)
     assert (len(podcast.url) > 0)
-    assert (len(podcast.author) >0
+    assert (len(podcast.author) >0)
     assert (len(str(podcast)) > 0)
 
 def test_podcast_without_title():
@@ -1116,11 +1117,11 @@ def invalid_html(html):
 
 **** 6. Casos de prueba
 
-1. Caso exitoso, cuando recibe un html que tiene varios =<div>= con la clase buscada, devuelve un =GeneratorType= de tantos elementos como =<div>= hay en el html
-2. Cuando recibe un html que no es un string, lanza un =AssertionError=
-3. Cuando recibe un html que no tiene ningún =<div>=, devuelve un =GeneratorType= vacío
-4. Cuando recibe un html que tiene varios =<div>= pero ninguno tiene la clase =rich-section-list-item-content=, devuelve un =GeneratorType= vacío
-5. Cuando recibe un html que tiene algunos =<div>= con la clase buscada y otros que no la tienen, devuelve un =GeneratorType= con solamente los =<div>= que tienen la clase
+- Caso exitoso, cuando recibe un html que tiene varios =<div>= con la clase buscada, devuelve un =GeneratorType= de tantos elementos como =<div>= hay en el html
+- Cuando recibe un html que no es un string, lanza un =AssertionError=
+- Cuando recibe un html que no tiene ningún =<div>=, devuelve un =GeneratorType= vacío
+- Cuando recibe un html que tiene varios =<div>= pero ninguno tiene la clase =rich-section-list-item-content=, devuelve un =GeneratorType= vacío
+- Cuando recibe un html que tiene algunos =<div>= con la clase buscada y otros que no la tienen, devuelve un =GeneratorType= con solamente los =<div>= que tienen la clase
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_tags_from_html.py
 import types
@@ -1242,11 +1243,11 @@ def invalid_tags(tags):
 
 **** 6. Casos de prueba
 
-1. Si recibe un objeto que no es iterable, lanza un =AssertionError=
-2. Si recibe una lista vacía, devuelve un =GeneratorType= vacío
-3. Si recibe una lista de tags válidos, devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
-4. Si recibe una lista con objetos que no son del tipo =bs4.element.Tag=, lanza un =AssertionError=
-5. Si recibe una lista con algún tag inválido (que no tenga el título o el URL), lanza un =AssertionError=
+- Si recibe un objeto que no es iterable, lanza un =AssertionError=
+- Si recibe una lista vacía, devuelve un =GeneratorType= vacío
+- Si recibe una lista de tags válidos, devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
+- Si recibe una lista con objetos que no son del tipo =bs4.element.Tag=, lanza un =AssertionError=
+- Si recibe una lista con algún tag inválido (que no tenga el título o el URL), lanza un =AssertionError=
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_tags.py
 import types
@@ -1369,9 +1370,9 @@ def invalid_type(resp):
 
 **** 6. Casos de prueba
 
-1. Cuando recibe una respuesta válida, devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
-2. Cuando recibe una respuesta que no es de la clase =requests.model.Response=, lanza un =AssertionError=
-3. Cuando recibe una respuesta válida que tiene el HTML de otra página, devuelve un =GeneratorType= vacío
+- Cuando recibe una respuesta válida, devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
+- Cuando recibe una respuesta que no es de la clase =requests.model.Response=, lanza un =AssertionError=
+- Cuando recibe una respuesta válida que tiene el HTML de otra página, devuelve un =GeneratorType= vacío
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_response.py
 import types
@@ -1407,10 +1408,13 @@ def test_wrong_page_response():
 <class 'generator'>
 :end:
 
-*** TODO podcasts_from_cached_url
+*** TODO podcasts_from_url
 **** 1. Objetivo
 **** 2. Firma
 **** 3. Ejemplos
+
+Levantar un servidor HTTP con los archivos que se encuentran en =./franceinter/html=
+
 **** 4. Boceto
 **** 5. Definición
 **** 6. Casos de prueba
@@ -1579,7 +1583,7 @@ drwxr-xr-x  7 martin  staff   224B Feb  8 17:18 ..
 -rw-r--r--  1 martin  staff    20K Feb  8 17:18 wrong-page.html
 :end:
 
-** Tests
+* Tests
 *** Ejecutar los casos de prueba
 
 #+begin_src sh
@@ -1599,22 +1603,6 @@ firefox --new-tab ./coverage/index.html
 #+end_src
 
 * Apendices
-*** shell
-
-#+begin_src sh
-ls -alh ./franceinter
-#+end_src
-
-#+RESULTS:
-:results:
-total 16
-drwxr-xr-x   5 martin  staff   160B Feb  3 12:19 .
-drwxr-xr-x  19 martin  staff   608B Feb  3 12:22 ..
--rw-r--r--   1 martin  staff    23B Feb  3 12:18 __init__.py
-drwxr-xr-x   4 martin  staff   128B Feb  3 12:19 __pycache__
--rw-r--r--   1 martin  staff   1.5K Feb  3 12:18 podcasts.py
-:end:
-
 *** listar podcasts
 
 #+begin_src python :python python-3.6 :results drawer
@@ -1632,7 +1620,7 @@ print(list(fr.podcast_search("darwin", podcasts)))
 [{'author': 'Jean Claude Ameisen', 'title': 'Sur les épaules de Darwin', 'url': 'https://franceinter.fr/emissions/sur-les-epaules-de-darwin'}]
 :end:
 
-*** implementación anterior
+*** implementación de referencia
 
 #+begin_src python :python python-3.6 :results output
 from bs4 import BeautifulSoup
