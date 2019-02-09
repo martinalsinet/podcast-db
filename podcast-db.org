@@ -94,10 +94,11 @@ Quiero que mi base de datos pueda consultar las siguientes fuentes de podcasts:
 
 ** Funcionalidades
 
-- Listar los podcasts de distintas fuentes
+- Listar las fuentes de podcasts disponibles
+- Listar los podcasts de un fuente
 - Listar los episodios de un podcast
 - Obtener el detalle de un episodio
-- Filtrar los episodios según algún criterio (año, mes, palabra clave)
+- Filtrar los episodios de un podcast según algún criterio (año, mes, palabra clave)
 - Generar una playlist o feed RSS de los episodios filtrados
 - Crear una cola de descarga a partir de una playlist
 - Procesar los archivos descargados (p.ej, cambiar el bitrate a 64k)
@@ -243,10 +244,10 @@ La función recibe un objeto =bs4.element.Tag= y devuelve un =str=
 
 **** 3. Ejemplos
 
-1. Caso exitoso, Un tag que contiene un =<a>= con la clase correcta y el atributo =title=
-2. Un tag que no tiene el =<a>=
-3. Un tag que tiene el =<a>= pero éste no tiene la clase =rich-section...=
-4. Un tag que tiene el =<a>= pero éste no tiene el atributo =title=
+- Caso exitoso, Un tag que contiene un =<a>= con la clase correcta y el atributo =title=
+- Un tag que no tiene el =<a>=
+- Un tag que tiene el =<a>= pero éste no tiene la clase =rich-section...=
+- Un tag que tiene el =<a>= pero éste no tiene el atributo =title=
 
 #+begin_src python :tangle franceinter/podcasts/tests/examples_title_from_tag.py
 from bs4 import BeautifulSoup
@@ -402,10 +403,10 @@ La función recibe un objeto =bs4.element.Tag= y devuelve un =str=
 
 **** 3. Ejemplos
 
-1. Caso exitoso, un tag que contiene un =<a>= con la clase =rich-section-list-item-content-title= y el atributo =href=
-2. Un tag que no tiene el =<a>=
-3. Un tag que tiene el =<a>= pero el link no tiene clase
-4. Un tag que tiene el =<a>= pero el link no tiene el atributo =href=
+- Caso exitoso, un tag que contiene un =<a>= con la clase =rich-section-list-item-content-title= y el atributo =href=
+- Un tag que no tiene el =<a>=
+- Un tag que tiene el =<a>= pero el link no tiene clase
+- Un tag que tiene el =<a>= pero el link no tiene el atributo =href=
 
 #+begin_src python :tangle franceinter/podcasts/tests/examples_url_from_tag.py
 from bs4 import BeautifulSoup
@@ -544,10 +545,10 @@ La funcion recibe un objeto =bs4.element.Tag= y devuelve un =str=
 
 **** 3. Ejemplos
 
-1. Caso exitoso, el tag tiene un =<span>= con la clase =rich-section-list-item-content-infos-author= que contiene un =<a>= con el atributo =title=
-2. El tag no tiene un =<span>=
-3. El tag tiene un =<span>=, pero éste no tiene un =<a>=
-4. El tag tiene un =<span>= que contiene un =<a>=, pero éste no tiene el atributo =title=
+- Caso exitoso, el tag tiene un =<span>= con la clase =rich-section-list-item-content-infos-author= que contiene un =<a>= con el atributo =title=
+- El tag no tiene un =<span>=
+- El tag tiene un =<span>=, pero éste no tiene un =<a>=
+- El tag tiene un =<span>= que contiene un =<a>=, pero éste no tiene el atributo =title=
 
 #+begin_src python :tangle franceinter/podcasts/tests/examples_author_from_tag.py
 from bs4 import BeautifulSoup
@@ -732,12 +733,12 @@ class Podcast:
 
 **** 3. Ejemplos
 
-1. Un tag que tiene todos los elementos para generar un podcast válido (título, URL y autor)
-2. Un tag que no es un =bs4.element.Tag=
-3. Un tag que no tiene el elemento del título
-4. Un tag que no tiene el elemento del URL
-5. Un tag que tiene el elemento del URL, pero el URL no es válido
-6. Un tag que no tiene el elemento del autor
+- Un tag que tiene todos los elementos para generar un podcast válido (título, URL y autor)
+- Un tag que no es un =bs4.element.Tag=
+- Un tag que no tiene el elemento del título
+- Un tag que no tiene el elemento del URL
+- Un tag que tiene el elemento del URL, pero el URL no es válido
+- Un tag que no tiene el elemento del autor
 
 #+begin_src python :tangle franceinter/podcasts/tests/examples_podcast_from_tag.py
 from bs4 import BeautifulSoup
@@ -1016,11 +1017,11 @@ La función recibe un =str= con el html de la página y devuelve un =GeneratorTy
 
 **** 3. Ejemplos
 
-1. Un html que tiene varios =<div>= con la clase buscada
-2. Un html que no es un =str=
-3. Un html que no tiene ningún =<div>=
-4. Un html que tiene varios =<div>= pero que ninguno tenga la clase =rich-section-list-item-content=
-5. Un html que tiene algunos =<div>= con la clase buscada y otros que no la tienen
+- Un html que tiene varios =<div>= con la clase buscada
+- Un html que no es un =str=
+- Un html que no tiene ningún =<div>=
+- Un html que tiene varios =<div>= pero que ninguno tenga la clase =rich-section-list-item-content=
+- Un html que tiene algunos =<div>= con la clase buscada y otros que no la tienen
 
 #+begin_src python :tangle franceinter/podcasts/tests/examples_tags_from_html.py
 from bs4 import BeautifulSoup
@@ -1172,11 +1173,11 @@ Vamos a aceptar tanto un =list= como un =GeneratorType=
 
 **** 3. Ejemplos
 
-1. Un objeto que no es iterable
-2. Una lista vacía
-3. Una lista con tags válidos
-4. Una lista con objetos que no son del tipo =bs4.element.Tag=
-5. Una lista con tags válidos y un tag inválido (sin el título o el URL)
+- Un objeto que no es iterable
+- Una lista vacía
+- Una lista con tags válidos
+- Una lista con objetos que no son del tipo =bs4.element.Tag=
+- Una lista con tags válidos y un tag inválido (sin el título o el URL)
 
 #+begin_src python :tangle franceinter/podcasts/tests/examples_podcasts_from_tags.py
 from franceinter.podcasts.tags_from_html import tags_from_html
@@ -1302,9 +1303,9 @@ La función recibe una =requests.model.Response= y devuelve un =GeneratorType= d
 
 **** 3. Ejemplos
 
-1. Una respuesta válida, con el HTML de la página del listado de podcasts
-2. Una respuesta inválida, que no es de la clase =requests.model.Response=
-3. Una respuesta válida, pero que tiene el HTML de otra página
+- Una respuesta válida, con el HTML de la página del listado de podcasts
+- Una respuesta inválida, que no es de la clase =requests.model.Response=
+- Una respuesta válida, pero que tiene el HTML de otra página
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_response.py
 from requests.models import Response
