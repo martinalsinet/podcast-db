@@ -5,6 +5,7 @@
 #+LANGUAGE: es
 #+PROPERTY: header-args:python :python python-3.6 :results output drawer :mkdirp yes
 #+PROPERTY: header-args:sh :results raw drawer
+#+TODO: TODO DOING | DONE
 
 * Motivación
 
@@ -176,7 +177,7 @@ pip-3.6 install -r requirements.txt
 * France Inter
 ** Submódulos
 
-Vamos a organizar el código en paquetes (carpetas) que permiten usar namespaces para importar las funcionalidades. Para ello, necesitamos crear un archivo =__init__.py= en cada carpeta que tenga módulos para que python sepa cuáles son los módulos que forman parte del paquete y podamos usarlos en el =import=.
+Vamos a organizar el código en paquetes (carpetas), lo que nos permite usar namespaces para importar las funcionalidades. Para ello, necesitamos crear un archivo =__init__.py= en cada carpeta para declarar los módulos que forman parte nuestro paquete y que Python pueda encontrarlos cuando los referenciamos en el =import=.
 
 El módulo actual es =franceinter=, y que tiene los siguientes submódulos:
 
@@ -196,6 +197,7 @@ __all__ = [
     "tags_from_html", 
     "podcasts_from_tags", 
     "podcasts_from_response", 
+    "podcasts_from_url", 
     "podcast_search",
     "podcast"
 ]
@@ -210,14 +212,16 @@ __all__ = [
     "test_tags_from_html", 
     "test_podcasts_from_tags", 
     "test_podcasts_from_response", 
+    "test_podcasts_from_url", 
     "test_podcast_search",
     "examples_author_from_tag", 
     "examples_title_from_tag",
     "examples_url_from_tag",
     "examples_podcast_from_tag",
     "examples_tags_from_html",
-    "examples_podcasts_from_response",
     "examples_podcasts_from_tags",
+    "examples_podcasts_from_response",
+    "examples_podcasts_from_url",
     "examples_podcast_search"
 ]
 #+end_src
@@ -874,7 +878,7 @@ def podcast_from_tag(tag):
     # validar que el tag sea un bs4.element.Tag
 
     # extraer el título con title_from_tag
-    # validar que el autor no sea un string vacío
+    # validar que el título no sea un string vacío
 
     # extraer el url con url_from_tag
     # validar que el url no sea un string vacío
@@ -914,10 +918,10 @@ def podcast_from_tag(tag):
     return Podcast(title, url, author)
 
 def no_url(tag):
-    return "received tag does not have a podcast url\n %s" % str(tag)
+    return "received tag does not have a podcast URL\n %s" % str(tag)
 
 def invalid_url(tag):
-    return "received tag has an invalid podcast url\n %s" % str(tag)
+    return "received tag has an invalid podcast URL\n %s" % str(tag)
 
 def no_title(tag):
     return "received tag does not have a podcast title\n %s" % str(tag)
@@ -1308,7 +1312,7 @@ La función recibe una =requests.model.Response= y devuelve un =GeneratorType= d
 - Una respuesta inválida, que no es de la clase =requests.model.Response=
 - Una respuesta válida, pero que tiene el HTML de otra página
 
-#+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_response.py
+#+begin_src python :tangle franceinter/podcasts/tests/examples_podcasts_from_response.py
 from requests.models import Response
 
 def response_ok():
@@ -1378,7 +1382,7 @@ def invalid_type(resp):
 import types
 from franceinter.podcasts.podcast import Podcast
 from franceinter.podcasts.podcasts_from_response import podcasts_from_response
-from franceinter.podcasts.tests.test_podcasts_from_response import *
+from franceinter.podcasts.tests.examples_podcasts_from_response import *
 
 def test_response_ok():
     resp = response_ok()
@@ -1408,16 +1412,116 @@ def test_wrong_page_response():
 <class 'generator'>
 :end:
 
-*** TODO podcasts_from_url
+*** DOING podcasts_from_url
 **** 1. Objetivo
+
+Extraer el listado de podcasts desde un URL
+
 **** 2. Firma
+
+La función recibe un URL y devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
+
 **** 3. Ejemplos
 
-Levantar un servidor HTTP con los archivos que se encuentran en =./franceinter/html=
+- Un URL con el listado de podcasts
+- Un URL de otra página, que no tiene podcasts
+- Un URL de una página inexistente, que dispare un error 404 (not found)
+- Un URL de un sitio inexistente, que dispare un error de DNS
+- Un URL de una página protegida por contraseña, que dispare un error 401
+- Un URL de una página con problemas, que dispare un error 500
+
+#+begin_src python :tangle franceinter/podcasts/tests/examples_podcasts_from_url.py
+
+def url_ok():
+    url = "http://localhost:3000/podcast-list-short.html"
+    return url
+
+def wrong_page_url():
+    url = "http://localhost:3000/wrong-page.html"
+    return url
+
+def not_found_url():
+    url = "http://localhost:3000/this-page-does-not-exist.html"
+    return url
+
+def wrong_site_url():
+    url = "http://hostlocal:3000/this-page-does-not-exist.html"
+    return url
+
+def unauthorized_url():
+    url = "http://hostlocal:3000/podcast-list-short.html"
+    return url
+
+def server_error_url():
+    url = "http://hostlocal:3000/podcast-list-short.html"
+    return url
+
+#+end_src
 
 **** 4. Boceto
+
+#+begin_src python
+
+def podcasts_from_url(url):
+    # validar el url
+    # obtener la respuesta del url
+    # obtener los podcasts llamando a podcasts_from_url
+    return podcasts
+
+#+end_src
+
 **** 5. Definición
+
+#+begin_src python :tangle franceinter/podcasts/podcasts_from_url.py
+import requests
+from validators.url import url as is_valid_url
+from franceinter.podcasts.podcasts_from_response import podcasts_from_response
+
+def podcasts_from_url(url):
+    assert is_valid_url(url), invalid_url(url)
+    response = requests.get(url)
+    podcasts = podcasts_from_response(response)
+    return podcasts
+
+def invalid_url(url):
+    return "url parameter must be a valid URL, received %s instead" % str(tag)
+
+#+end_src
+
 **** 6. Casos de prueba
+
+Bueno, aquí tenemos un caso de prueba un poco más complejo que lo normal. Para poder testear nuestra función necesitamos realizar una petición HTTP. El problema es que no queremos depender de un sitio web externo, o de que haya conectividad a Internet cuando se ejecuten los casos de prueba. La solución es levantar un servidor HTTP desde una carpeta local y en nuestro caso vamos a usar los archivos HTML de ejemplo que tenemos en =franceinter/html=.
+
+Ahora bien, necesitamos que el servidor HTTP esté levantado antes de correr nuestros casos de prueba y sería ideal poder bajarlo luego de ejecutar todos los tests que lo necesitan. Para ello vamos a usar un [[https://docs.pytest.org/en/latest/fixture.html][fixture]] (=@pytest.fixture=), que es una funcionalidad de pytest que permite que los casos de prueba reciban un argumento con algún recurso, en este caso, el servidor HTTP ya levantado y sirviendo los archivos desde la carpeta local.
+
+El atributo ~scope="module"~ indica que el fixture =http_server= será invocado una sola vez por módulo, que es lo que queremos para que todos los tests de nuestra función compartan el mismo servidor HTTP y no tener que levantarlo y bajarlo para cada test. Cuando no se indica un =scope=, pytest invoca el fixture para cada caso de prueba.
+
+Un fixture es una función común y corriente como cualquier otra, a la que pytest llama cuando comienza a procesar el módulo, se guarda el valor retornado, y se lo inyecta a los casos de prueba que declaren ese fixture como parámetro.
+
+Nótese en el código del fixture =http_server= que se levanta el servidor HTTP en otro thread para no bloquear la ejecución de los tests y que se utiliza =yield= para poder bajar el servidor luego de su utilización.
+
+#+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_url.py
+import threading
+import pytest
+from franceinter.podcasts.podcasts_from_url import podcasts_from_url
+from franceinter.podcasts.tests.examples_podcasts_from_url import *
+from utils.http_server import LocalFolderHTTPServer as HTTPServer
+
+def test_url_ok(http_server):
+    url = url_ok()
+    podcasts = list(podcasts_from_url(url))
+    assert (len(podcasts) > 0)
+
+@pytest.fixture(scope="module")
+def http_server():
+    web_dir = './franceinter/html'
+    httpd = HTTPServer(web_dir, ("", 3000))
+    threading.Thread(target=httpd.serve_forever).start()
+    yield httpd
+    httpd.shutdown()
+
+#+end_src
+
 *** TODO podcasts_from_file
 **** 1. Objetivo
 **** 2. Firma
@@ -1583,6 +1687,44 @@ drwxr-xr-x  7 martin  staff   224B Feb  8 17:18 ..
 -rw-r--r--  1 martin  staff    20K Feb  8 17:18 wrong-page.html
 :end:
 
+* Herramientas
+** =__init__.py=
+
+#+begin_src python :tangle utils/__init__.py
+__all__ = ["http_server"]
+#+end_src
+
+** LocalFolderHTTPServer
+
+Para poder ejecutar los casos de prueba que realizan peticiones HTTP, necesitamos levantar un servidor HTTP desde una carpeta local.
+
+https://stackoverflow.com/questions/39801718/how-to-run-a-http-server-which-serve-a-specific-path/46332163#46332163
+
+#+begin_src python :tangle utils/http_server.py
+import os
+try:
+    # python 2
+    from SimpleHTTPServer import SimpleHTTPRequestHandler
+    from BaseHTTPServer import HTTPServer as BaseHTTPServer
+except ImportError:
+    # python 3
+    from http.server import HTTPServer as BaseHTTPServer, SimpleHTTPRequestHandler
+
+class HTTPHandler(SimpleHTTPRequestHandler):
+    """This handler uses server.base_path instead of always using os.getcwd()"""
+    def translate_path(self, path):
+        path = SimpleHTTPRequestHandler.translate_path(self, path)
+        relpath = os.path.relpath(path, os.getcwd())
+        fullpath = os.path.join(self.server.base_path, relpath)
+        return fullpath
+
+class LocalFolderHTTPServer(BaseHTTPServer):
+    """The main server, you pass in base_path which is the path you want to serve requests from"""
+    def __init__(self, base_path, server_address, RequestHandlerClass=HTTPHandler):
+        self.base_path = base_path
+        BaseHTTPServer.__init__(self, server_address, RequestHandlerClass)   
+#+end_src
+
 * Tests
 *** Ejecutar los casos de prueba
 
@@ -1602,7 +1744,7 @@ Para visualizar el reporte se debe abrir el archivo =./coverage/index.html= con 
 firefox --new-tab ./coverage/index.html
 #+end_src
 
-* Apendices
+* Apéndices
 *** listar podcasts
 
 #+begin_src python :python python-3.6 :results drawer
