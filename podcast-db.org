@@ -199,6 +199,7 @@ __all__ = [
     "podcasts_from_tags", 
     "podcasts_from_response", 
     "podcasts_from_url", 
+    "podcasts_from_filename", 
     "podcast_search",
     "podcast"
 ]
@@ -214,6 +215,7 @@ __all__ = [
     "test_podcasts_from_tags", 
     "test_podcasts_from_response", 
     "test_podcasts_from_url", 
+    "test_podcasts_from_filename", 
     "test_podcast_search",
     "examples_author_from_tag", 
     "examples_title_from_tag",
@@ -223,6 +225,7 @@ __all__ = [
     "examples_podcasts_from_tags",
     "examples_podcasts_from_response",
     "examples_podcasts_from_url",
+    "examples_podcasts_from_filename",
     "examples_podcast_search"
 ]
 #+end_src
@@ -231,11 +234,15 @@ __all__ = [
 
 France Inter publica en una sola página (enorme) el listado de todas sus emisiones. El html está bastante fácil de parsear, dado que los datos cada emisión se encuentran dentro de un =div= con la clase =rich-section-list-item-content=. Revisando el contenido de ese div, podemos obtener el título del podcast, su URL y el autor (que es opcional).
 
-En este submódulo se implementan las siguentes funcionalidades:
+**** Wishlist
 
-- Obtener el listado de los podcasts de France Inter
-- Para cada podcast obtener el nombre, el url y el autor
-- Filtrar el listado de podcasts por una palabra clave
+- [X] Obtener el listado de los podcasts de France Inter
+- [X] Para cada podcast obtener el nombre, el url y el autor
+- [ ] Filtrar el listado de podcasts por una palabra clave
+
+**** Mejoras a futuro
+
+- [ ] =podcasts_from_filename= :: Se podrían matchear los errores de lectura del archivo con los códigos de la respuesta HTTP (404 si no se encuentra, 500 si hubo un error de I/O, etc)
 
 *** title_from_tag
 **** 1. Objetivo
@@ -341,10 +348,10 @@ def invalid_tag(tag):
 **** 6. Casos de prueba
 
 - Caso exitoso, devuelve el título
-- El parámetro tag no es un bs4.element.tag, lanza un =AssertionError=
-- El tag no contiene un =<a>=, devuelve un string vacío
-- El tag tiene el =<a>= pero éste no tiene la clase correcta, devuelve un string vacío
-- El tag tiene el =<a>= pero éste no tiene el atributo =title=, devuelve un string vacío
+- Cuando recibe un tag que no es un bs4.element.tag, lanza un =AssertionError=
+- Cuando recibe un tag que no contiene un =<a>=, devuelve un string vacío
+- Cuando recibe un tag que tiene el =<a>= pero éste no tiene la clase correcta, devuelve un string vacío
+- Cuando recibe un tag que tiene el =<a>= pero éste no tiene el atributo =title=, devuelve un string vacío
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_title_from_tag.py
 from franceinter.podcasts.title_from_tag import title_from_tag
@@ -384,15 +391,11 @@ title = title_from_tag(tag)
 print(title)
 #+end_src
 
-****** Run tests
+***** Run tests
 
-#+begin_src sh :results output drawer
-./pytest ./franceinter/podcasts/tests/test_title_from_tag.py
+#+begin_src sh
+pytest ./franceinter/podcasts/tests/test_title_from_tag.py
 #+end_src
-
-#+RESULTS:
-:results:
-:end:
 
 *** url_from_tag
 **** 1. Objetivo
@@ -498,10 +501,10 @@ def invalid_tag(tag):
 **** 6. Casos de prueba
 
 - Caso exitoso, devuelve el url
-- El tag no es un bs4.element.tag, lanza un =AssertionError=
-- El tag no contiene un =<a>=, devuelve un string vacío
-- El tag tiene el =<a>= pero éste no tiene la clase buscada, devuelve un string vacío
-- El tag tiene el =<a>= pero éste no tiene el atributo =href=, devuelve un string vacío
+- Cuando recibe un tag que no es un bs4.element.tag, lanza un =AssertionError=
+- Cuando recibe un tag que no contiene un =<a>=, devuelve un string vacío
+- Cuando recibe un tag que tiene el =<a>= pero éste no tiene la clase buscada, devuelve un string vacío
+- Cuando recibe un tag que tiene el =<a>= pero éste no tiene el atributo =href=, devuelve un string vacío
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_url_from_tag.py
 from franceinter.podcasts.url_from_tag import url_from_tag
@@ -532,10 +535,10 @@ def test_title_not_found():
 
 #+end_src
 
-****** Run tests
+***** Run tests
 
-#+begin_src sh :results output drawer
-./pytest ./franceinter/podcasts/tests/test_url_from_tag.py
+#+begin_src sh
+pytest ./franceinter/podcasts/tests/test_url_from_tag.py
 #+end_src
 
 *** author_from_tag
@@ -651,10 +654,10 @@ def invalid_tag(tag):
 **** 6. Casos de prueba
 
 - Caso exitoso, devuelve el autor
-- El parámetro tag no es un bs4.element.tag, lanza un =AssertionError=
-- El tag no tiene un tag =<span>= con la clase buscada, devuelve un string vacío
-- El tag tiene el =<span>= pero éste no contiene un =<a>=, devuelve un string vacío
-- El tag tiene el =<span>= y el =<a>= pero éste último no tiene el atributo =title=, devuelve un string vacío
+- Cuando recibe un tag que no es un bs4.element.tag, lanza un =AssertionError=
+- Cuando recibe un tag que no tiene un tag =<span>= con la clase buscada, devuelve un string vacío
+- Cuando recibe un tag que tiene el =<span>= pero éste no contiene un =<a>=, devuelve un string vacío
+- Cuando recibe un tag que tiene el =<span>= y el =<a>= pero éste último no tiene el atributo =title=, devuelve un string vacío
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_author_from_tag.py
 from franceinter.podcasts.author_from_tag import author_from_tag
@@ -689,23 +692,11 @@ def test_title_not_found():
 None
 :end:
 
-****** Run tests
+***** Run tests
 
-#+begin_src sh :results output drawer
-./pytest franceinter/podcasts/tests/test_author_from_tag.py
+#+begin_src sh
+pytest franceinter/podcasts/tests/test_author_from_tag.py
 #+end_src
-
-#+RESULTS:
-:results:
-============================= test session starts ==============================
-platform linux -- Python 3.6.8, pytest-4.2.0, py-1.7.0, pluggy-0.8.1
-rootdir: /app, inifile:
-collected 5 items
-
-franceinter/podcasts/tests/test_author_from_tag.py .....                 [100%]
-
-=========================== 5 passed in 0.30 seconds ===========================
-:end:
 
 *** podcast_from_tag
 **** 1. Objetivo
@@ -934,11 +925,11 @@ def invalid_tag(tag):
 **** 6. Casos de prueba
 
 - Caso exitoso, devuelve un podcast
-- El tag no es un =bs4.element.Tag=, lanza un =AssertionError=
-- El tag no tiene título, lanza un =AssertionError=
-- El tag no tiene url, lanza un =AssertionError=
-- El tag tiene un url pero es inválido, lanza un =AssertionError=
-- El tag no tiene autor, devuelve un podcast con un =str= vacío en la propiedad author
+- Cuando recibe un tag que no es un =bs4.element.Tag=, lanza un =AssertionError=
+- Cuando recibe un tag que no tiene título, lanza un =AssertionError=
+- Cuando recibe un tag que no tiene url, lanza un =AssertionError=
+- Cuando recibe un tag que tiene un url pero es inválido, lanza un =AssertionError=
+- Cuando recibe un tag que no tiene autor, devuelve un podcast con un =str= vacío en la propiedad author
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_podcast_from_tag.py
 from franceinter.podcasts import podcast
@@ -990,25 +981,11 @@ def test_invalid_tag():
 
 #+end_src
 
-#+RESULTS:
-:results:
-:end:
+***** Run tests
 
 #+begin_src sh
-pytest ./franceinter/podcasts/tests/test_podcast_from_tag.py
+pytest franceinter/podcasts/tests/test_podcast_from_tag.py
 #+end_src
-
-#+RESULTS:
-:results:
-============================= test session starts ==============================
-platform linux -- Python 3.6.8, pytest-4.2.0, py-1.7.0, pluggy-0.8.1
-rootdir: /app, inifile:
-collected 5 items
-
-franceinter/podcasts/tests/test_podcast_from_tag.py .....                [100%]
-
-=========================== 5 passed in 0.52 seconds ===========================
-:end:
 
 *** tags_from_html
 **** 1. Objetivo
@@ -1166,6 +1143,12 @@ def test_some_divs_with_class():
 
 #+end_src
 
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/podcasts/tests/test_tags_from_html.py
+#+end_src
+
 *** podcasts_from_tags
 **** 1. Objetivo
 
@@ -1298,6 +1281,12 @@ def test_list_with_invalid_tag():
 
 #+end_src
 
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/podcasts/tests/test_podcasts_from_tags.py
+#+end_src
+
 *** podcasts_from_response
 **** 1. Objetivo
 
@@ -1407,13 +1396,13 @@ def test_wrong_page_response():
 
 #+end_src
 
-#+RESULTS:
-:results:
-<class 'generator'>
-<class 'generator'>
-:end:
+***** Run tests
 
-*** DOING podcasts_from_url
+#+begin_src sh
+pytest franceinter/podcasts/tests/test_podcasts_from_response.py
+#+end_src
+
+*** podcasts_from_url
 **** 1. Objetivo
 
 Extraer el listado de podcasts desde un URL
@@ -1562,15 +1551,136 @@ def http_server():
 
 #+end_src
 
-*** TODO podcasts_from_file
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/podcasts/tests/test_podcasts_from_url.py
+#+end_src
+
+*** podcasts_from_filename
 **** 1. Objetivo
+
+Extraer un listado de podcasts desde un archivo
+
 **** 2. Firma
+
+La función recibe un =str= con el nombre del archivo y devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
+
 **** 3. Ejemplos
+
+- Un archivo HTML que tiene un listado de podcasts
+- Un archivo HTML de otra página, que no tiene podcasts
+- Un archivo que no existe
+- Un nombre de archivo que no es un =str=
+
+#+begin_src python :tangle franceinter/podcasts/tests/examples_podcasts_from_filename.py
+
+def ok_filename():
+    return "./franceinter/html/podcast-list-short.html"
+
+def wrong_filename():
+    return "./franceinter/html/wrong-page.html"
+
+def not_found_filename():
+    return "./franceinter/html/this-file-does-not-exist.html"
+
+def invalid_filename():
+    return [1, 2, 3]
+
+#+end_src
+
 **** 4. Boceto
+
+#+begin_src python
+
+def podcasts_from_filename(filename):
+    # validar que filename sea un str
+    # validar que el archivo exista
+    podcasts = []
+    # crear un requests.models.Response con el contenido del archivo
+    # obtener los podcasts llamando a podcasts_from_response
+    return podcasts
+     
+#+end_src
+
 **** 5. Definición
+
+#+begin_src python :tangle franceinter/podcasts/podcasts_from_filename.py
+from requests.models import Response
+from franceinter.podcasts.podcasts_from_response import podcasts_from_response
+
+def podcasts_from_filename(filename):
+    assert isinstance(filename, str), invalid_filename(filename)
+    resp = Response()
+    podcasts = []
+    try:
+        with open(filename, "rb") as f:
+            resp._content = f.read()
+            podcasts = podcasts_from_response(resp)
+    except (OSError, IOError) as error:
+        assert False, not_found(filename, error)
+    return podcasts
+
+def invalid_filename(filename):
+    return "filename parameter must be a str, %s received instead" % filename
+
+def not_found(filename, error):
+    return "filename %s cannot be read, thrown error :\n%s" % (filename, error)
+#+end_src
+
 **** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un archivo HTML que tiene un listado de podcasts, devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
+- Cuando recibe un archivo HTML de otra página, que no tiene podcasts, devuelve un =GeneratorType= vacío
+- Cuando recibe un archivo que no existe, lanza un =AssertionError=
+- Cuando recibe un nombre de archivo que no es un =str=, lanza un =AssertionError=
+
+#+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_filename.py
+import types
+from franceinter.podcasts.podcast import Podcast
+from franceinter.podcasts.podcasts_from_filename import podcasts_from_filename
+from franceinter.podcasts.tests.examples_podcasts_from_filename import *
+
+def test_ok_filename():
+    filename = ok_filename()
+    podcasts = podcasts_from_filename(filename)
+    assert isinstance(podcasts, types.GeneratorType)
+    podcasts = list(podcasts)
+    assert (len(podcasts) > 0)
+    for p in podcasts:
+        assert isinstance(p, Podcast)
+
+def test_wrong_filename():
+    filename = wrong_filename()
+    podcasts = podcasts_from_filename(filename)
+    assert isinstance(podcasts, types.GeneratorType)
+    podcasts = list(podcasts)
+    assert (len(podcasts) == 0)
+
+def test_not_found_filename():
+    filename = not_found_filename()
+    try:
+        podcasts = podcasts_from_filename(filename)
+    except AssertionError:
+        assert True
+
+def test_invalid_filename():
+    filename = invalid_filename()
+    try:
+        podcasts = podcasts_from_filename(filename)
+    except AssertionError:
+        assert True
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest ./franceinter/podcasts/tests/test_podcasts_from_filename.py
+#+end_src
+
 *** TODO podcasts_fetch_all
-*** TODO podcasts_search
+*** TODO podcasts_filter
 **** 1. Objetivo
 **** 2. Firma
 **** 3. Ejemplos
