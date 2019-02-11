@@ -117,6 +117,7 @@ coverage
 downloads
 franceinter
 requirements.txt
+utils
 venv
 #+end_src
 
@@ -1427,8 +1428,7 @@ La función recibe un URL y devuelve un =GeneratorType= de objetos =franceinter.
 - Un URL de otra página, que no tiene podcasts
 - Un URL de una página inexistente, que dispare un error 404 (not found)
 - Un URL de un sitio inexistente, que dispare un error de DNS
-- Un URL de una página protegida por contraseña, que dispare un error 401
-- Un URL de una página con problemas, que dispare un error 500
+- Un URL inválido
 
 #+begin_src python :tangle franceinter/podcasts/tests/examples_podcasts_from_url.py
 
@@ -1445,15 +1445,11 @@ def not_found_url():
     return url
 
 def wrong_site_url():
-    url = "http://hostlocal:3000/this-page-does-not-exist.html"
+    url = "http://host.local:3000/this-page-does-not-exist.html"
     return url
 
-def unauthorized_url():
-    url = "http://hostlocal:3000/podcast-list-short.html"
-    return url
-
-def server_error_url():
-    url = "http://hostlocal:3000/podcast-list-short.html"
+def invalid_url():
+    url = "ht pt:\\hostlocal:3000/this-url-is-not-valid.html"
     return url
 
 #+end_src
@@ -1464,8 +1460,10 @@ def server_error_url():
 
 def podcasts_from_url(url):
     # validar el url
+    # realizar una petición al url
     # obtener la respuesta del url
     # obtener los podcasts llamando a podcasts_from_url
+    # revisar si da un error de conexión
     return podcasts
 
 #+end_src
@@ -1479,38 +1477,80 @@ from franceinter.podcasts.podcasts_from_response import podcasts_from_response
 
 def podcasts_from_url(url):
     assert is_valid_url(url), invalid_url(url)
-    response = requests.get(url)
-    podcasts = podcasts_from_response(response)
-    return podcasts
+    try:
+        response = requests.get(url)
+        podcasts = podcasts_from_response(response)
+        return podcasts
+    except requests.ConnectionError:
+        assert False, connection_error(url)
 
 def invalid_url(url):
-    return "url parameter must be a valid URL, received %s instead" % str(tag)
+    return "url parameter must be a valid URL, received %s instead" % url
 
+def connection_error(url):
+    return "request to %s failed with a connection error" % url
 #+end_src
 
 **** 6. Casos de prueba
 
 Bueno, aquí tenemos un caso de prueba un poco más complejo que lo normal. Para poder testear nuestra función necesitamos realizar una petición HTTP. El problema es que no queremos depender de un sitio web externo, o de que haya conectividad a Internet cuando se ejecuten los casos de prueba. La solución es levantar un servidor HTTP desde una carpeta local y en nuestro caso vamos a usar los archivos HTML de ejemplo que tenemos en =franceinter/html=.
 
-Ahora bien, necesitamos que el servidor HTTP esté levantado antes de correr nuestros casos de prueba y sería ideal poder bajarlo luego de ejecutar todos los tests que lo necesitan. Para ello vamos a usar un [[https://docs.pytest.org/en/latest/fixture.html][fixture]] (=@pytest.fixture=), que es una funcionalidad de pytest que permite que los casos de prueba reciban un argumento con algún recurso, en este caso, el servidor HTTP ya levantado y sirviendo los archivos desde la carpeta local.
+Ahora bien, necesitamos que el servidor HTTP esté levantado antes de correr nuestros casos de prueba y sería ideal poder bajarlo luego de ejecutar todos los tests que lo necesiten. Para ello vamos a usar un [[https://docs.pytest.org/en/latest/fixture.html][fixture]] (=@pytest.fixture=), que es una funcionalidad de pytest que permite que los casos de prueba reciban un argumento con algún recurso, en este caso, el servidor HTTP ya levantado y sirviendo los archivos desde la carpeta local.
 
 El atributo ~scope="module"~ indica que el fixture =http_server= será invocado una sola vez por módulo, que es lo que queremos para que todos los tests de nuestra función compartan el mismo servidor HTTP y no tener que levantarlo y bajarlo para cada test. Cuando no se indica un =scope=, pytest invoca el fixture para cada caso de prueba.
 
 Un fixture es una función común y corriente como cualquier otra, a la que pytest llama cuando comienza a procesar el módulo, se guarda el valor retornado, y se lo inyecta a los casos de prueba que declaren ese fixture como parámetro.
 
-Nótese en el código del fixture =http_server= que se levanta el servidor HTTP en otro thread para no bloquear la ejecución de los tests y que se utiliza =yield= para poder bajar el servidor luego de su utilización.
+Nótese en el código del fixture =http_server= que se levanta el servidor HTTP en otro thread para no bloquear la ejecución de los tests y que se utiliza =yield= para poder bajar el servidor luego de su uso.
+
+- Cuando recibe un URL con el listado de podcasts, devuelve un =GeneratorType= de objetos =Podcast=
+- Cuando recibe un URL de otra página, que no tiene podcasts, devuelve un =GeneratorType= vacío
+- Cuando recibe un URL de una página inexistente, devuelve un =GeneratorType= vacío
+- Cuando recibe un URL de un sitio inexistente (error de DNS), lanza un =AssertionError=
+- Cuando recibe un URL inválido, lanza un =AssertionError=
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_url.py
-import threading
 import pytest
+import threading
+import types
+from franceinter.podcasts.podcast import Podcast
 from franceinter.podcasts.podcasts_from_url import podcasts_from_url
 from franceinter.podcasts.tests.examples_podcasts_from_url import *
 from utils.http_server import LocalFolderHTTPServer as HTTPServer
 
 def test_url_ok(http_server):
     url = url_ok()
-    podcasts = list(podcasts_from_url(url))
+    gen = podcasts_from_url(url)
+    assert isinstance(gen, types.GeneratorType)
+    podcasts = list(gen)
     assert (len(podcasts) > 0)
+    for p in podcasts:
+        assert isinstance(p, Podcast)
+
+def test_wrong_page_url(http_server):
+    url = wrong_page_url()
+    podcasts = list(podcasts_from_url(url))
+    assert (len(podcasts) == 0)
+
+def test_not_found_url(http_server):
+    url = not_found_url()
+    podcasts = list(podcasts_from_url(url))
+    assert (len(podcasts) == 0)
+
+@pytest.mark.skip(reason="Slow test (~10 sec) waiting for DNS error")
+def test_wrong_site_url(http_server):
+    url = wrong_site_url()
+    try:
+        podcasts = list(podcasts_from_url(url))
+    except AssertionError:
+        assert True
+
+def test_invalid_url():
+    url = invalid_url()
+    try:
+        podcasts = podcasts_from_url(url)
+    except AssertionError:
+        assert True
 
 @pytest.fixture(scope="module")
 def http_server():
@@ -1688,7 +1728,7 @@ drwxr-xr-x  7 martin  staff   224B Feb  8 17:18 ..
 :end:
 
 * Herramientas
-** =__init__.py=
+** Submódulos
 
 #+begin_src python :tangle utils/__init__.py
 __all__ = ["http_server"]
