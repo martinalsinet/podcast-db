@@ -96,14 +96,14 @@ Quiero que mi base de datos pueda consultar las siguientes fuentes de podcasts:
 
 ** Funcionalidades
 
-- Listar las fuentes de podcasts disponibles
-- Listar los podcasts de un fuente
-- Listar los episodios de un podcast
-- Obtener el detalle de un episodio
-- Filtrar los episodios de un podcast según algún criterio (año, mes, palabra clave)
-- Generar una playlist o feed RSS de los episodios filtrados
-- Crear una cola de descarga a partir de una playlist
-- Procesar los archivos descargados (p.ej, cambiar el bitrate a 64k)
+- [ ] Listar las fuentes de podcasts disponibles
+- [X] Listar los podcasts de una fuente
+- [ ] Listar los episodios de un podcast
+- [ ] Obtener el detalle de un episodio
+- [ ] Filtrar los episodios de un podcast según algún criterio (año, mes, palabra clave)
+- [ ] Generar una playlist o feed RSS de los episodios filtrados
+- [ ] Crear una cola de descarga a partir de una playlist
+- [ ] Procesar los archivos descargados (p.ej, cambiar el bitrate a 64k)
 
 * Setup
 *** .gitignore
@@ -176,11 +176,11 @@ pip-3.6 install -r requirements.txt
 #+end_src
 
 * France Inter
-** Submódulos
+** Módulos
 
 Vamos a organizar el código en paquetes (carpetas), lo que nos permite usar namespaces para importar las funcionalidades. Para ello, necesitamos crear un archivo =__init__.py= en cada carpeta para declarar los módulos que forman parte nuestro paquete y que Python pueda encontrarlos cuando los referenciamos en el =import=.
 
-El módulo actual es =franceinter=, y que tiene los siguientes submódulos:
+El módulo actual es =franceinter=, y tiene los siguientes submódulos:
 
 - podcasts
 - episodes
@@ -188,6 +188,26 @@ El módulo actual es =franceinter=, y que tiene los siguientes submódulos:
 #+begin_src python :tangle franceinter/__init__.py
 __all__ = ["podcasts", "episodes"]
 #+end_src
+
+** Podcasts
+*** Diseño
+
+France Inter publica en una sola página (enorme) el listado de todas sus emisiones. El html está bastante fácil de parsear, dado que los datos cada emisión se encuentran dentro de un =div= con la clase =rich-section-list-item-content=. Revisando el contenido de ese div, podemos obtener el título del podcast, su URL y el autor (que es opcional).
+
+Queremos obtener el listado de los podcasts desde un URL y también desde un archivo local. Además queremos poder filtrar el listado buscando los podcasts que contengan una palabra clave en el autor o en el título.
+
+**** Wishlist
+
+- [X] Obtener el listado de los podcasts de France Inter
+- [X] Para cada podcast obtener el nombre, el url y el autor
+- [X] Filtrar el listado de podcasts por una palabra clave
+
+**** Mejoras a futuro
+
+- [ ] =podcasts_from_filename= :: Se podrían matchear los errores de lectura del archivo con los códigos de la respuesta HTTP (404 si no se encuentra, 500 si hubo un error de I/O, etc)
+
+*** Submódulos
+**** Podcasts
 
 #+begin_src python :tangle franceinter/podcasts/__init__.py
 __all__ = [
@@ -204,6 +224,8 @@ __all__ = [
     "podcast"
 ]
 #+end_src
+
+**** Tests
 
 #+begin_src python :tangle franceinter/podcasts/tests/__init__.py
 __all__ = [
@@ -229,20 +251,6 @@ __all__ = [
     "examples_podcasts_from_query"
 ]
 #+end_src
-
-** Podcasts
-
-France Inter publica en una sola página (enorme) el listado de todas sus emisiones. El html está bastante fácil de parsear, dado que los datos cada emisión se encuentran dentro de un =div= con la clase =rich-section-list-item-content=. Revisando el contenido de ese div, podemos obtener el título del podcast, su URL y el autor (que es opcional).
-
-**** Wishlist
-
-- [X] Obtener el listado de los podcasts de France Inter
-- [X] Para cada podcast obtener el nombre, el url y el autor
-- [ ] Filtrar el listado de podcasts por una palabra clave
-
-**** Mejoras a futuro
-
-- [ ] =podcasts_from_filename= :: Se podrían matchear los errores de lectura del archivo con los códigos de la respuesta HTTP (404 si no se encuentra, 500 si hubo un error de I/O, etc)
 
 *** title_from_tag
 **** 1. Objetivo
@@ -1679,7 +1687,7 @@ def test_invalid_filename():
 pytest ./franceinter/podcasts/tests/test_podcasts_from_filename.py
 #+end_src
 
-*** DOING podcasts_from_query
+*** podcasts_from_query
 **** 1. Objetivo
 
 Filtrar un listado de podcasts y obtener solamente los que contienen una palabra clave en el título o en el autor
@@ -1866,78 +1874,42 @@ def test_invalid_query():
 pytest franceinter/podcasts/tests/test_podcasts_from_query.py
 #+end_src
 
-*** Implementación completa
-
-#+begin_src python
-from bs4 import BeautifulSoup
-from urllib.request import urlopen
-import re
-
-def div_author(div):
-    cls = "rich-section-list-item-content-infos-author"
-    span = div.find("span", class_=cls)
-    author = ''
-    if span:
-        author = span.find("a").attrs["title"]
-    return author
-
-def div_title(div):
-    cls = "rich-section-list-item-content-title"
-    link = div.find("a", class_=cls)
-    title = ''
-    if link:
-        title = link.attrs["title"]
-    return title
-
-def div_href(div):
-    cls = "rich-section-list-item-content-title"
-    link = div.find("a", class_=cls)
-    href = ''
-    if link:
-        href = "https://franceinter.fr/" + link.attrs["href"]
-    return href
-
-def div_to_podcast(div):
-    return {
-        'author': div_author(div),
-        'title': div_title(div),
-        'url': div_href(div)
-    }
-
-def divs(html):
-    soup = BeautifulSoup(html, "html.parser")
-    cls = "rich-section-list-item-content"
-    return soup.find_all("div", class_=cls)
-
-def podcasts():
-    for div in divs():
-        yield div_to_podcast(div)
-
-def podcasts_from_file(filename):
-    with open(filename) as html:
-        for div in divs(html.read()):
-            yield div_to_podcast(div)
-
-def podcasts_from_url(url):
-    with urlopen(url) as html:
-        for div in divs(html.read()):
-            yield div_to_podcast(div)
-
-def podcast_search(query, podcasts):
-    return filter(lambda p: re.search(query, p["title"], re.IGNORECASE) 
-                  or re.search(query, p["author"], re.IGNORECASE), 
-                  podcasts)
-
-#+end_src
-
 ** Episodios
+*** Diseño
 
-En el URL de un podcast vemos el listado de los últimos episodios disponibles. Al final del listado hay un selector de páginas para acceder al historial de episodios. Para poder obtener el historial completo necesitamos la cantidad de páginas, que está en un tag ~<li>~ que tiene la clase =last=. Una vez que tengamos la cantidad de páginas podemos obtener el listado de episodios, parseando cada una de las páginas del historial.
+En el URL de un podcast vemos el listado de los últimos episodios disponibles. Al final del listado hay un selector de páginas para acceder al historial de episodios. Para poder obtener el historial completo necesitamos la cantidad de páginas, que está en un tag =<li>= que tiene la clase =last=. 
+
+Una vez que tengamos la cantidad de páginas podemos obtener el listado de episodios, parseando cada una de las páginas del historial. Como hicimos en el módulo de podcasts, necesitamos poder obtener los episodios tanto desde un URL como desde un archivo local.
+
+Cada episodio tiene un título, una fecha de emisión y un URL para descargar el audio. Podemos ver en el HTML de la página (ver el archivo =./franceinter/html/episode-list.html=) que se puede obtener también la duración en segundos del episodio, dato que puede ser útil más adelante para detectar problemas en la descarga de los archivos.
+
+Por lo que se puede ver en el HTML, muchos de los datos que necesitamos se encuentran en un tag =<button>= que tiene la clase =replay-button=
+
+**** Wishlist
+
+- [ ] Obtener el listado de los episodios de un podcast
+- [ ] Para cada episodio obtener el título, la fecha, el URL del audio y su duración
+- [ ] Filtrar el listado por una palabra clave
+
+*** Submódulos
+*** title_from_tag
+*** url_from_tag
+*** date_from_tag
+*** duration_from_tag
+*** episode_from_tag
+*** pages_from_podcast
+*** episodes_from_page
+*** episodes_from_podcast
+*** episodes_from_filename
+*** episodes_from_response
+*** Implementación de referencia
 
 #+begin_src python
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
-from franceinter import podcasts as p
+from franceinter.podcasts.podcasts_from_filename import podcasts_from_filename
+from franceinter.podcasts.podcasts_from_query import podcasts_from_query
+
 import re
 
 def lastpage_from_filename(filename):
@@ -1953,44 +1925,32 @@ def lastpage_from_filename(filename):
         return lastpage
 
 def page_list(podcast):
-    lastpage = lastpage_from_filename("episodes.html")
+    lastpage = lastpage_from_filename("./franceinter/html/episode-list.html")
     for pagenum in range(1, lastpage+1):
-        yield podcast["url"] + "?p=" + str(pagenum)
+        yield podcast.url + "?p=" + str(pagenum)
 
 #return lastpage_from_filename("episodes.html")
+podcasts = podcasts_from_filename('./franceinter/html/podcast-list.html')
+darwin = list(podcasts_from_query(podcasts, "darwin"))[0]
+pages = list(page_list(darwin))
 
-podcasts = p.podcasts_from_file('emissions.html')
-darwin = list(p.podcast_search("darwin", podcasts))[0]
-
-return list(page_list(darwin))
+print(pages)
 #+end_src
 
-#+RESULTS:
-:results:
-:end:
 
 #+begin_src sh
 #curl -o episodes.html https://franceinter.fr/emissions/sur-les-epaules-de-darwin
 #ls -alh *.html
-cat episodes.html | grep "pager-item"
+#cat episodes.html | grep "pager-item"
+ls franceinter/html
 #+end_src
 
 #+RESULTS:
 :results:
-                                    <li class="pager-item active">
-                                    <li class="pager-item">
-                                    <li class="pager-item">
-                                    <li class="pager-item">
-                                    <li class="pager-item">
-                                    <li class="pager-item">
-                                    <li class="pager-item">
-                                    <li class="pager-item">
-                                    <li class="pager-item">
-                                    <li class="pager-item">
-                                                                            <li class="pager-item show-hidden">
-                                        <li class="pager-item next">
-                    <li class="pager-item last">
-                            <li class="pager-item">
+episode-list.html
+podcast-list-short.html
+podcast-list.html
+wrong-page.html
 :end:
 
 ** HTML
@@ -2017,7 +1977,7 @@ drwxr-xr-x  7 martin  staff   224B Feb  8 17:18 ..
 :end:
 
 * Herramientas
-** Submódulos
+** Módulos
 
 #+begin_src python :tangle utils/__init__.py
 __all__ = ["http_server"]
