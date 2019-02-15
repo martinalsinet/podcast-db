@@ -1892,16 +1892,90 @@ Por lo que se puede ver en el HTML, muchos de los datos que necesitamos se encue
 - [ ] Filtrar el listado por una palabra clave
 
 *** Submódulos
-*** title_from_tag
-*** url_from_tag
-*** date_from_tag
-*** duration_from_tag
-*** episode_from_tag
-*** pages_from_podcast
-*** episodes_from_page
-*** episodes_from_podcast
-*** episodes_from_filename
-*** episodes_from_response
+*** attribute_from_tag
+*** DOING title_from_tag
+**** 1. Objetivo
+
+Obtener el título de un episodio de un fragmento de HTML.
+
+El título se puede obtener en dos lugares: 
+
+- En el atributo =data-diffusion-title= de un =<button>= que tiene la clase =replay-button=
+- En el atributo =title= de un =<a>= que tiene la clase =rich-section-list-item-content-title=
+
+Vamos a sacarlo del button porque tenemos varios elementos y podemos usar una función a
+
+**** 2. Firma
+
+La función recibe un objeto =bs4.element.Tag= y devuelve un =str=
+
+**** 3. Ejemplos
+**** 4. Boceto
+**** 5. Definición
+**** 6. Casos de prueba
+*** TODO url_from_tag
+**** 1. Objetivo
+**** 2. Firma
+**** 3. Ejemplos
+**** 4. Boceto
+**** 5. Definición
+**** 6. Casos de prueba
+*** TODO date_from_tag
+**** 1. Objetivo
+**** 2. Firma
+**** 3. Ejemplos
+**** 4. Boceto
+**** 5. Definición
+**** 6. Casos de prueba
+*** TODO duration_from_tag
+**** 1. Objetivo
+**** 2. Firma
+**** 3. Ejemplos
+**** 4. Boceto
+**** 5. Definición
+**** 6. Casos de prueba
+*** TODO episode_from_tag
+**** 1. Objetivo
+**** 2. Firma
+**** 3. Ejemplos
+**** 4. Boceto
+**** 5. Definición
+**** 6. Casos de prueba
+*** TODO pages_from_podcast
+**** 1. Objetivo
+**** 2. Firma
+**** 3. Ejemplos
+**** 4. Boceto
+**** 5. Definición
+**** 6. Casos de prueba
+*** TODO episodes_from_page
+**** 1. Objetivo
+**** 2. Firma
+**** 3. Ejemplos
+**** 4. Boceto
+**** 5. Definición
+**** 6. Casos de prueba
+*** TODO episodes_from_podcast
+**** 1. Objetivo
+**** 2. Firma
+**** 3. Ejemplos
+**** 4. Boceto
+**** 5. Definición
+**** 6. Casos de prueba
+*** TODO episodes_from_filename
+**** 1. Objetivo
+**** 2. Firma
+**** 3. Ejemplos
+**** 4. Boceto
+**** 5. Definición
+**** 6. Casos de prueba
+*** TODO episodes_from_response
+**** 1. Objetivo
+**** 2. Firma
+**** 3. Ejemplos
+**** 4. Boceto
+**** 5. Definición
+**** 6. Casos de prueba
 *** Implementación de referencia
 
 #+begin_src python
