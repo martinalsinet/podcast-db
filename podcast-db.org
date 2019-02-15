@@ -202,7 +202,7 @@ Queremos obtener el listado de los podcasts desde un URL y también desde un arc
 - [X] Para cada podcast obtener el nombre, el url y el autor
 - [X] Filtrar el listado de podcasts por una palabra clave
 
-**** Mejoras a futuro
+**** TODO Mejoras
 
 - [ ] =podcasts_from_filename= :: Se podrían matchear los errores de lectura del archivo con los códigos de la respuesta HTTP (404 si no se encuentra, 500 si hubo un error de I/O, etc)
 
@@ -1885,11 +1885,17 @@ Cada episodio tiene un título, una fecha de emisión y un URL para descargar el
 
 Por lo que se puede ver en el HTML, muchos de los datos que necesitamos se encuentran en un tag =<button>= que tiene la clase =replay-button=
 
-**** Wishlist
+**** TODO Wishlist
 
 - [ ] Obtener el listado de los episodios de un podcast
 - [ ] Para cada episodio obtener el título, la fecha, el URL del audio y su duración
 - [ ] Filtrar el listado por una palabra clave
+
+**** TODO Mejoras
+
+- [ ] Crear una nueva función =attribute_from_tag= para extraer un atributo de un tag con una clase determinada
+
+Luego de la implementación de varias funciones vemos que hay un patrón de código que se repite: Se busca un tag HTML con una clase determinada, y de ese tag se extrae un atributo específico. Podemos ver ejemplos de este patrón en las funciones =title_from_tag=, =url_from_tag= y =author_from_tag= del módulo podcasts y otros tantos en las funciones de este módulo que extraen los atributos del episodio (p.ej. =title_from_tag=). Quizás sea necesario crear un nuevo módulo Tags que contenga la lógica que se encarga de extraer datos de los tags HTML.
 
 *** Submódulos
 **** Episodes
