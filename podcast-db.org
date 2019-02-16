@@ -373,7 +373,7 @@ def test_invalid_tag():
     try:
         title_from_tag(5)
     except AssertionError:
-        assert(True)
+        assert True
 
 def test_link_not_found():
     tag = tag_without_link()
@@ -527,7 +527,7 @@ def test_invalid_tag():
     try:
         url_from_tag(5)
     except AssertionError:
-        assert(True)
+        assert True
 
 def test_link_not_found():
     tag = tag_without_link()
@@ -1904,7 +1904,8 @@ Luego de la implementación de varias funciones vemos que hay un patrón de cód
 __all__ = [
     "title_from_tag",
     "url_from_tag",
-    "date_from_tag"
+    "date_from_tag",
+    "duration_from_tag"
 ]
 #+end_src
 
@@ -1915,9 +1916,11 @@ __all__ = [
     "test_title_from_tag", 
     "test_url_from_tag", 
     "test_date_from_tag", 
+    "test_duration_from_tag", 
     "examples_title_from_tag",
     "examples_url_from_tag",
-    "examples_date_from_tag"
+    "examples_date_from_tag",
+    "examples_duration_from_tag"
 ]
 #+end_src
 
@@ -2018,9 +2021,9 @@ def title_from_tag(tag):
     assert isinstance(tag, bs4.element.Tag), invalid_tag(tag)
     title = ""
     cls = "replay-button"
-    link = tag.find("button", class_=cls)
-    if link and "data-diffusion-title" in link.attrs:
-        title = link.attrs["data-diffusion-title"]
+    button = tag.find("button", class_=cls)
+    if button and "data-diffusion-title" in button.attrs:
+        title = button.attrs["data-diffusion-title"]
     return title
 
 def invalid_tag(tag):
@@ -2047,7 +2050,7 @@ def test_invalid_tag():
     try:
         title_from_tag(5)
     except AssertionError:
-        assert(True)
+        assert True
 
 def test_button_not_found():
     tag = tag_without_button()
@@ -2158,9 +2161,9 @@ def url_from_tag(tag):
     assert isinstance(tag, bs4.element.Tag), invalid_tag(tag)
     url = ""
     cls = "replay-button"
-    link = tag.find("button", class_=cls)
-    if link and "data-url" in link.attrs:
-        url = link.attrs["data-url"]
+    button = tag.find("button", class_=cls)
+    if button and "data-url" in button.attrs:
+        url = button.attrs["data-url"]
     return url
 
 def invalid_tag(tag):
@@ -2187,7 +2190,7 @@ def test_invalid_url():
     try:
         url_from_tag(5)
     except AssertionError:
-        assert(True)
+        assert True
 
 def test_button_not_found():
     tag = tag_without_button()
@@ -2330,9 +2333,9 @@ def date_from_tag(tag):
     assert isinstance(tag, bs4.element.Tag), invalid_tag(tag)
     date = ""
     cls = "replay-button"
-    link = tag.find("button", class_=cls)
-    if link and "data-diffusion-path" in link.attrs:
-        attr = link.attrs["data-diffusion-path"]
+    button = tag.find("button", class_=cls)
+    if button and "data-diffusion-path" in button.attrs:
+        attr = button.attrs["data-diffusion-path"]
         match = re.search("([0-9]{2})-([a-z]+)-([0-9]{4})$", attr)
         if match:
             date = "%s-%s-%s" % (
@@ -2389,7 +2392,7 @@ def test_invalid_tag():
     try:
         date_from_tag(5)
     except AssertionError:
-        assert(True)
+        assert True
 
 def test_button_not_found():
     tag = tag_without_button()
@@ -2408,7 +2411,7 @@ def test_invalid_date():
     try:
         date_from_tag(tag)
     except AssertionError:
-        assert(True)
+        assert True
 
 #+end_src
 
@@ -2418,13 +2421,172 @@ def test_invalid_date():
 pytest ./franceinter/episodes/tests/test_date_from_tag.py
 #+end_src
 
-*** TODO duration_from_tag
+*** duration_from_tag
 **** 1. Objetivo
+
+Obtener la duración en segundos de un episodio a partir de un fragmento de html.
+
+El URL se encuentra en el atributo =data-duration-seconds= de un tag =<button>= que tiene la clase =replay-button=. 
+
 **** 2. Firma
+
+La función recibe un objeto =bs4.element.Tag= y devuelve un =int=
+
 **** 3. Ejemplos
+
+- Caso exitoso, un tag que contiene un =<button>= con la clase =replay-button= y una duración en el atributo =data-duration-seconds=
+- Un tag que no tiene el =<button>=
+- Un tag que tiene el =<button>= pero éste no tiene la clase =replay-button=
+- Un tag que tiene el =<button>= pero éste no tiene el atributo =data-url=
+- Un tag que contiene un =<button>= con la clase =replay-button= pero que no contiene un número entero en el atributo =data-duration-seconds=
+
+#+begin_src python :tangle franceinter/episodes/tests/examples_duration_from_tag.py
+from bs4 import BeautifulSoup
+
+def tag_with_duration():
+    html = '''<div>
+<p>Lorem ipsum</p>
+<button class="replay-button" data-duration-seconds="3256">
+</button>
+    </div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def tag_without_class():
+    html = '''<div>
+<p>Lorem ipsum</p>
+<button data-duration-seconds="3256">
+</button>
+    </div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def tag_without_button():
+    html = '''<div>
+<p>Lorem ipsum</p>
+<p class="replay-button" data-duration-seconds="3256">
+</p>
+    </div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def tag_without_duration():
+    html = '''<div>
+<p>Lorem ipsum</p>
+<button class="replay-button">
+</button>
+    </div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def tag_with_invalid_duration():
+    html = '''<div>
+<p>Lorem ipsum</p>
+<button class="replay-button" data-duration-seconds="six seconds">
+</button>
+    </div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+#+end_src
+
 **** 4. Boceto
+
+#+begin_src python
+
+def duration_from_tag(tag):
+    # validar que el tag sea un bs4.element.Tag
+    # devuelve un integer
+    duration = ""
+    # hay que buscar un <button> con la clase "replay-button"
+    # si existe el <button> hay que revisar si tiene el atributo "data-duration-seconds"
+    # si tiene el atributo se guarda en la variable duration
+    # validar que sea un número entero
+    return duration
+
+#+end_src
+
 **** 5. Definición
+
+#+begin_src python :tangle franceinter/episodes/duration_from_tag.py
+import bs4
+
+def duration_from_tag(tag):
+    assert isinstance(tag, bs4.element.Tag), invalid_tag(tag)
+    duration = 0
+    cls = "replay-button"
+    button = tag.find("button", class_=cls)
+    if button and "data-duration-seconds" in button.attrs:
+        value = button.attrs["data-duration-seconds"]
+        try:
+            duration = int(value)
+        except ValueError:
+            assert False, invalid_duration(value, tag)
+    return duration
+
+def invalid_tag(tag):
+    return "tag parameter must be an instance of bs4.element.Tag, received %s instead" % str(type(tag))
+
+def invalid_duration(duration, tag):
+    return "data-duration-seconds attribute must be int, received %s instead\n%s" % (str(type(duration)), tag)
+
+#+end_src
+
 **** 6. Casos de prueba
+
+- Caso exitoso, devuelve el título
+- Cuando recibe un tag que no es un bs4.element.tag, lanza un =AssertionError=
+- Cuando recibe un tag que no contiene un =<button>=, devuelve =0=
+- Cuando recibe un tag que tiene el =<button>= pero éste no tiene la clase correcta, devuelve =0=
+- Cuando recibe un tag que tiene el =<button>= con la clase correcta, pero éste no tiene el atributo =data-url=, devuelve =0=
+- Cuando recibe un tag que contiene un =<button>= con la clase =replay-button= pero que no contiene un número entero en el atributo =data-duration-seconds=, lanza un =AssertionError=
+
+#+begin_src python :tangle franceinter/episodes/tests/test_duration_from_tag.py
+from franceinter.episodes.duration_from_tag import duration_from_tag
+from franceinter.episodes.tests.examples_duration_from_tag import *
+
+def test_duration_ok():
+    tag = tag_with_duration()
+    assert (3256 == duration_from_tag(tag))
+
+def test_invalid_url():
+    try:
+        duration_from_tag(5)
+    except AssertionError:
+        assert True
+
+def test_button_not_found():
+    tag = tag_without_button()
+    assert (0 == duration_from_tag(tag))
+
+def test_class_not_found():
+    tag = tag_without_class()
+    assert (0 == duration_from_tag(tag))
+
+def test_duration_not_found():
+    tag = tag_without_duration()
+    assert (0 == duration_from_tag(tag))
+
+def test_invalid_duration():
+    tag = tag_with_invalid_duration()
+    try:
+        duration_from_tag(tag)
+    except AssertionError:
+        assert True
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest ./franceinter/episodes/tests/test_duration_from_tag.py
+#+end_src
+
 *** TODO episode_from_tag
 **** 1. Objetivo
 **** 2. Firma
@@ -2446,6 +2608,13 @@ pytest ./franceinter/episodes/tests/test_date_from_tag.py
 **** 4. Boceto
 **** 5. Definición
 **** 6. Casos de prueba
+*** TODO episodes_from_response
+**** 1. Objetivo
+**** 2. Firma
+**** 3. Ejemplos
+**** 4. Boceto
+**** 5. Definición
+**** 6. Casos de prueba
 *** TODO episodes_from_podcast
 **** 1. Objetivo
 **** 2. Firma
@@ -2454,13 +2623,6 @@ pytest ./franceinter/episodes/tests/test_date_from_tag.py
 **** 5. Definición
 **** 6. Casos de prueba
 *** TODO episodes_from_filename
-**** 1. Objetivo
-**** 2. Firma
-**** 3. Ejemplos
-**** 4. Boceto
-**** 5. Definición
-**** 6. Casos de prueba
-*** TODO episodes_from_response
 **** 1. Objetivo
 **** 2. Firma
 **** 3. Ejemplos
