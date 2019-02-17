@@ -3247,12 +3247,142 @@ def test_html_without_link():
 pytest franceinter/episodes/tests/test_lastpage_from_html.py
 #+end_src
 
+*** pages_from_podcast
 **** 1. Objetivo
+
+Obtener un listado de URLs de las páginas del listado de episodios a partir de los datos de un podcast.
+
 **** 2. Firma
+
+La función recibe un objeto =franceinter.podcasts.Podcast= y devuelve un =GeneratorType= con los URLs de las páginas del historial de episodios.
+
 **** 3. Ejemplos
+
+- Caso exitoso, un podcast válido
+- Un podcast con el URL vacío
+- Un podcast con el URL inválido
+- Un objeto que no es un =franceinter.podcasts.Podcast=
+
+#+begin_src python :tangle franceinter/episodes/tests/examples_pages_from_podcast.py
+from franceinter.podcasts.podcast import Podcast
+
+def valid_podcast():
+    title = "Sur les epaules de Darwin"
+    url = "http://localhost:3000/episode-list.html"
+    author = "Jean-Claude Ameisen"
+    return Podcast(title, url, author)
+
+def podcast_with_empty_url():
+    title = "Sur les epaules de Darwin"
+    url = ""
+    author = "Jean-Claude Ameisen"
+    return Podcast(title, url, author)
+
+def podcast_with_invalid_url():
+    title = "Sur les epaules de Darwin"
+    url = "ghu:\\{this]url^is((not?valid.com"
+    author = "Jean-Claude Ameisen"
+    return Podcast(title, url, author)
+
+def invalid_podcast():
+    return "this is not a podcast object"
+
+#+end_src
+
 **** 4. Boceto
+
+#+begin_src python
+
+def pages_from_podcast(podcast):
+    # validar que el podcast sea una instancia de Podcast
+    # validar el url
+    # obtener el HTML del URL
+    # obtener el número de la última página del HTML
+    # generar los URLs de las páginas agregando ?p=XX al URL del podcast
+    yield page_url
+
+#+end_src
+
 **** 5. Definición
+
+#+begin_src python :tangle franceinter/episodes/pages_from_podcast.py
+from franceinter.podcasts.podcast import Podcast
+from franceinter.episodes.html_from_url import html_from_url
+from franceinter.episodes.lastpage_from_html import lastpage_from_html
+
+def pages_from_podcast(podcast):
+    assert isinstance(podcast, Podcast), invalid_podcast(podcast)
+    html = html_from_url(podcast.url)
+    lastpage = lastpage_from_html(html)
+    for page_number in range(1, lastpage + 1):
+        page_url = podcast.url + "?p=" + str(page_number)
+        yield page_url
+
+def invalid_podcast(podcast):
+    return "podcast parameter must be a Podcast, received %s instead" % str(type(podcast))
+
+#+end_src
+
 **** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un podcast válido, devuelve un =GeneratorType= con los URLs de las páginas del podcast
+- Cuando recibe un podcast con el URL vacío, lanza un =AssertionError=
+- Cuando recibe un podcast con el URL inválido, lanza un =AssertionError=
+- Cuando recibe un objeto que no es un =franceinter.podcasts.Podcast=, lanza un =AssertionError=
+
+#+begin_src python :tangle franceinter/episodes/tests/test_pages_from_podcast.py
+import types
+import pytest
+import threading
+from validators.url import url as is_valid_url
+from franceinter.episodes.pages_from_podcast import pages_from_podcast
+from franceinter.episodes.tests.examples_pages_from_podcast import *
+from utils.http_server import LocalFolderHTTPServer as HTTPServer
+
+def test_url_ok(http_server):
+    podcast = valid_podcast()
+    pages = pages_from_podcast(podcast)
+    assert isinstance(pages, types.GeneratorType)
+    for page in pages:
+        assert is_valid_url(page)
+
+def test_podcast_with_empty_url():
+    podcast = podcast_with_empty_url()
+    try:
+        pages = list(pages_from_podcast(podcast))
+    except AssertionError:
+        assert True
+
+def test_podcast_with_invalid_url():
+    podcast = podcast_with_invalid_url()
+    try:
+        pages = list(pages_from_podcast(podcast))
+    except AssertionError:
+        assert True
+
+def test_invalid_podcast():
+    podcast = invalid_podcast()
+    try:
+        pages = list(pages_from_podcast(podcast))
+    except AssertionError:
+        assert True
+
+@pytest.fixture(scope="module")
+def http_server():
+    web_dir = './franceinter/html'
+    httpd = HTTPServer(web_dir, ("", 3000))
+    threading.Thread(target=httpd.serve_forever).start()
+    yield httpd
+    httpd.shutdown()
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest ./franceinter/episodes/tests/test_pages_from_podcast.py
+#+end_src
+
 *** TODO episodes_from_page
 **** 1. Objetivo
 **** 2. Firma
