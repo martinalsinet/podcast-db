@@ -3013,7 +3013,7 @@ import requests
 from validators.url import url as is_valid_url
 
 def html_from_url(url):
-    assert isinstance(url, str)
+    assert isinstance(url, str), invalid_str(url)
     assert is_valid_url(url), invalid_url(url)
     try:
         response = requests.get(url)
@@ -3097,9 +3097,156 @@ def http_server():
 pytest franceinter/episodes/tests/test_html_from_url.py
 #+end_src
 
+*** lastpage_from_html
+**** 1. Objetivo
+
+Obtener la cantidad de páginas del HTML del listado de episodios.
+
+En el HTML del listado de episodios de un podcast hay un paginador donde podemos encontrar la cantidad total de páginas, buscando un tag =<li>= que tiene la clase =last=. Dentro de ese =<li>= hay un link a la última página, que se encuentra en el atributo =href=. 
+
+**** 2. Firma
+
+La función recibe un =str= con el HTML y devuelve un =int= con el número de la última página.
+
+**** 3. Ejemplos
+
+- Caso exitoso, un HTML con el tag =<li>= que tiene la clase =last= y el =<a>= con el atributo =href= correcto
+- Un HTML que no es un =str=
+- Un HTML que no tiene el tag =<li>=
+- Un HTML que tiene el tag =<li>=, pero éste no tiene la clase =last=
+- Un HTML que tiene el tag =<li>= con la clase =last=, pero éste no tiene el =<a>=
+
+#+begin_src python :tangle franceinter/episodes/tests/examples_lastpage_from_html.py
+
+def html_ok():
+    html = '''<div>
+<li class="pager-item last">
+    <a href="/emissions/sur-les-epaules-de-darwin?p=22"
+    title="Aller à la denière page"> >>
+    </a>
+</li>
+    </div>'''
+    return html
+
+def invalid_html():
+    return 4321
+
+def html_without_item():
+    html = '''<div>
+<span class="pager-item last">
+    <a href="/emissions/sur-les-epaules-de-darwin?p=22"
+    title="Aller à la denière page"> >>
+    </a>
+</span>
+    </div>'''
+    return html
+
+def html_without_class():
+    html = '''<div>
+<li>
+    <a href="/emissions/sur-les-epaules-de-darwin?p=22"
+    title="Aller à la denière page"> >>
+    </a>
+</li>
+    </div>'''
+    return html
+
+def html_without_link():
+    html = '''<div>
+<li>
+    <a href="/emissions/sur-les-epaules-de-darwin?p=22"
+    title="Aller à la denière page"> >>
+    </a>
+</li>
+    </div>'''
+    return html
+
 #+end_src
 
-*** TODO pages_from_podcast
+**** 4. Boceto
+
+#+begin_src python
+
+def lastpage_from_html(html):
+    # validar que el html sea un str
+    # buscar un <li> con la clase =last=
+    # si existe buscar dentro un <a> y extraer el atributo "href"
+    # extraer al final del href uno o más números [0-9]
+    lastpage = 1
+    return lastpage
+
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle franceinter/episodes/lastpage_from_html.py
+from bs4 import BeautifulSoup
+import re
+
+def lastpage_from_html(html):
+    assert isinstance(html, str), invalid_html(html)
+    soup = BeautifulSoup(html, "html.parser")
+    lastpage = 1
+    item = soup.find("li", class_="last")
+    if item:
+        href = item.find("a").attrs["href"]
+        match = re.search("([0-9]+)$", href)
+        if match:
+            lastpage = int(match.groups()[0])
+    return lastpage
+     
+def invalid_html(html):
+    return "html parameter must be a string, %s received" % str(type(html))
+
+#+end_src
+
+**** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un HTML con el tag =<li>= que tiene la clase =last=, devuelve el número de la última página
+- Cuando recibe un HTML que no es un =str=, lanza un =AssertionError=
+- Cuando recibe un HTML que no tiene el tag =<li>=, devuelve la primera página (=1=)
+- Cuando recibe un HTML que tiene el tag =<li>=, pero éste no tiene la clase =last=, devuelve la primera página (=1=)
+- Cuando recibe un HTML que tiene el tag =<li>= con la clase =last=, pero éste no tiene el =<a>=, devuelve la primera página (=1=)
+
+#+begin_src python :tangle franceinter/episodes/tests/test_lastpage_from_html.py
+from franceinter.episodes.lastpage_from_html import lastpage_from_html
+from franceinter.episodes.tests.examples_lastpage_from_html import *
+
+def test_html_ok():
+    html = html_ok()
+    lastpage = lastpage_from_html(html)
+    assert (lastpage == 22)
+
+def test_invalid_html():
+    html = invalid_html()
+    try:
+        lastpage = lastpage_from_html(html)
+    except AssertionError:
+        assert True
+
+def test_html_without_item():
+    html = html_without_item()
+    lastpage = lastpage_from_html(html)
+    assert (lastpage == 1)
+
+def test_html_without_class():
+    html = html_without_class()
+    lastpage = lastpage_from_html(html)
+    assert (lastpage == 1)
+
+def test_html_without_link():
+    html = html_without_link()
+    lastpage = lastpage_from_html(html)
+    assert (lastpage == 1)
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/episodes/tests/test_lastpage_from_html.py
+#+end_src
+
 **** 1. Objetivo
 **** 2. Firma
 **** 3. Ejemplos
