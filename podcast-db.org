@@ -1905,7 +1905,8 @@ __all__ = [
     "title_from_tag",
     "url_from_tag",
     "date_from_tag",
-    "duration_from_tag"
+    "duration_from_tag",
+    "episode_from_tag"
 ]
 #+end_src
 
@@ -1917,10 +1918,12 @@ __all__ = [
     "test_url_from_tag", 
     "test_date_from_tag", 
     "test_duration_from_tag", 
+    "test_episode_from_tag", 
     "examples_title_from_tag",
     "examples_url_from_tag",
     "examples_date_from_tag",
-    "examples_duration_from_tag"
+    "examples_duration_from_tag",
+    "examples_episode_from_tag"
 ]
 #+end_src
 
@@ -2278,10 +2281,21 @@ def tag_without_date():
     return tag
 
 # la fecha es inválida porque el mes debe estar en francés
-def tag_with_invalid_date():
+def tag_with_invalid_month():
     html = '''<div>
 <p>Lorem ipsum</p>
 <button class="replay-button" data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-january-2019">
+</button>
+    </div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+# la fecha es inválida porque el día es > 31
+def tag_with_invalid_day():
+    html = '''<div>
+<p>Lorem ipsum</p>
+<button class="replay-button" data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-42-janvier-2019">
 </button>
     </div>'''
     soup = BeautifulSoup(html, "html.parser")
@@ -2313,6 +2327,7 @@ def date_from_tag(tag):
 
     # transformar el mes en números con una función auxiliar
     # darle formato YYYY-MM-DD
+    # validar la fecha
     
     return date
     
@@ -2328,6 +2343,7 @@ def month_from_name(month_name):
 #+begin_src python :tangle franceinter/episodes/date_from_tag.py
 import bs4
 import re
+import datetime
 
 def date_from_tag(tag):
     assert isinstance(tag, bs4.element.Tag), invalid_tag(tag)
@@ -2342,10 +2358,17 @@ def date_from_tag(tag):
                 match.group(3), 
                 month_from_name(match.group(2)), 
                 match.group(1))
+            try:
+                datetime.datetime.strptime(date, '%Y-%m-%d')
+            except ValueError:
+                assert False, invalid_date(date, tag)
     return date
 
 def invalid_tag(tag):
     return "tag parameter must be an instance of bs4.element.Tag, received %s instead" % str(type(tag))
+
+def invalid_date(date, tag):
+    return "received tag has an invalid date [%s]\n %s" % (date, str(tag))
 
 def month_from_name(month_name):
     try:
@@ -2364,9 +2387,9 @@ def month_from_name(month_name):
             'decembre': "12"
         }[month_name]
     except KeyError:
-        assert False, invalid_month_name(month_name)
+        assert False, invalid_month(month_name)
 
-def invalid_month_name(month_name):
+def invalid_month(month_name):
     return "invalid month name, %s received" % month_name
 
 #+end_src
@@ -2406,8 +2429,15 @@ def test_date_not_found():
     tag = tag_without_date()
     assert ("" == date_from_tag(tag))
 
-def test_invalid_date():
-    tag = tag_with_invalid_date()
+def test_invalid_month():
+    tag = tag_with_invalid_month()
+    try:
+        date_from_tag(tag)
+    except AssertionError:
+        assert True
+
+def test_invalid_day():
+    tag = tag_with_invalid_day()
     try:
         date_from_tag(tag)
     except AssertionError:
@@ -2426,7 +2456,7 @@ pytest ./franceinter/episodes/tests/test_date_from_tag.py
 
 Obtener la duración en segundos de un episodio a partir de un fragmento de html.
 
-El URL se encuentra en el atributo =data-duration-seconds= de un tag =<button>= que tiene la clase =replay-button=. 
+La duración se encuentra en el atributo =data-duration-seconds= de un tag =<button>= que tiene la clase =replay-button=. 
 
 **** 2. Firma
 
@@ -2587,13 +2617,347 @@ def test_invalid_duration():
 pytest ./franceinter/episodes/tests/test_duration_from_tag.py
 #+end_src
 
-*** TODO episode_from_tag
+*** episode_from_tag
 **** 1. Objetivo
+
+Obtener un episodio de un fragmento de html.
+
+Un episodio tiene cuatro propiedades, a saber:
+
+- título :: es un =str= y es obligatorio
+- url :: es un =str=, es obligatorio y debe ser un URL válido
+- fecha de emisión :: es un =str=, es obligatoria y debe ser una fecha válida en formato =YYYY-MM-DD=
+- duración en segundos :: es un =int= y es obligatoria
+
 **** 2. Firma
+
+La función recibe un objeto =bs4.element.Tag= y devuelve un objeto =franceinter.episodes.episode=
+
+Necesitamos entonces definir la clase =episode=
+
+#+begin_src python :tangle franceinter/episodes/episode.py
+
+class Episode:
+    def __init__(self, title, url, date, duration):
+        self.title = title
+        self.url = url
+        self.date = date
+        self.duration = duration
+
+    def __repr__(self):
+        return "Episode(title='%s', url='%s')" % (self.title, self.url)
+
+#+end_src
+
 **** 3. Ejemplos
+
+- Un tag que tiene todos los elementos para generar un episodio válido (título, URL, fecha y duración)
+- Un tag que no es un =bs4.element.Tag=
+- Un tag que no tiene el elemento del título
+- Un tag que no tiene el elemento del URL
+- Un tag que no tiene el elemento de la fecha
+- Un tag que no tiene el elemento de la duración
+- Un tag que tiene el elemento del URL, pero el URL no es válido
+- Un tag que tiene el elemento de la fecha, pero ésta no es válida
+- Un tag que tiene el elemento de la duración, pero ésta no es válida
+
+#+begin_src python :tangle franceinter/episodes/tests/examples_episode_from_tag.py
+from bs4 import BeautifulSoup
+
+def tag_ok():
+    html = '''<div class="media-visual-replay-button"><button class="replay-button
+                 playable"
+data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-janvier-2019"
+            data-diffusion-title="Une année dans le monde"
+            data-duration-seconds="3256"
+            data-is-aod="1"
+            data-start-time="1549664208"
+data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3"
+        data-xiti-level="4">
+</div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def invalid_tag():
+    return "I am not a tag"
+
+def tag_without_title():
+    html = '''<div class="media-visual-replay-button"><button class="replay-button
+                 playable"
+data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-janvier-2019"
+            data-duration-seconds="3256"
+            data-is-aod="1"
+            data-start-time="1549664208"
+data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3"
+        data-xiti-level="4">
+</div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def tag_without_url():
+    html = '''<div class="media-visual-replay-button"><button class="replay-button
+                 playable"
+            data-diffusion-title="Une année dans le monde"
+data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-janvier-2019"
+            data-duration-seconds="3256"
+            data-is-aod="1"
+            data-start-time="1549664208"
+        data-xiti-level="4">
+</div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def tag_without_date():
+    html = '''<div class="media-visual-replay-button"><button class="replay-button
+                 playable"
+            data-diffusion-title="Une année dans le monde"
+            data-duration-seconds="3256"
+            data-is-aod="1"
+            data-start-time="1549664208"
+data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3"
+        data-xiti-level="4">
+</div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def tag_without_duration():
+    html = '''<div class="media-visual-replay-button"><button class="replay-button
+                 playable"
+data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-janvier-2019"
+            data-diffusion-title="Une année dans le monde"
+            data-is-aod="1"
+            data-start-time="1549664208"
+data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3"
+        data-xiti-level="4">
+</div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def tag_with_invalid_url():
+    html = '''<div class="media-visual-replay-button"><button class="replay-button
+                 playable"
+data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-janvier-2019"
+            data-diffusion-title="Une année dans le monde"
+            data-duration-seconds="3256"
+            data-is-aod="1"
+            data-start-time="1549664208"
+data-url="this://isnot[?=>avalid[[/\\url"
+        data-xiti-level="4">
+</div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def tag_with_invalid_date():
+    html = '''<div class="media-visual-replay-button"><button class="replay-button
+                 playable"
+data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-mercredi-2019"
+            data-diffusion-title="Une année dans le monde"
+            data-duration-seconds="3256"
+            data-is-aod="1"
+            data-start-time="1549664208"
+data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3"
+        data-xiti-level="4">
+</div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def tag_with_invalid_duration():
+    html = '''<div class="media-visual-replay-button"><button class="replay-button
+                 playable"
+data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-janvier-2019"
+            data-diffusion-title="Une année dans le monde"
+            data-duration-seconds="forty minutes"
+            data-is-aod="1"
+            data-start-time="1549664208"
+data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3"
+        data-xiti-level="4">
+</div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+#+end_src
+
 **** 4. Boceto
+
+#+begin_src python
+
+def episode_from_tag(tag):
+    # validar que el tag sea un bs4.element.Tag
+
+    # extraer el título con title_from_tag
+    # validar que el título no sea un string vacío
+
+    # extraer el url con url_from_tag
+    # validar que el url no sea un string vacío
+    # validar el url
+
+    # extraer la fecha con date_from_tag
+    # validar la fecha
+
+    # extraer la duración con duration_from_tag
+    # validar que la duración sea > 0
+
+    # crear una instancia de franceinter.epidsodes.Episode
+    # con el título, el url, la fecha y la duración
+    return episode
+
+#+end_src
+
 **** 5. Definición
+
+Usamos la biblioteca [[https://validators.readthedocs.io/][validators]] para validar el URL del podcast
+
+#+begin_src python :tangle franceinter/episodes/episode_from_tag.py
+from franceinter.episodes.title_from_tag import title_from_tag
+from franceinter.episodes.url_from_tag import url_from_tag
+from franceinter.episodes.date_from_tag import date_from_tag
+from franceinter.episodes.duration_from_tag import duration_from_tag
+from franceinter.episodes.episode import Episode
+from validators.url import url as is_valid_url
+import datetime
+import bs4
+
+def episode_from_tag(tag):
+    assert isinstance(tag, bs4.element.Tag), invalid_tag(tag)
+    title = title_from_tag(tag)
+    assert (title != ""), no_title(tag)
+
+    url = url_from_tag(tag)
+    assert (url != ""), no_url(tag)
+    assert is_valid_url(url), invalid_url(tag)
+
+    date = date_from_tag(tag)
+    assert (date != ""), no_date(tag)
+
+    duration = duration_from_tag(tag)
+    assert (duration != 0), invalid_duration(tag)
+
+    return Episode(title, url, date, duration)
+
+def no_url(tag):
+    return "received tag does not have an episode URL\n %s" % str(tag)
+
+def invalid_url(tag):
+    return "received tag has an invalid episode URL\n %s" % str(tag)
+
+def no_title(tag):
+    return "received tag does not have a episode title\n %s" % str(tag)
+
+def no_date(tag):
+    return "received tag does not have an episode publication date\n %s" % str(tag)
+
+def invalid_tag(tag):
+    return "tag parameter must be an instance of bs4.element.Tag, received %s instead" % str(type(tag))
+
+def invalid_duration(tag):
+    return "received tag has an invalid duration\n %s" % str(tag)
+
+#+end_src
+
 **** 6. Casos de prueba
+
+- Caso exitoso, devuelve un episodio (=franceinter.episodes.Episode=)
+- Cuando recibe un tag que no es un =bs4.element.Tag=, lanza un =AssertionError=
+- Cuando recibe un tag que no tiene el elemento del título, lanza un =AssertionError=
+- Cuando recibe un tag que no tiene el elemento del URL, lanza un =AssertionError=
+- Cuando recibe un tag que no tiene el elemento de la fecha, lanza un =AssertionError=
+- Cuando recibe un tag que no tiene el elemento de la duración, lanza un =AssertionError=
+- Cuando recibe un tag que tiene el elemento del URL, pero el URL no es válido, lanza un =AssertionError=
+- Cuando recibe un tag que tiene el elemento de la fecha, pero ésta no es válida, lanza un =AssertionError=
+- Cuando recibe un tag que tiene el elemento de la duración, pero ésta no es válida, lanza un =AssertionError=
+
+#+begin_src python :tangle franceinter/episodes/tests/test_episode_from_tag.py
+from franceinter.episodes.episode import Episode
+from franceinter.episodes.episode_from_tag import episode_from_tag
+from franceinter.episodes.tests.examples_episode_from_tag import *
+
+def test_episode_ok():
+    tag = tag_ok()
+    episode = episode_from_tag(tag)
+    assert isinstance(episode, Episode)
+    assert (len(str(episode)) > 0)
+
+def test_tag_without_title():
+    tag = tag_without_title()
+    try:
+        episode = episode_from_tag(tag)
+    except AssertionError:
+        assert True
+
+def test_tag_without_url():
+    tag = tag_without_url()
+    try:
+        episode = episode_from_tag(tag)
+    except AssertionError:
+        assert True
+
+def test_tag_without_date():
+    tag = tag_without_date()
+    try:
+        episode = episode_from_tag(tag)
+    except AssertionError:
+        assert True
+
+def test_tag_without_duration():
+    tag = tag_without_duration()
+    try:
+        episode = episode_from_tag(tag)
+    except AssertionError:
+        assert True
+
+def test_tag_with_invalid_url():
+    tag = tag_with_invalid_url()
+    try:
+        episode = episode_from_tag(tag)
+    except AssertionError:
+        assert True
+
+def test_tag_with_invalid_date():
+    tag = tag_with_invalid_date()
+    try:
+        episode = episode_from_tag(tag)
+    except AssertionError:
+        assert True
+
+def test_tag_with_invalid_duration():
+    tag = tag_with_invalid_duration()
+    try:
+        episode = episode_from_tag(tag)
+    except AssertionError:
+        assert True
+
+def test_invalid_tag():
+    tag = invalid_tag()
+    try:
+        episode = episode_from_tag(tag)
+    except AssertionError:
+        assert True
+
+#+end_src
+
+#+RESULTS:
+:results:
+<div class="media-visual-replay-button"><button class="replay-button playable" data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-mercredi-2019" data-diffusion-title="Une année dans le monde" data-duration-seconds="3256" data-is-aod="1" data-start-time="1549664208" data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3" data-xiti-level="4">
+</button></div>
+
+
+invalid month name, mercredi received
+:end:
+
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/episodes/tests/test_episode_from_tag.py
+#+end_src
+
 *** TODO pages_from_podcast
 **** 1. Objetivo
 **** 2. Firma
