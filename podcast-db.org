@@ -2943,19 +2943,160 @@ def test_invalid_tag():
 
 #+end_src
 
-#+RESULTS:
-:results:
-<div class="media-visual-replay-button"><button class="replay-button playable" data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-mercredi-2019" data-diffusion-title="Une année dans le monde" data-duration-seconds="3256" data-is-aod="1" data-start-time="1549664208" data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3" data-xiti-level="4">
-</button></div>
-
-
-invalid month name, mercredi received
-:end:
-
 ***** Run tests
 
 #+begin_src sh
 pytest franceinter/episodes/tests/test_episode_from_tag.py
+#+end_src
+
+*** html_from_url
+**** 1. Objetivo
+
+Obtener el HTML de un URL
+
+A primera vista, parecería ser una función trivial que quizás no debiera existir. Sin embargo, al encapsular las peticiones HTTP en esta función ganamos la posibilidad de cambiar la dependencia de la biblioteca =requests= en caso que sea necesario.
+
+Por ahora colocamos esta función en el módulo episodes, pero la idea es extraerla en un nuevo módulo =HTML= dentro de =Utils= para poder utilizarla en otras partes de la aplicación. Podremos utilizarla, por ejemplo, en la función =podcasts_from_url=.
+
+**** 2. Firma
+
+La función recibe un =str= con un URL válido y devuelve otro =str= con el HTML del URL
+
+**** 3. Ejemplos
+
+- Caso exitoso, un URL válido
+- Un URL que no es un =str=
+- Un URL inválido
+- Un URL válido, pero que causa un =ConnectionError= porque el host no existe
+- Un URL válido, pero de una página que no existe
+
+#+begin_src python :tangle franceinter/episodes/tests/examples_html_from_url.py
+
+def valid_url():
+    url = "http://localhost:3000/episode-list.html"
+    return url
+
+def not_str_url():
+    url = 1234
+    return url
+
+def invalid_url():
+    url = "ghu:\\{this]url^is((not?valid.com"
+    return url
+
+def not_found_url():
+    url = "http://localhost:3000/this-page-does-not-exist.html"
+    return url
+
+def connection_error_url():
+    url = "http://host.local:3000/this-page-does-not-exist.html"
+    return url
+
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+
+def html_from_url(url):
+    # validar el URL
+    # ejecutar la petición HTTP
+    # si no hay error de conexión
+    # devolver el texto de la respuesta
+
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle franceinter/episodes/html_from_url.py
+import requests
+from validators.url import url as is_valid_url
+
+def html_from_url(url):
+    assert isinstance(url, str)
+    assert is_valid_url(url), invalid_url(url)
+    try:
+        response = requests.get(url)
+        return response.text
+    except requests.ConnectionError:
+        assert False, connection_error(url)
+        
+def invalid_str(url):
+    return "url parameter must be string, received %s instead" % str(type(url))
+
+def invalid_url(url):
+    return "url parameter must be a valid URL, received %s instead" % url
+
+def connection_error(url):
+    return "request to %s failed with a connection error" % url
+
+#+end_src
+
+**** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un URL válido devuelve el HTML de la página
+- Cuando recibe un URL que no es un =str=, lanza un =AssertionError=
+- Cuando recibe un URL inválido, lanza un =AssertionError=
+- Cuando recibe un URL válido pero cuyo host no existe, lanza un =AssertionError=
+- Cuando recibe un URL válido pero cuya página, devuelve un =str= vacío
+
+#+begin_src python :tangle franceinter/episodes/tests/test_html_from_url.py
+import re
+import pytest
+import threading
+from franceinter.episodes.html_from_url import html_from_url
+from franceinter.episodes.tests.examples_html_from_url import *
+from utils.http_server import LocalFolderHTTPServer as HTTPServer
+
+def test_url_ok(http_server):
+    url = valid_url()
+    html = html_from_url(url)
+    assert isinstance(html, str)
+    assert (len(html) > 0)
+
+def test_not_str_url(http_server):
+    url = not_str_url()
+    try:
+        html = html_from_url(url)
+    except AssertionError:
+        assert True
+
+def test_invalid_url():
+    url = invalid_url()
+    try:
+        html = html_from_url(url)
+    except AssertionError:
+        assert True
+
+def test_not_found_url(http_server):
+    url = not_found_url()
+    html = html_from_url(url)
+    assert re.search("NOT_FOUND", html)
+
+@pytest.mark.skip(reason="Slow test (~10 sec) waiting for DNS error")
+def test_wrong_site_url(http_server):
+    url = connection_error_url()
+    try:
+        html = html_from_url(url)
+    except AssertionError:
+        assert True
+
+@pytest.fixture(scope="module")
+def http_server():
+    web_dir = './franceinter/html'
+    httpd = HTTPServer(web_dir, ("", 3000))
+    threading.Thread(target=httpd.serve_forever).start()
+    yield httpd
+    httpd.shutdown()
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/episodes/tests/test_html_from_url.py
+#+end_src
+
 #+end_src
 
 *** TODO pages_from_podcast
