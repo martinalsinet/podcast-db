@@ -206,6 +206,8 @@ Queremos obtener el listado de los podcasts desde un URL y también desde un arc
 
 - [ ] =podcasts_from_filename= :: Se podrían matchear los errores de lectura del archivo con los códigos de la respuesta HTTP (404 si no se encuentra, 500 si hubo un error de I/O, etc)
 
+- [ ] =podcasts_from_query= :: Analizar el cambio de nombre por =podcasts_matching_query=, que expresa mejor que la función es un filtro de podcasts usando una palabra clave
+
 *** Submódulos
 **** Podcasts
 
@@ -1897,6 +1899,10 @@ Por lo que se puede ver en el HTML, muchos de los datos que necesitamos se encue
 
 Luego de la implementación de varias funciones vemos que hay un patrón de código que se repite: Se busca un tag HTML con una clase determinada, y de ese tag se extrae un atributo específico. Podemos ver ejemplos de este patrón en las funciones =title_from_tag=, =url_from_tag= y =author_from_tag= del módulo podcasts y otros tantos en las funciones de este módulo que extraen los atributos del episodio (p.ej. =title_from_tag=). Quizás sea necesario crear un nuevo módulo /Tags/ que contenga la lógica que se encarga de extraer datos de los tags HTML.
 
+- [ ] Crear un nuevo módulo =HTML= dentro de =Utils= que tenga la función =html_from_url=
+
+A primera vista, la función =html_from_url= parecería ser una función trivial que quizás no debiera existir. Sin embargo, al encapsular las peticiones HTTP en esta función ganamos la posibilidad de cambiar la dependencia de la biblioteca =requests= en caso que sea necesario. Por ahora la colocamos en el módulo episodes, pero la idea es extraerla en un nuevo módulo =HTML= dentro de =Utils= para poder utilizarla en otras partes de la aplicación. Así podríamos utilizarla, por ejemplo, en la función =podcasts_from_url=.
+
 *** Submódulos
 **** Episodes
 
@@ -2965,10 +2971,6 @@ pytest franceinter/episodes/tests/test_episode_from_tag.py
 **** 1. Objetivo
 
 Obtener el HTML de un URL
-
-A primera vista, parecería ser una función trivial que quizás no debiera existir. Sin embargo, al encapsular las peticiones HTTP en esta función ganamos la posibilidad de cambiar la dependencia de la biblioteca =requests= en caso que sea necesario.
-
-Por ahora colocamos esta función en el módulo episodes, pero la idea es extraerla en un nuevo módulo =HTML= dentro de =Utils= para poder utilizarla en otras partes de la aplicación. Podremos utilizarla, por ejemplo, en la función =podcasts_from_url=.
 
 **** 2. Firma
 
