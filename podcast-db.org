@@ -1963,7 +1963,7 @@ La función recibe un objeto =bs4.element.Tag= y devuelve un =str=
 
 **** 3. Ejemplos
 
-- Caso exitoso, Un tag =<button>= con la clase =replay-button= y el atributo =data-diffusion-title=
+- Caso exitoso, un tag =<button>= con la clase =replay-button= y el atributo =data-diffusion-title=
 - Un tag que no es un =<button>=
 - Un tag =<button>= que no tiene la clase =replay-button=
 - Un tag =<button>= que no tiene el atributo =data-diffusion-title=
@@ -2026,10 +2026,10 @@ import bs4
 def title_from_tag(tag):
     assert isinstance(tag, bs4.element.Tag), invalid_tag(tag)
     title = ""
-    if (tag.name == "button" and 
-        "class" in tag.attrs and
-        "replay-button" in tag.attrs["class"] and
-        "data-diffusion-title" in tag.attrs):
+    if (tag.name == "button" 
+        and "class" in tag.attrs 
+        and "replay-button" in tag.attrs["class"]
+        and"data-diffusion-title" in tag.attrs):
         title = tag.attrs["data-diffusion-title"]
     return title
 
@@ -2092,54 +2092,42 @@ La función recibe un objeto =bs4.element.Tag= y devuelve un =str=
 
 **** 3. Ejemplos
 
-- Caso exitoso, Un tag que contiene un =<button>= con la clase =replay-button= y un URL el atributo =data-url=
-- Un tag que no tiene el =<button>=
-- Un tag que tiene el =<button>= pero éste no tiene la clase =replay-button=
-- Un tag que tiene el =<button>= pero éste no tiene el atributo =data-url=
+- Caso exitoso, un tag =<button>= con la clase =replay-button= y un URL en el atributo =data-url=
+- Un tag que no es un =<button>=
+- Un tag =<button>= que no tiene la clase =replay-button=
+- Un tag =<button>= que no tiene el atributo =data-url=
 
 #+begin_src python :tangle franceinter/episodes/tests/examples_url_from_tag.py
 from bs4 import BeautifulSoup
 
 def tag_with_url():
-    html = '''<div>
-<p>Lorem ipsum</p>
-<button class="replay-button" 
+    html = '''<button class="replay-button" 
     data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3">
-</button>
-    </div>'''
+</button>'''
     soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
+    tag = soup.button
     return tag
 
 def tag_without_class():
-    html = '''<div>
-<p>Lorem ipsum</p>
-<button data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3">
-</button>
-    </div>'''
+    html = '''<button data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3">
+</button>'''
     soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
+    tag = soup.button
     return tag
 
 def tag_without_button():
-    html = '''<div>
-<p>Lorem ipsum</p>
-<a class="replay-button" 
+    html = '''<a class="replay-button" 
     data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3">
-</a>
-    </div>'''
+</a>'''
     soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
+    tag = soup.a
     return tag
 
 def tag_without_url():
-    html = '''<div>
-<p>Lorem ipsum</p>
-<button class="replay-button">
-</button>
-    </div>'''
+    html = '''<button class="replay-button">
+</button>'''
     soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
+    tag = soup.button
     return tag
 
 #+end_src
@@ -2152,9 +2140,10 @@ def url_from_tag(tag):
     # validar que el tag sea un bs4.element.Tag
     # devuelve un string
     url = ""
-    # hay que buscar un <button> con la clase "replay-button"
-    # si existe el <button> hay que revisar si tiene el atributo "data-url"
-    # si tiene el atributo se guarda en la variable url
+    # si el tag es un <button>
+    # y tiene la clase "replay-button"
+    # y tiene el atributo "data-url"
+    # se guarda el valor del atributo en la variable url
     return url
     
 #+end_src
@@ -2167,10 +2156,11 @@ import bs4
 def url_from_tag(tag):
     assert isinstance(tag, bs4.element.Tag), invalid_tag(tag)
     url = ""
-    cls = "replay-button"
-    button = tag.find("button", class_=cls)
-    if button and "data-url" in button.attrs:
-        url = button.attrs["data-url"]
+    if (tag.name == "button" 
+        and "class" in tag.attrs 
+        and "replay-button" in tag.attrs["class"]
+        and"data-url" in tag.attrs):
+        url = tag.attrs["data-url"]
     return url
 
 def invalid_tag(tag):
@@ -2179,11 +2169,11 @@ def invalid_tag(tag):
 
 **** 6. Casos de prueba
 
-- Caso exitoso, devuelve el título
-- Cuando recibe un tag que no es un bs4.element.tag, lanza un =AssertionError=
-- Cuando recibe un tag que no contiene un =<button>=, devuelve un string vacío
-- Cuando recibe un tag que tiene el =<button>= pero éste no tiene la clase correcta, devuelve un string vacío
-- Cuando recibe un tag que tiene el =<button>= con la clase correcta, pero éste no tiene el atributo =data-url=, devuelve un string vacío
+- Caso exitoso, cuando recibe un tag =<button>= con la clase =replay-button= y un URL en el atributo =data-url=, devuelve el URL
+- Cuando recibe un tag que no es un =bs4.element.Tag=, lanza un =AssertionError=
+- Cuando recibe un tag que no es un =<button>=, devuelve un string vacío
+- Cuando recibe un tag =<button>= que no tiene la clase =replay-button=, devuelve un string vacío
+- Cuando recibe un tag =<button>= que no tiene el atributo =data-url=, devuelve un string vacío
 
 #+begin_src python :tangle franceinter/episodes/tests/test_url_from_tag.py
 from franceinter.episodes.url_from_tag import url_from_tag
@@ -2853,7 +2843,7 @@ def invalid_url(tag):
     return "received tag has an invalid episode URL\n %s" % str(tag)
 
 def no_title(tag):
-    return "received tag does not have a episode title\n %s" % str(tag)
+    return "received tag does not have an episode title\n %s" % str(tag)
 
 def no_date(tag):
     return "received tag does not have an episode publication date\n %s" % str(tag)
