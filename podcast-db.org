@@ -1955,7 +1955,7 @@ El título se puede obtener en dos lugares:
 - En el atributo =data-diffusion-title= de un =<button>= que tiene la clase =replay-button=
 - En el atributo =title= de un =<a>= que tiene la clase =rich-section-list-item-content-title=
 
-Elegimos sacarlo del button porque hay otros atributos que también podremos sacar del mismo tag.
+Elegimos sacarlo del button porque tiene todos los atributos que necesitamos obtener (titlulo, url, fecha y duración) en el mismo tag
 
 **** 2. Firma
 
@@ -1963,57 +1963,41 @@ La función recibe un objeto =bs4.element.Tag= y devuelve un =str=
 
 **** 3. Ejemplos
 
-- Caso exitoso, Un tag que contiene un =<button>= con la clase =replay-button= y el atributo =data-diffusion-title=
-- Un tag que no tiene el =<button>=
-- Un tag que tiene el =<button>= pero éste no tiene la clase =replay-button=
-- Un tag que tiene el =<button>= pero éste no tiene el atributo =data-diffusion-title=
+- Caso exitoso, Un tag =<button>= con la clase =replay-button= y el atributo =data-diffusion-title=
+- Un tag que no es un =<button>=
+- Un tag =<button>= que no tiene la clase =replay-button=
+- Un tag =<button>= que no tiene el atributo =data-diffusion-title=
 
 #+begin_src python :tangle franceinter/episodes/tests/examples_title_from_tag.py
 from bs4 import BeautifulSoup
 
 def tag_with_title():
-    html = '''<div>
-<p>Lorem ipsum</p>
-<button class="replay-button" 
+    html = '''<button class="replay-button" 
     data-diffusion-title="Sur les epaules de Darwin">
-</button>
-    </div>'''
+</button>'''
     soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
-    return tag
-
-def tag_without_class():
-    html = '''<div>
-<p>Lorem ipsum</p>
-<button data-diffusion-title="Sur les epaules de Darwin">
-</button>
-</span>
-    </div>'''
-    soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
+    tag = soup.button
     return tag
 
 def tag_without_button():
-    html = '''<div>
-<p>Lorem ipsum</p>
-<p class="replay-button" 
+    html = '''<p class="replay-button" 
     data-diffusion-title="Sur les epaules de Darwin">
-</p>
-</span>
-    </div>'''
+</p>'''
     soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
+    tag = soup.p
+    return tag
+
+def tag_without_class():
+    html = '''<button data-diffusion-title="Sur les epaules de Darwin">
+</button>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.button
     return tag
 
 def tag_without_title():
-    html = '''<div>
-<p>Lorem ipsum</p>
-<button class="replay-buttton">
-</button>
-</span>
-    </div>'''
+    html = '''<button class="replay-buttton"></button>'''
     soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
+    tag = soup.button
     return tag
 
 #+end_src
@@ -2026,8 +2010,9 @@ def title_from_tag(tag):
     # validar que el tag sea un bs4.element.Tag
     # devuelve un string
     title = ""
-    # hay que buscar un <button> con la clase "replay-button"
-    # si existe el <button> hay que revisar si tiene el atributo "data-diffusion-title"
+    # validar que sea un <button>
+    # validar que tenga la clase "replay-button"
+    # revisar si tiene el atributo "data-diffusion-title"
     # si tiene el atributo se guarda en la variable title
     return title
     
@@ -2041,10 +2026,11 @@ import bs4
 def title_from_tag(tag):
     assert isinstance(tag, bs4.element.Tag), invalid_tag(tag)
     title = ""
-    cls = "replay-button"
-    button = tag.find("button", class_=cls)
-    if button and "data-diffusion-title" in button.attrs:
-        title = button.attrs["data-diffusion-title"]
+    if (tag.name == "button" and 
+        "class" in tag.attrs and
+        "replay-button" in tag.attrs["class"] and
+        "data-diffusion-title" in tag.attrs):
+        title = tag.attrs["data-diffusion-title"]
     return title
 
 def invalid_tag(tag):
@@ -2053,11 +2039,11 @@ def invalid_tag(tag):
 
 **** 6. Casos de prueba
 
-- Caso exitoso, devuelve el título
+- Caso exitoso, cuando recibe un tag =<button>= con la clase =replay-button= y el atributo =data-diffusion-title=, devuelve el título
 - Cuando recibe un tag que no es un bs4.element.tag, lanza un =AssertionError=
-- Cuando recibe un tag que no contiene un =<button>=, devuelve un string vacío
-- Cuando recibe un tag que tiene el =<button>= pero éste no tiene la clase correcta, devuelve un string vacío
-- Cuando recibe un tag que tiene el =<button>= con la clase correcta, pero éste no tiene el atributo =data-diffusion-title=, devuelve un string vacío
+- Cuando recibe un tag que no es un =<button>=, devuelve un string vacío
+- Cuando recibe un =<button>= que no tiene la clase =replay-button=, devuelve un string vacío
+- Cuando recibe un =<button>= que no tiene el atributo =data-diffusion-title=, devuelve un string vacío
 
 #+begin_src python :tangle franceinter/episodes/tests/test_title_from_tag.py
 from franceinter.episodes.title_from_tag import title_from_tag
