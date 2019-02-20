@@ -2638,122 +2638,106 @@ class Episode:
 from bs4 import BeautifulSoup
 
 def tag_ok():
-    html = '''<div class="media-visual-replay-button"><button class="replay-button
-                 playable"
+    html = '''<button class="replay-button playable"
 data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-janvier-2019"
             data-diffusion-title="Une année dans le monde"
             data-duration-seconds="3256"
             data-is-aod="1"
             data-start-time="1549664208"
 data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3"
-        data-xiti-level="4">
-</div>'''
+data-xiti-level="4">'''
     soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
+    tag = soup.button
     return tag
 
 def invalid_tag():
     return "I am not a tag"
 
 def tag_without_title():
-    html = '''<div class="media-visual-replay-button"><button class="replay-button
-                 playable"
+    html = '''<button class="replay-button playable"
 data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-janvier-2019"
             data-duration-seconds="3256"
             data-is-aod="1"
             data-start-time="1549664208"
 data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3"
-        data-xiti-level="4">
-</div>'''
+data-xiti-level="4">'''
     soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
+    tag = soup.button
     return tag
 
 def tag_without_url():
-    html = '''<div class="media-visual-replay-button"><button class="replay-button
-                 playable"
+    html = '''<button class="replay-button playable"
             data-diffusion-title="Une année dans le monde"
 data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-janvier-2019"
             data-duration-seconds="3256"
             data-is-aod="1"
             data-start-time="1549664208"
-        data-xiti-level="4">
-</div>'''
+data-xiti-level="4">'''
     soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
+    tag = soup.button
     return tag
 
 def tag_without_date():
-    html = '''<div class="media-visual-replay-button"><button class="replay-button
-                 playable"
+    html = '''<button class="replay-button playable"
             data-diffusion-title="Une année dans le monde"
             data-duration-seconds="3256"
             data-is-aod="1"
             data-start-time="1549664208"
 data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3"
-        data-xiti-level="4">
-</div>'''
+data-xiti-level="4">'''
     soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
+    tag = soup.button
     return tag
 
 def tag_without_duration():
-    html = '''<div class="media-visual-replay-button"><button class="replay-button
-                 playable"
+    html = '''<button class="replay-button playable"
 data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-janvier-2019"
             data-diffusion-title="Une année dans le monde"
             data-is-aod="1"
             data-start-time="1549664208"
 data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3"
-        data-xiti-level="4">
-</div>'''
+data-xiti-level="4">'''
     soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
+    tag = soup.button
     return tag
 
 def tag_with_invalid_url():
-    html = '''<div class="media-visual-replay-button"><button class="replay-button
-                 playable"
+    html = '''<button class="replay-button playable"
 data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-janvier-2019"
             data-diffusion-title="Une année dans le monde"
             data-duration-seconds="3256"
             data-is-aod="1"
             data-start-time="1549664208"
 data-url="this://isnot[?=>avalid[[/\\url"
-        data-xiti-level="4">
-</div>'''
+data-xiti-level="4">'''
     soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
+    tag = soup.button
     return tag
 
 def tag_with_invalid_date():
-    html = '''<div class="media-visual-replay-button"><button class="replay-button
-                 playable"
+    html = '''<button class="replay-button playable"
 data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-mercredi-2019"
             data-diffusion-title="Une année dans le monde"
             data-duration-seconds="3256"
             data-is-aod="1"
             data-start-time="1549664208"
 data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3"
-        data-xiti-level="4">
-</div>'''
+data-xiti-level="4">'''
     soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
+    tag = soup.button
     return tag
 
 def tag_with_invalid_duration():
-    html = '''<div class="media-visual-replay-button"><button class="replay-button
-                 playable"
+    html = '''<button class="replay-button playable"
 data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-janvier-2019"
             data-diffusion-title="Une année dans le monde"
             data-duration-seconds="forty minutes"
             data-is-aod="1"
             data-start-time="1549664208"
 data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3"
-        data-xiti-level="4">
-</div>'''
+data-xiti-level="4">'''
     soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
+    tag = soup.button
     return tag
 
 #+end_src
