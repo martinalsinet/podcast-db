@@ -1917,7 +1917,8 @@ __all__ = [
     "lastpage_from_html",
     "pages_from_podcast",
     "tags_from_html",
-    "episodes_from_response"
+    "episodes_from_response",
+    "episodes_from_filename"
 ]
 #+end_src
 
@@ -1935,6 +1936,7 @@ __all__ = [
     "test_pages_from_podcast",
     "test_tags_from_html",
     "test_episodes_from_response", 
+    "test_episodes_from_filename", 
     "examples_title_from_tag",
     "examples_url_from_tag",
     "examples_date_from_tag",
@@ -1944,7 +1946,8 @@ __all__ = [
     "examples_lastpage_from_html",
     "examples_pages_from_podcast",
     "examples_tags_from_html",
-    "examples_episodes_from_response"
+    "examples_episodes_from_response",
+    "examples_episodes_from_filename"
 ]
 #+end_src
 
@@ -3766,13 +3769,132 @@ def test_wrong_page_response():
 pytest franceinter/episodes/tests/test_episodes_from_response.py
 #+end_src
 
-*** TODO episodes_from_filename
+*** episodes_from_filename
 **** 1. Objetivo
+
+Extraer un listado de episodios desde un archivo
+
 **** 2. Firma
+
+La función recibe un =str= con el nombre del archivo y devuelve un =GeneratorType= de objetos =franceinter.episodes.Episode=
+
 **** 3. Ejemplos
+
+- Un archivo HTML que tiene un listado de episodios
+- Un archivo HTML de otra página, que no tiene episodios
+- Un archivo que no existe
+- Un nombre de archivo que no es un =str=
+
+#+begin_src python :tangle franceinter/episodes/tests/examples_episodes_from_filename.py
+
+def ok_filename():
+    return "./franceinter/html/episode-list.html"
+
+def wrong_filename():
+    return "./franceinter/html/wrong-page.html"
+
+def not_found_filename():
+    return "./franceinter/html/this-file-does-not-exist.html"
+
+def invalid_filename():
+    return [1, 2, 3]
+
+#+end_src
+
 **** 4. Boceto
+
+#+begin_src python
+
+def episodes_from_filename(filename):
+    # validar que filename sea un str
+    # validar que el archivo exista
+    episodes = []
+    # crear un requests.models.Response con el contenido del archivo
+    # obtener los episodios llamando a episodes_from_response
+    return episodes
+     
+#+end_src
+
 **** 5. Definición
+
+#+begin_src python :tangle franceinter/episodes/episodes_from_filename.py
+from requests.models import Response
+from franceinter.episodes.episodes_from_response import episodes_from_response
+
+def episodes_from_filename(filename):
+    assert isinstance(filename, str), invalid_filename(filename)
+    resp = Response()
+    episodes = []
+    try:
+        with open(filename, "rb") as f:
+            resp._content = f.read()
+            episodes = episodes_from_response(resp)
+    except (OSError, IOError) as error:
+        assert False, not_found(filename, error)
+    return episodes
+
+def invalid_filename(filename):
+    return "filename parameter must be a str, %s received instead" % filename
+
+def not_found(filename, error):
+    return "filename %s cannot be read, thrown error :\n%s" % (filename, error)
+#+end_src
+
 **** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un archivo HTML que tiene un listado de podcasts, devuelve un =GeneratorType= de objetos =franceinter.episodes.Episode=
+- Cuando recibe un archivo HTML de otra página, que no tiene podcasts, devuelve un =GeneratorType= vacío
+- Cuando recibe un archivo que no existe, lanza un =AssertionError=
+- Cuando recibe un nombre de archivo que no es un =str=, lanza un =AssertionError=
+
+#+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_filename.py
+import types
+from franceinter.episodes.episode import Episode
+from franceinter.episodes.episodes_from_filename import episodes_from_filename
+from franceinter.episodes.tests.examples_episodes_from_filename import *
+
+def test_ok_filename():
+    filename = ok_filename()
+    episodes = episodes_from_filename(filename)
+    assert isinstance(episodes, types.GeneratorType)
+    episodes = list(episodes)
+    assert (len(episodes) > 0)
+    for e in episodes:
+        assert isinstance(e, Episode)
+
+def test_wrong_filename():
+    filename = wrong_filename()
+    episodes = episodes_from_filename(filename)
+    assert isinstance(episodes, types.GeneratorType)
+    episodes = list(episodes)
+    assert (len(episodes) == 0)
+
+def test_not_found_filename():
+    filename = not_found_filename()
+    try:
+        episodes = episodes_from_filename(filename)
+    except AssertionError:
+        assert True
+
+def test_invalid_filename():
+    filename = invalid_filename()
+    try:
+        episodes = episodes_from_filename(filename)
+    except AssertionError:
+        assert True
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest ./franceinter/episodes/tests/test_episodes_from_filename.py
+#+end_src
+
+#+RESULTS:
+:results:
+:end:
+
 *** Implementación de referencia
 
 #+begin_src python
