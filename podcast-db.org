@@ -1018,7 +1018,7 @@ La función recibe un =str= con el html de la página y devuelve un =GeneratorTy
 
 #+begin_src python :tangle franceinter/podcasts/tests/examples_tags_from_html.py
 from bs4 import BeautifulSoup
-from random import shuffle
+import random
 
 def html_with_divs(how_many):
     class_name = "rich-section-list-item-content"
@@ -1047,7 +1047,7 @@ def html_some_divs_with_class(how_many_with, how_many_without):
     divs_with = list(map(lambda x: div(class_name), range(how_many_with)))
     divs_without = list(map(lambda x: div(), range(how_many_without)))
     divs = divs_with + divs_without
-    shuffle(divs)
+    random.shuffle(divs)
     return html(divs)
 
 def div(class_name=""):
@@ -3357,7 +3357,7 @@ La función recibe un =str= con el html de la página y devuelve un =GeneratorTy
 
 #+begin_src python :tangle franceinter/episodes/tests/examples_tags_from_html.py
 from bs4 import BeautifulSoup
-from random import shuffle
+import random
 
 def html_with_buttons(how_many):
     btn_class = "replay-button"
@@ -3388,7 +3388,7 @@ def html_some_buttons_with_class(how_many_with, how_many_without):
     buttons_with = list(map(lambda x: button("click here", cls), range(how_many_with)))
     buttons_without = list(map(lambda x: button("click here"), range(how_many_without)))
     buttons = buttons_with + buttons_without
-    shuffle(buttons)
+    random.shuffle(buttons)
     class_name = "diffusions-list"
     return html(buttons, class_name)
 
@@ -3400,11 +3400,8 @@ def button(content, class_name=""):
     soup = BeautifulSoup(html, "html.parser")
     return soup.button
 
-def div(content, class_name=""):
-    attr = ""
-    if class_name:
-        attr = 'class="%s"' % class_name
-    html = '''<div %s>%s</div>''' % (attr, content)
+def div(content):
+    html = '''<div>%s</div>''' % content
     soup = BeautifulSoup(html, "html.parser")
     return soup.div
 
@@ -3515,13 +3512,147 @@ def test_some_buttons_with_class():
 pytest franceinter/episodes/tests/test_tags_from_html.py
 #+end_src
 
+*** episodes_from_tags
 **** 1. Objetivo
+
+Generar un listado de episodios a partir de un listado de fragmentos de HTML tomados de la página
+
 **** 2. Firma
+
+La función recibe un listado de objetos =bs4.element.Tag= y devuelve un =GeneratorType= de objetos =franceinter.episodes.Episode=
+
+Vamos a aceptar tanto un =list= como un =GeneratorType=
+
 **** 3. Ejemplos
+
+- Un objeto que no es iterable
+- Una lista vacía
+- Una lista con tags válidos
+- Una lista con objetos que no son del tipo =bs4.element.Tag=
+- Una lista con tags válidos y un tag inválido (sin el título o el URL)
+
+#+begin_src python :tangle franceinter/episodes/tests/examples_episodes_from_tags.py
+import random
+from franceinter.episodes.tags_from_html import tags_from_html
+from franceinter.episodes.tests.examples_episode_from_tag import (
+    tag_ok,
+    tag_without_title
+)
+
+def invalid_list():
+    return 123
+
+def empty_list():
+    return []
+
+def list_without_tags():
+    return [1, 2, 3, 4, 5]
+
+def list_with_valid_tags(how_many):
+    html = "<div class='diffusions-list'>"
+    for i in range(1, how_many):
+        html+= str(tag_ok())
+    html+= "</div>"
+    tags = tags_from_html(html)
+    return tags
+
+def list_with_invalid_tag(how_many):
+    tags = list(list_with_valid_tags(how_many - 1))
+    tags.append(tag_without_title())
+    random.shuffle(tags)
+    return tags
+
+#+end_src
+
 **** 4. Boceto
+
+#+begin_src python
+from franceinter.episodes.tags_from_html import tags_from_html
+
+def podcasts_from_tags(tags):
+    # validar que tags sea un GeneratorType
+    # para cada tag de la lista
+    # usar episode_from_tag() para obtener un podcast
+    # yield posdcast
+
+#+end_src
+
 **** 5. Definición
+
+#+begin_src python :tangle franceinter/episodes/episodes_from_tags.py
+from franceinter.episodes.episode_from_tag import episode_from_tag
+
+def episodes_from_tags(tags):
+    try:
+        it = iter(tags)
+    except TypeError:
+        assert False, invalid_tags(tags)
+    for tag in tags:
+        yield episode_from_tag(tag)
+
+def invalid_tags(tags):
+    return "tags parameter must be iterable, received %s instead" % type(tags)
+#+end_src
+
 **** 6. Casos de prueba
-*** TODO episodes_from_podcast
+
+- Si recibe un objeto que no es iterable, lanza un =AssertionError=
+- Si recibe una lista vacía, devuelve un =GeneratorType= vacío
+- Si recibe una lista de tags válidos, devuelve un =GeneratorType= de objetos =franceinter.episodes.Episode=
+- Si recibe una lista con objetos que no son del tipo =bs4.element.Tag=, lanza un =AssertionError=
+- Si recibe una lista con algún tag inválido (que no tenga el título o el URL), lanza un =AssertionError=
+
+#+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_tags.py
+import types
+from franceinter.episodes.episodes_from_tags import episodes_from_tags
+from franceinter.episodes.tests.examples_episodes_from_tags import *
+from franceinter.episodes.episode import Episode
+
+def test_invalid_list():
+    tags = invalid_list()
+    try:
+        episodes = list(episodes_from_tags(tags))
+    except AssertionError:
+        assert True
+
+def test_empty_list():
+    tags = empty_list()
+    episodes = episodes_from_tags(tags)
+    assert isinstance(episodes, types.GeneratorType)
+    assert (len(list(episodes))==0)
+
+def test_list_with_valid_tags():
+    tags = list_with_valid_tags(6)
+    episodes = episodes_from_tags(tags)
+    assert isinstance(episodes, types.GeneratorType)
+    for e in episodes:
+        assert (isinstance(e, Episode))
+
+def test_list_without_tags():
+    tags = list_without_tags()
+    try:
+        episodes = list(episodes_from_tags(tags))
+    except AssertionError:
+        assert True
+
+def test_list_with_invalid_tag():
+    tags = list_with_invalid_tag(6)
+    episodes = episodes_from_tags(tags)
+    try:
+        for e in episodes:
+            assert (isinstance(e, Episode))
+    except AssertionError:
+        assert True
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/episodes/tests/test_episodes_from_tags.py
+#+end_src
+
+*** TODO episodes_from_response
 **** 1. Objetivo
 **** 2. Firma
 **** 3. Ejemplos
