@@ -1916,7 +1916,8 @@ __all__ = [
     "html_from_url",
     "lastpage_from_html",
     "pages_from_podcast",
-    "tags_from_html"
+    "tags_from_html",
+    "episodes_from_response"
 ]
 #+end_src
 
@@ -1933,6 +1934,7 @@ __all__ = [
     "test_lastpage_from_html",
     "test_pages_from_podcast",
     "test_tags_from_html",
+    "test_episodes_from_response", 
     "examples_title_from_tag",
     "examples_url_from_tag",
     "examples_date_from_tag",
@@ -1941,7 +1943,8 @@ __all__ = [
     "examples_html_from_url",
     "examples_lastpage_from_html",
     "examples_pages_from_podcast",
-    "examples_tags_from_html"
+    "examples_tags_from_html",
+    "examples_episodes_from_response"
 ]
 #+end_src
 
@@ -3652,13 +3655,117 @@ def test_list_with_invalid_tag():
 pytest franceinter/episodes/tests/test_episodes_from_tags.py
 #+end_src
 
-*** TODO episodes_from_response
+*** episodes_from_response
 **** 1. Objetivo
+
+Extraer el listado de episodios de la respuesta de una petición HTTP
+
 **** 2. Firma
+
+La función recibe una =requests.model.Response= y devuelve un =GeneratorType= de objetos =franceinter.episodes.Episode=
+
 **** 3. Ejemplos
+
+- Una respuesta válida, con el HTML de una página del listado de episodios
+- Una respuesta inválida, que no es de la clase =requests.model.Response=
+- Una respuesta válida, pero que tiene el HTML de otra página
+
+#+begin_src python :tangle franceinter/episodes/tests/examples_episodes_from_response.py
+from requests.models import Response
+
+def response_ok():
+    resp = Response()
+    resp.status_code = 200
+    filename = "./franceinter/html/episode-list.html" 
+    with open(filename, "rb") as f:
+        resp._content = f.read()
+    return resp
+
+def invalid_response():
+    return "i am not a Response"
+
+def wrong_page_response():
+    resp = Response()
+    resp.status_code = 200
+    filename = "./franceinter/html/wrong-page.html" 
+    with open(filename, "rb") as f:
+        resp._content = f.read()
+    return resp
+
+#+end_src
+
 **** 4. Boceto
+
+#+begin_src python
+import requests
+
+def episodes_from_response(resp):
+    # validar la respuesta
+    # obtener el HTML de resp.text
+    # extraer los tags usando tags_from_html
+    # obtener los podcasts usando episodes_from_tags
+
+#+end_src
+
 **** 5. Definición
+
+#+begin_src python :tangle franceinter/episodes/episodes_from_response.py
+import requests
+from franceinter.episodes.tags_from_html import tags_from_html
+from franceinter.episodes.episodes_from_tags import episodes_from_tags
+
+def episodes_from_response(resp):
+    assert isinstance(resp, requests.models.Response), invalid_type(resp)
+    html = resp.text
+    tags = tags_from_html(html)
+    episodes = episodes_from_tags(tags)
+    return episodes
+    
+def invalid_type(resp):
+    return "resp parameter must be a requests.models.Response, received %s instead" % type(resp)
+
+#+end_src
+
 **** 6. Casos de prueba
+
+- Cuando recibe una respuesta válida, devuelve un =GeneratorType= de objetos =franceinter.episodes.Episode=
+- Cuando recibe una respuesta que no es de la clase =requests.model.Response=, lanza un =AssertionError=
+- Cuando recibe una respuesta válida que tiene el HTML de otra página, devuelve un =GeneratorType= vacío
+
+#+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_response.py
+import types
+from franceinter.episodes.episode import Episode
+from franceinter.episodes.episodes_from_response import episodes_from_response
+from franceinter.episodes.tests.examples_episodes_from_response import *
+
+def test_response_ok():
+    resp = response_ok()
+    episodes = episodes_from_response(resp)
+    assert isinstance(episodes, types.GeneratorType)
+    for e in episodes:
+        assert isinstance(e, Episode)
+
+def test_invalid_response():
+    resp = invalid_response()
+    try:
+        episodes = episodes_from_response(resp)
+    except AssertionError:
+        assert True
+    
+def test_wrong_page_response():
+    resp = wrong_page_response()
+    episodes = episodes_from_response(resp)
+    assert isinstance(episodes, types.GeneratorType)
+    assert (len(list(episodes)) == 0)
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/episodes/tests/test_episodes_from_response.py
+#+end_src
+
 *** TODO episodes_from_filename
 **** 1. Objetivo
 **** 2. Firma
