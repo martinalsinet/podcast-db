@@ -2447,63 +2447,49 @@ La función recibe un objeto =bs4.element.Tag= y devuelve un =int=
 
 **** 3. Ejemplos
 
-- Caso exitoso, un tag que contiene un =<button>= con la clase =replay-button= y una duración en el atributo =data-duration-seconds=
-- Un tag que no tiene el =<button>=
-- Un tag que tiene el =<button>= pero éste no tiene la clase =replay-button=
-- Un tag que tiene el =<button>= pero éste no tiene el atributo =data-url=
-- Un tag que contiene un =<button>= con la clase =replay-button= pero que no contiene un número entero en el atributo =data-duration-seconds=
+- Caso exitoso, un tag =<button>= con la clase =replay-button= y una duración válida en el atributo =data-duration-seconds=
+- Un tag que no es un =<button>=
+- Un tag =<button>= que no tiene la clase =replay-button=
+- Un tag =<button>= que no tiene el atributo =data-duration-seconds=
+- Un tag =<button>= con la clase =replay-button= pero que no contiene un número entero en el atributo =data-duration-seconds=
 
 #+begin_src python :tangle franceinter/episodes/tests/examples_duration_from_tag.py
 from bs4 import BeautifulSoup
 
 def tag_with_duration():
-    html = '''<div>
-<p>Lorem ipsum</p>
-<button class="replay-button" data-duration-seconds="3256">
-</button>
-    </div>'''
+    html = '''<button class="replay-button" 
+data-duration-seconds="3256">
+</button>'''
     soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
-    return tag
-
-def tag_without_class():
-    html = '''<div>
-<p>Lorem ipsum</p>
-<button data-duration-seconds="3256">
-</button>
-    </div>'''
-    soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
+    tag = soup.button
     return tag
 
 def tag_without_button():
-    html = '''<div>
-<p>Lorem ipsum</p>
-<p class="replay-button" data-duration-seconds="3256">
-</p>
-    </div>'''
+    html = '''<p class="replay-button" 
+data-duration-seconds="3256">
+</p>'''
     soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
+    tag = soup.p
+    return tag
+
+def tag_without_class():
+    html = '''<button data-duration-seconds="3256"></button>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.button
     return tag
 
 def tag_without_duration():
-    html = '''<div>
-<p>Lorem ipsum</p>
-<button class="replay-button">
-</button>
-    </div>'''
+    html = '''<button class="replay-button"></button>'''
     soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
+    tag = soup.button
     return tag
 
 def tag_with_invalid_duration():
-    html = '''<div>
-<p>Lorem ipsum</p>
-<button class="replay-button" data-duration-seconds="six seconds">
-</button>
-    </div>'''
+    html = '''<button class="replay-button" 
+data-duration-seconds="six seconds">
+</button>'''
     soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
+    tag = soup.button
     return tag
 
 #+end_src
@@ -2516,10 +2502,12 @@ def duration_from_tag(tag):
     # validar que el tag sea un bs4.element.Tag
     # devuelve un integer
     duration = ""
-    # hay que buscar un <button> con la clase "replay-button"
-    # si existe el <button> hay que revisar si tiene el atributo "data-duration-seconds"
-    # si tiene el atributo se guarda en la variable duration
-    # validar que sea un número entero
+    # si el tag es un <button>
+    # y tiene la clase "replay-button"
+    # y tiene el atributo "data-duration-seconds"
+    # se guarda el valor del atributo en la variable duration
+
+    # validar que la duración sea un número entero
     return duration
 
 #+end_src
@@ -2532,10 +2520,12 @@ import bs4
 def duration_from_tag(tag):
     assert isinstance(tag, bs4.element.Tag), invalid_tag(tag)
     duration = 0
-    cls = "replay-button"
-    button = tag.find("button", class_=cls)
-    if button and "data-duration-seconds" in button.attrs:
-        value = button.attrs["data-duration-seconds"]
+    if (tag.name == "button" 
+        and "class" in tag.attrs 
+        and "replay-button" in tag.attrs["class"]
+        and "data-duration-seconds" in tag.attrs):
+
+        value = tag.attrs["data-duration-seconds"]
         try:
             duration = int(value)
         except ValueError:
@@ -2552,12 +2542,12 @@ def invalid_duration(duration, tag):
 
 **** 6. Casos de prueba
 
-- Caso exitoso, devuelve el título
+- Caso exitoso, cuando recibe un tag =<button>= con la clase =replay-button= y una duración válida en el atributo =data-duration-seconds=, devuelve la duración
 - Cuando recibe un tag que no es un bs4.element.tag, lanza un =AssertionError=
-- Cuando recibe un tag que no contiene un =<button>=, devuelve =0=
-- Cuando recibe un tag que tiene el =<button>= pero éste no tiene la clase correcta, devuelve =0=
-- Cuando recibe un tag que tiene el =<button>= con la clase correcta, pero éste no tiene el atributo =data-url=, devuelve =0=
-- Cuando recibe un tag que contiene un =<button>= con la clase =replay-button= pero que no contiene un número entero en el atributo =data-duration-seconds=, lanza un =AssertionError=
+- Cuando recibe tag que no es un =<button>=, devuelve =0=
+- Cuando recibe un =<button>= que no tiene la clase =replay-button=, devuelve =0=
+- Cuando recibe un =<button>= que no tiene el atributo =data-url=, devuelve =0=
+- Cuando recibe un =<button>= con la clase =replay-button= pero que no contiene un número entero en el atributo =data-duration-seconds=, lanza un =AssertionError=
 
 #+begin_src python :tangle franceinter/episodes/tests/test_duration_from_tag.py
 from franceinter.episodes.duration_from_tag import duration_from_tag
