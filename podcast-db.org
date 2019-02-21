@@ -208,6 +208,8 @@ Queremos obtener el listado de los podcasts desde un URL y también desde un arc
 
 - [ ] =podcasts_from_query= :: Analizar el cambio de nombre por =podcasts_matching_query=, que expresa mejor que la función es un filtro de podcasts usando una palabra clave
 
+- [ ] =podcasts_from_query= :: Agregar que no distinga entre los caracteres acentuados (á vs a) al buscar. Por ejemplo, si la palabra buscada es =té= debería devolver los podcasts que contengan tanto =té= como =te=
+
 *** Submódulos
 **** Podcasts
 
