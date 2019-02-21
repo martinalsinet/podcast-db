@@ -1927,7 +1927,8 @@ __all__ = [
     "tags_from_html",
     "episodes_from_response",
     "episodes_from_url",
-    "episodes_from_filename"
+    "episodes_from_filename",
+    "episodes_from_podcast"
 ]
 #+end_src
 
@@ -1947,6 +1948,7 @@ __all__ = [
     "test_episodes_from_response", 
     "test_episodes_from_url", 
     "test_episodes_from_filename", 
+    "test_episodes_from_podcast", 
     "examples_title_from_tag",
     "examples_url_from_tag",
     "examples_date_from_tag",
@@ -1958,7 +1960,8 @@ __all__ = [
     "examples_tags_from_html",
     "examples_episodes_from_response",
     "examples_episodes_from_url",
-    "examples_episodes_from_filename"
+    "examples_episodes_from_filename",
+    "examples_episodes_from_podcast"
 ]
 #+end_src
 
@@ -4051,14 +4054,149 @@ pytest ./franceinter/episodes/tests/test_episodes_from_filename.py
 :results:
 :end:
 
-*** TODO episodes_from_podcast
+*** episodes_from_podcast
+**** 1. Objetivo
+
+Obtener el listado de episodios de un podcast.
+
+Con el podcast obtiene el listado de páginas y de cada página extrae el listado de episodios.
+
+**** 2. Firma
+
+La función recibe un =franceinter.podcast.Podcast= y devuelve un =GeneratorType= de =franceinter.episodes.Episode=
+
+**** 3. Ejemplos
+
+- Caso exitoso, un podcast válido
+- Un podcast con el URL vacío
+- Un podcast con el URL inválido
+- Un objeto que no es un =franceinter.podcasts.Podcast=
+
+#+begin_src python :tangle franceinter/episodes/tests/examples_episodes_from_podcast.py
+from franceinter.podcasts.podcast import Podcast
+
+def valid_podcast():
+    title = "Sur les epaules de Darwin"
+    url = "http://localhost:3000/episode-list.html"
+    author = "Jean-Claude Ameisen"
+    return Podcast(title, url, author)
+
+def podcast_with_empty_url():
+    title = "Sur les epaules de Darwin"
+    url = ""
+    author = "Jean-Claude Ameisen"
+    return Podcast(title, url, author)
+
+def podcast_with_invalid_url():
+    title = "Sur les epaules de Darwin"
+    url = "ghu:\\{this]url^is((not?valid.com"
+    author = "Jean-Claude Ameisen"
+    return Podcast(title, url, author)
+
+def invalid_podcast():
+    return "this is not a podcast object"
+
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+
+def episodes_from_podcast(podcast):
+    # validar el podcast
+    # obtener el listado de URLs usando pages_from_podcast
+    # para cada URL obtener los episodios usando episodes_from_url
+    yield episode
+
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle franceinter/episodes/episodes_from_podcast.py
+from franceinter.podcasts.podcast import Podcast
+from franceinter.episodes.pages_from_podcast import pages_from_podcast
+from franceinter.episodes.episodes_from_url import episodes_from_url
+
+def episodes_from_podcast(podcast):
+    assert isinstance(podcast, Podcast), invalid_podcast(podcast)
+    pages = pages_from_podcast(podcast)
+    for url in pages:
+        episodes = episodes_from_url(url)
+        for episode in episodes:
+            yield episode
+
+def invalid_podcast(podcast):
+    return "podcast parameter must be a Podcast, received %s instead" % str(type(podcast))
+
+#+end_src
+
+**** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un podcast válido, devuelve un =GeneratorType= con los episodios del podcast
+- Cuando recibe un podcast con el URL vacío, lanza un =AssertionError=
+- Cuando recibe un podcast con el URL inválido, lanza un =AssertionError=
+- Cuando recibe un objeto que no es un =franceinter.podcasts.Podcast=, lanza un =AssertionError=
+
+#+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_podcast.py
+import types
+import pytest
+import threading
+from franceinter.episodes.episode import Episode
+from franceinter.episodes.episodes_from_podcast import episodes_from_podcast
+from franceinter.episodes.tests.examples_episodes_from_podcast import *
+from utils.http_server import LocalFolderHTTPServer as HTTPServer
+
+def test_url_ok(http_server):
+    podcast = valid_podcast()
+    episodes = episodes_from_podcast(podcast)
+    assert isinstance(episodes, types.GeneratorType)
+    for episode in episodes:
+        assert isinstance(episode, Episode)
+
+def test_podcast_with_empty_url():
+    podcast = podcast_with_empty_url()
+    try:
+        episodes = list(episodes_from_podcast(podcast))
+    except AssertionError:
+        assert True
+
+def test_podcast_with_invalid_url():
+    podcast = podcast_with_invalid_url()
+    try:
+        episodes = list(episodes_from_podcast(podcast))
+    except AssertionError:
+        assert True
+
+def test_invalid_podcast():
+    podcast = invalid_podcast()
+    try:
+        episodes = list(episodes_from_podcast(podcast))
+    except AssertionError:
+        assert True
+
+@pytest.fixture(scope="module")
+def http_server():
+    web_dir = './franceinter/html'
+    httpd = HTTPServer(web_dir, ("", 3000))
+    threading.Thread(target=httpd.serve_forever).start()
+    yield httpd
+    httpd.shutdown()
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest ./franceinter/episodes/tests/test_episodes_from_podcast.py
+#+end_src
+
+*** TODO episodes_from_query
 **** 1. Objetivo
 **** 2. Firma
 **** 3. Ejemplos
 **** 4. Boceto
 **** 5. Definición
 **** 6. Casos de prueba
->>>>>>> Stashed changes
 *** Implementación de referencia
 
 #+begin_src python
