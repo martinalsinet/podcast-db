@@ -1901,9 +1901,15 @@ Por lo que se puede ver en el HTML, muchos de los datos que necesitamos se encue
 
 Luego de la implementación de varias funciones vemos que hay un patrón de código que se repite: Se busca un tag HTML con una clase determinada, y de ese tag se extrae un atributo específico. Podemos ver ejemplos de este patrón en las funciones =title_from_tag=, =url_from_tag= y =author_from_tag= del módulo podcasts y otros tantos en las funciones de este módulo que extraen los atributos del episodio (p.ej. =title_from_tag=). Quizás sea necesario crear un nuevo módulo /Tags/ que contenga la lógica que se encarga de extraer datos de los tags HTML.
 
+Una ventaja adicional de crear un nuevo módulo para manipular los tags es que podemos encapsular el uso de la biblioteca =BeautifulSoup=, y eso nos haría más sencillo el poder reemplazarla llegado el caso. Idealmente, no deberíamos hacer referencia a los objetos o clases de =BeautifulSoup= (p.ej. =bs4.elements.Tag=) en el resto de la aplicación.
+
 - [ ] Crear un nuevo módulo =HTML= dentro de =Utils= que tenga la función =html_from_url=
 
 A primera vista, la función =html_from_url= parecería ser una función trivial que quizás no debiera existir. Sin embargo, al encapsular las peticiones HTTP en esta función ganamos la posibilidad de cambiar la dependencia de la biblioteca =requests= en caso que sea necesario. Por ahora la colocamos en el módulo episodes, pero la idea es extraerla en un nuevo módulo =HTML= dentro de =Utils= para poder utilizarla en otras partes de la aplicación. Así podríamos utilizarla, por ejemplo, en la función =podcasts_from_url=.
+
+- [ ] Extraer la función =tags_from_html= al nuevo módulo =utils.html=
+
+Notamos que la función =tags_from_html= está repetida en los módulos Podcasts y Episodes. Esto nos sugiere que habría que hacer un cambio en el diseño para extraer esa lógica común a otro módulo, para eliminar la duplicación de ese código.
 
 *** Submódulos
 **** Episodes
@@ -1920,6 +1926,7 @@ __all__ = [
     "pages_from_podcast",
     "tags_from_html",
     "episodes_from_response",
+    "episodes_from_url",
     "episodes_from_filename"
 ]
 #+end_src
@@ -1938,6 +1945,7 @@ __all__ = [
     "test_pages_from_podcast",
     "test_tags_from_html",
     "test_episodes_from_response", 
+    "test_episodes_from_url", 
     "test_episodes_from_filename", 
     "examples_title_from_tag",
     "examples_url_from_tag",
@@ -1949,6 +1957,7 @@ __all__ = [
     "examples_pages_from_podcast",
     "examples_tags_from_html",
     "examples_episodes_from_response",
+    "examples_episodes_from_url",
     "examples_episodes_from_filename"
 ]
 #+end_src
@@ -3771,6 +3780,151 @@ def test_wrong_page_response():
 pytest franceinter/episodes/tests/test_episodes_from_response.py
 #+end_src
 
+*** episodes_from_url
+**** 1. Objetivo
+
+Extraer el listado de episodios desde un URL
+
+**** 2. Firma
+
+La función recibe un URL y devuelve un =GeneratorType= de objetos =franceinter.episodes.Episode=
+
+**** 3. Ejemplos
+
+- Un URL con el listado de episodios
+- Un URL de otra página, que no tiene episodios
+- Un URL de una página inexistente, que dispare un error 404 (not found)
+- Un URL de un sitio inexistente, que dispare un error de DNS
+- Un URL inválido
+
+#+begin_src python :tangle franceinter/episodes/tests/examples_episodes_from_url.py
+
+def url_ok():
+    url = "http://localhost:3000/episode-list.html"
+    return url
+
+def wrong_page_url():
+    url = "http://localhost:3000/wrong-page.html"
+    return url
+
+def not_found_url():
+    url = "http://localhost:3000/this-page-does-not-exist.html"
+    return url
+
+def wrong_site_url():
+    url = "http://host.local:3000/this-page-does-not-exist.html"
+    return url
+
+def invalid_url():
+    url = "ht pt:\\hostlocal:3000/this-url-is-not-valid.html"
+    return url
+
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+
+def episodes_from_url(url):
+    # validar el url
+    # realizar una petición al url
+    # obtener la respuesta del url
+    # obtener los episodes llamando a episodes_from_response
+    # revisar si da un error de conexión
+    return episodes
+
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle franceinter/episodes/episodes_from_url.py
+import requests
+from validators.url import url as is_valid_url
+from franceinter.episodes.episodes_from_response import episodes_from_response
+
+def episodes_from_url(url):
+    assert is_valid_url(url), invalid_url(url)
+    try:
+        response = requests.get(url)
+        episodes = episodes_from_response(response)
+        return episodes
+    except requests.ConnectionError:
+        assert False, connection_error(url)
+
+def invalid_url(url):
+    return "url parameter must be a valid URL, received %s instead" % url
+
+def connection_error(url):
+    return "request to %s failed with a connection error" % url
+#+end_src
+
+**** 6. Casos de prueba
+
+- Cuando recibe un URL con el listado de episodios, devuelve un =GeneratorType= de objetos =Episode=
+- Cuando recibe un URL de otra página, que no tiene episodios, devuelve un =GeneratorType= vacío
+- Cuando recibe un URL de una página inexistente, devuelve un =GeneratorType= vacío
+- Cuando recibe un URL de un sitio inexistente (error de DNS), lanza un =AssertionError=
+- Cuando recibe un URL inválido, lanza un =AssertionError=
+
+#+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_url.py
+import pytest
+import threading
+import types
+from franceinter.episodes.episode import Episode
+from franceinter.episodes.episodes_from_url import episodes_from_url
+from franceinter.episodes.tests.examples_episodes_from_url import *
+from utils.http_server import LocalFolderHTTPServer as HTTPServer
+
+def test_url_ok(http_server):
+    url = url_ok()
+    gen = episodes_from_url(url)
+    assert isinstance(gen, types.GeneratorType)
+    episodes = list(gen)
+    assert (len(episodes) > 0)
+    for e in episodes:
+        assert isinstance(e, Episode)
+
+def test_wrong_page_url(http_server):
+    url = wrong_page_url()
+    episodes = list(episodes_from_url(url))
+    assert (len(episodes) == 0)
+
+def test_not_found_url(http_server):
+    url = not_found_url()
+    episodes = list(episodes_from_url(url))
+    assert (len(episodes) == 0)
+
+@pytest.mark.skip(reason="Slow test (~10 sec) waiting for DNS error")
+def test_wrong_site_url(http_server):
+    url = wrong_site_url()
+    try:
+        episodes = list(episodes_from_url(url))
+    except AssertionError:
+        assert True
+
+def test_invalid_url():
+    url = invalid_url()
+    try:
+        episodes = episodes_from_url(url)
+    except AssertionError:
+        assert True
+
+@pytest.fixture(scope="module")
+def http_server():
+    web_dir = './franceinter/html'
+    httpd = HTTPServer(web_dir, ("", 3000))
+    threading.Thread(target=httpd.serve_forever).start()
+    yield httpd
+    httpd.shutdown()
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/episodes/tests/test_episodes_from_url.py
+#+end_src
+
 *** episodes_from_filename
 **** 1. Objetivo
 
@@ -3897,6 +4051,14 @@ pytest ./franceinter/episodes/tests/test_episodes_from_filename.py
 :results:
 :end:
 
+*** TODO episodes_from_podcast
+**** 1. Objetivo
+**** 2. Firma
+**** 3. Ejemplos
+**** 4. Boceto
+**** 5. Definición
+**** 6. Casos de prueba
+>>>>>>> Stashed changes
 *** Implementación de referencia
 
 #+begin_src python
