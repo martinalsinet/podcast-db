@@ -1928,7 +1928,8 @@ __all__ = [
     "episodes_from_response",
     "episodes_from_url",
     "episodes_from_filename",
-    "episodes_from_podcast"
+    "episodes_from_podcast",
+    "episodes_from_query"
 ]
 #+end_src
 
@@ -1949,6 +1950,7 @@ __all__ = [
     "test_episodes_from_url", 
     "test_episodes_from_filename", 
     "test_episodes_from_podcast", 
+    "test_episodes_from_query", 
     "examples_title_from_tag",
     "examples_url_from_tag",
     "examples_date_from_tag",
@@ -1961,7 +1963,8 @@ __all__ = [
     "examples_episodes_from_response",
     "examples_episodes_from_url",
     "examples_episodes_from_filename",
-    "examples_episodes_from_podcast"
+    "examples_episodes_from_podcast",
+    "examples_episodes_from_query"
 ]
 #+end_src
 
@@ -4190,13 +4193,167 @@ def http_server():
 pytest ./franceinter/episodes/tests/test_episodes_from_podcast.py
 #+end_src
 
-*** TODO episodes_from_query
+*** episodes_from_query
 **** 1. Objetivo
+
+Filtrar un listado de episodios y obtener solamente los que contienen una palabra clave en el título
+
+Se debe buscar la palabra clave sin tener encuenta las mayúsculas o minúsculas (case insensitive match)
+
 **** 2. Firma
+
+La función recibe un listado de objetos =franceinter.episodes.Episode= y un =str=, y devuelve un =filter= de objetos =franceinter.episodes.Episode=
+
+Para el listado de episodios vamos a recibir cualquier objeto que sea iterable, como por ejemplo un =list= o un =GeneratorType=
+
 **** 3. Ejemplos
+
+- Un listado de 5 episodios en el que hay 2 que tienen la palabra clave el título 
+- Un listado de 5 episodios en el que ninguno tiene la palabra clave en el título
+- Un listado de episodios que no es iterable
+- Un listado de episodios que no tiene objetos =franceinter.episodes.Episode=
+- Una query que no es un =str=
+
+#+begin_src python :tangle franceinter/episodes/tests/examples_episodes_from_query.py
+import random
+from franceinter.episodes.episode import Episode
+
+def episodes_with_word_in_title(word):
+    episodes = list(some_episodes(3))
+    ep = new_episode()
+    ep.title+= " " + word
+    episodes.append(ep)
+    episodes.append(ep)
+    random.shuffle(episodes)
+    return episodes
+
+def some_episodes(how_many):
+    for i in range(0, how_many):
+        yield new_episode()
+
+def episodes_not_iterable():
+    return 42
+        
+def invalid_episodes():
+    return range(0,10)
+
+def invalid_query():
+    return 42
+
+def new_episode():
+    title = "Este es un episodio de ejemplo"
+    url = "http://podcastplace.com/shows/my-podcast/season-01-episode-01.mp3"
+    date = "2018-09-12"
+    duration = 3265
+    return Episode(title, url, date, duration)
+
+#+end_src
+
 **** 4. Boceto
+
+#+begin_src python
+
+def episodes_from_query(episodes, query):
+    # validar que los episodios sean iterables
+    # validar que la query sea un str
+    # validar que cada episodio sea un Episode
+    # filtrar los episodios con una función que devuelva true 
+    # si el título contiene la query
+
+#+end_src
+
 **** 5. Definición
+
+#+begin_src python :tangle franceinter/episodes/episodes_from_query.py
+import re
+from franceinter.episodes.episode import Episode
+
+def episodes_from_query(episodes, query):
+    try:
+        it = iter(episodes)
+    except TypeError:
+        assert False, invalid_episodes(episodes)
+    assert isinstance(query, str), invalid_query(query)
+    valid_episodes = filter(is_episode, episodes)
+    contains_query = query_matcher(query)
+    return filter(contains_query, valid_episodes)
+
+def is_episode(episode):
+    assert isinstance(episode, Episode), invalid_episode(episode)
+    return True
+    
+def query_matcher(query):
+    def matcher(episode):
+        return re.search(query, episode.title, re.IGNORECASE)
+    return matcher
+    
+def invalid_episodes(episodes):
+    return "episodes parameter must be iterable, received %s instead" % type(episodes)
+
+def invalid_query(query):
+    return "query parameter must be a string, received %s instead" % type(query)
+
+def invalid_episode(episode):
+    return "episode parameter must be an Episode, received %s instead" % type(episode)
+
+#+end_src
+
 **** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un listado de 5 episodios en el que hay 2 que tienen la palabra clave el título, devuelve un =filter= con los 2 episodios que cumplen la condición
+- Cuando reciben un listado de 5 episodios en el que ninguno tiene la palabra clave en el título, devuelve un =filter= vacío
+- Cuando recibe un listado de podcasts que no es iterable, lanza un =AssertionError=
+- Un listado de episodios que no tiene objetos =franceinter.episodes.Episode=, lanza un =AssertionError=
+- Una query que no es un =str=, lanza un =AssertionError=
+
+#+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_query.py
+import types
+from franceinter.episodes.episodes_from_query import episodes_from_query
+from franceinter.episodes.tests.examples_episodes_from_query import *
+
+def test_episodes_with_word_in_title():
+    episodes = episodes_with_word_in_title("radio")
+    result = episodes_from_query(episodes, "radio")
+    assert isinstance(result, filter)
+    assert (len(list(result)) == 2)
+
+def test_episodes_without_word():
+    episodes = some_episodes(5)
+    result = episodes_from_query(episodes, "radio")
+    assert isinstance(result, filter)
+    assert (len(list(result)) == 0)
+
+def test_episodes_not_iterable():
+    episodes = episodes_not_iterable()
+    try:
+        result = episodes_from_query(episodes, "radio")
+    except AssertionError:
+        assert True
+
+def test_invalid_episodes():
+    episodes = invalid_episodes()
+    try:
+        result = episodes_from_query(episodes, "radio")
+        assert (len(list(result)) == 0)
+    except AssertionError:
+        assert True
+
+def test_invalid_query():
+    episodes = some_episodes(10)
+    query = invalid_query()
+    try:
+        result = episodes_from_query(episodes, query)
+    except AssertionError:
+        assert True
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/episodes/tests/test_episodes_from_query.py
+#+end_src
+
 *** Implementación de referencia
 
 #+begin_src python
