@@ -206,7 +206,7 @@ Queremos obtener el listado de los podcasts desde un URL y también desde un arc
 
 - [ ] =podcasts_from_filename= :: Se podrían matchear los errores de lectura del archivo con los códigos de la respuesta HTTP (404 si no se encuentra, 500 si hubo un error de I/O, etc)
 
-- [ ] =podcasts_from_query= :: Analizar el cambio de nombre por =podcasts_matching_query=, que expresa mejor que la función es un filtro de podcasts usando una palabra clave
+- [ ] =podcasts_from_query= :: Analizar el cambio de nombre por =podcasts_matching_query=, que expresa mejor que la función es un filtro de podcasts usando una palabra clave. Pensándolo bien, el nombre de que mejor expresa lo que hace la función es =podcasts_with_keyword=
 
 - [ ] =podcasts_from_query= :: Agregar que no distinga entre los caracteres acentuados (á vs a) al buscar. Por ejemplo, si la palabra buscada es =té= debería devolver los podcasts que contengan tanto =té= como =te=
 
@@ -1889,11 +1889,12 @@ Cada episodio tiene un título, una fecha de emisión y un URL para descargar el
 
 Por lo que se puede ver en el HTML, muchos de los datos que necesitamos se encuentran en un tag =<button>= que tiene la clase =replay-button=
 
-**** TODO Wishlist
+**** Wishlist
 
-- [ ] Obtener el listado de los episodios de un podcast
-- [ ] Para cada episodio obtener el título, la fecha, el URL del audio y su duración
-- [ ] Filtrar el listado por una palabra clave
+- [X] Obtener el listado de los episodios de un podcast
+- [X] Para cada episodio obtener el título, la fecha, el URL del audio y su duración
+- [X] Filtrar el listado por una palabra clave
+- [ ] Filtrar el listado por año, mes, día o intervalo de fechas
 
 **** TODO Mejoras
 
