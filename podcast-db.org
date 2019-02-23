@@ -1912,6 +1912,8 @@ A primera vista, la función =html_from_url= parecería ser una función trivial
 
 Notamos que la función =tags_from_html= está repetida en los módulos Podcasts y Episodes. Esto nos sugiere que habría que hacer un cambio en el diseño para extraer esa lógica común a otro módulo, para eliminar la duplicación de ese código.
 
+- [ ] Cambiar el tipo de dato de la fecha del episodio =Episode.date= para que sea un =datetime.date=
+
 *** Submódulos
 **** Episodes
 
@@ -1930,7 +1932,8 @@ __all__ = [
     "episodes_from_url",
     "episodes_from_filename",
     "episodes_from_podcast",
-    "episodes_from_query"
+    "episodes_from_query",
+    "episodes_between_dates"
 ]
 #+end_src
 
@@ -1952,6 +1955,7 @@ __all__ = [
     "test_episodes_from_filename", 
     "test_episodes_from_podcast", 
     "test_episodes_from_query", 
+    "test_episodes_between_dates", 
     "examples_title_from_tag",
     "examples_url_from_tag",
     "examples_date_from_tag",
@@ -1965,7 +1969,8 @@ __all__ = [
     "examples_episodes_from_url",
     "examples_episodes_from_filename",
     "examples_episodes_from_podcast",
-    "examples_episodes_from_query"
+    "examples_episodes_from_query",
+    "examples_episodes_between_dates"
 ]
 #+end_src
 
@@ -4302,7 +4307,7 @@ def invalid_episode(episode):
 **** 6. Casos de prueba
 
 - Caso exitoso, cuando recibe un listado de 5 episodios en el que hay 2 que tienen la palabra clave el título, devuelve un =filter= con los 2 episodios que cumplen la condición
-- Cuando reciben un listado de 5 episodios en el que ninguno tiene la palabra clave en el título, devuelve un =filter= vacío
+- Cuando recibe un listado de 5 episodios en el que ninguno tiene la palabra clave en el título, devuelve un =filter= vacío
 - Cuando recibe un listado de podcasts que no es iterable, lanza un =AssertionError=
 - Un listado de episodios que no tiene objetos =franceinter.episodes.Episode=, lanza un =AssertionError=
 - Una query que no es un =str=, lanza un =AssertionError=
@@ -4353,6 +4358,211 @@ def test_invalid_query():
 
 #+begin_src sh
 pytest franceinter/episodes/tests/test_episodes_from_query.py
+#+end_src
+
+*** episodes_between_dates
+**** 1. Objetivo
+
+Filtrar un listado de episodios y obtener solamente los que fueron publicados entre dos fechas
+
+**** 2. Firma
+
+La función recibe un listado de objetos =franceinter.episodes.Episode= y dos objetos =datetime.date= (de inicio y fin del intervalo), y devuelve un =filter= de objetos =franceinter.episodes.Episode=
+
+Para el listado de episodios vamos a recibir cualquier objeto que sea iterable, como por ejemplo un =list= o un =GeneratorType=
+
+**** 3. Ejemplos
+
+- Un listado de 5 episodios en el que hay 2 que fueron publicados entre las fechas dadas
+- Un listado de 5 episodios en el que ninguno fue publicado entre las fechas dadas
+- Un listado de episodios que no es iterable
+- Un listado de episodios que no tiene objetos =franceinter.episodes.Episode=
+- Una fecha de inicio que no es un =datetime.date=
+- Una fecha de fin que no es un =datetime.date=
+- Una fecha de inicio que es posterior a la fecha de fin
+
+#+begin_src python :tangle franceinter/episodes/tests/examples_episodes_between_dates.py
+import random
+from datetime import date as Date, timedelta as TimeDelta
+from franceinter.episodes.episode import Episode
+
+def some_episodes_between_dates(starting_at, ending_at):
+    date_outside = ending_at + TimeDelta(days=5)
+    episodes = list(some_episodes_with_date(3, date_outside))
+    date_between = random_date_between(starting_at, ending_at)
+    ep = new_episode(date_between)
+    episodes.append(ep)
+    episodes.append(ep)
+    random.shuffle(episodes)
+    return episodes
+
+def random_date_between(date1, date2):
+    days = (date2 - date1).days
+    random_days = random.randint(0, days)
+    random_date = date1 + TimeDelta(days=random_days)
+    return random_date
+
+def some_episodes_with_date(how_many, episode_date):
+    for i in range(0, how_many):
+        yield new_episode(episode_date)
+
+def episodes_not_iterable():
+    return 42
+        
+def invalid_episodes():
+    return range(0,10)
+
+def invalid_date():
+    return 42
+
+def new_episode(episode_date):
+    title = "Este es un episodio de ejemplo"
+    url = "http://podcastplace.com/shows/my-podcast/season-01-episode-01.mp3"
+    date = str(episode_date)
+    duration = 3265
+    return Episode(title, url, date, duration)
+
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+
+def episodes_between_dates(episodes, starting_at, ending_at):
+    # validar que los episodios sean iterables
+    # validar que las fechas sean datetime.date
+    # validar que cada episodio sea un Episode
+    # filtrar los episodios con una función que devuelva true 
+    # si la fecha está entre starting_at y ending_at
+
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle franceinter/episodes/episodes_between_dates.py
+from datetime import date as Date, datetime as DateTime
+from franceinter.episodes.episode import Episode
+
+def episodes_between_dates(episodes, starting_at, ending_at):
+    try:
+        it = iter(episodes)
+    except TypeError:
+        assert False, invalid_episodes(episodes)
+    assert isinstance(starting_at, Date), invalid_date(starting_at)
+    assert isinstance(ending_at, Date), invalid_date(ending_at)
+    valid_episodes = filter(is_episode, episodes)
+    is_between_dates = date_filter(starting_at, ending_at)
+    return filter(is_between_dates, valid_episodes)
+
+def is_episode(episode):
+    assert isinstance(episode, Episode), invalid_episode(episode)
+    return True
+    
+def date_filter(starting_at, ending_at):
+    def matcher(episode):
+        episode_date = DateTime.strptime(episode.date, "%Y-%m-%d").date()
+        return ((starting_at <= episode_date) 
+                and (episode_date <= ending_at))
+    return matcher
+    
+def invalid_episodes(episodes):
+    return "episodes parameter must be iterable, received %s instead" % type(episodes)
+
+def invalid_date(date):
+    return "starting_at and ending_at parameters must be a date, received %s instead" % type(date)
+
+def invalid_episode(episode):
+    return "episode parameter must be an Episode, received %s instead" % type(episode)
+
+#+end_src
+
+**** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un listado de 5 episodios en el que hay 2 que fueron publicados entre las fechas dadas, devuelve un =filter= con los 2 episodios que cumplen la condición
+- Cuando recibe un listado de 5 episodios en el que ninguno fue publicado entre las fechas dadas, devuelve un =filter= vacío
+- Cuando recibe un listado de episodios que no es iterable, lanza un =AssertionError=
+- Cuando recibe un listado de episodios que no tiene objetos =franceinter.episodes.Episode=, lanza un =AssertionError=
+- Cuando recibe una fecha de inicio que no es un =datetime.date=, lanza un =AssertionError=
+- Cuando recibe una fecha de fin que no es un =datetime.date=, lanza un =AssertionError=
+- Cuando recibe una fecha de inicio que es posterior a la fecha de fin, devuelve un =filter= vacío
+
+#+begin_src python :tangle franceinter/episodes/tests/test_episodes_between_dates.py
+import types
+from datetime import date as Date, timedelta as TimeDelta
+from franceinter.episodes.episodes_between_dates import episodes_between_dates
+from franceinter.episodes.tests.examples_episodes_between_dates import *
+
+def test_episodes_between_dates():
+    starting_at = Date.today()
+    ending_at = Date.today() + TimeDelta(days=5)
+    episodes = some_episodes_between_dates(starting_at, ending_at)
+    result = episodes_between_dates(episodes, starting_at, ending_at)
+    assert isinstance(result, filter)
+    assert (len(list(result)) == 2)
+
+def test_episodes_outside_interval():
+    date_outside = Date.today() - TimeDelta(days=30)
+    episodes = some_episodes_with_date(5, date_outside)
+    starting_at = Date.today()
+    ending_at = Date.today() + TimeDelta(days=5)
+    result = episodes_between_dates(episodes, starting_at, ending_at)
+    assert isinstance(result, filter)
+    assert (len(list(result)) == 0)
+
+def test_episodes_not_iterable():
+    episodes = episodes_not_iterable()
+    try:
+        starting_at = Date.today()
+        ending_at = Date.today() + TimeDelta(days=5)
+        result = episodes_between_dates(episodes, starting_at, ending_at)
+    except AssertionError:
+        assert True
+
+def test_invalid_episodes():
+    episodes = invalid_episodes()
+    try:
+        starting_at = Date.today()
+        ending_at = Date.today() + TimeDelta(days=5)
+        result = episodes_between_dates(episodes, starting_at, ending_at)
+        assert (len(list(result)) == 0)
+    except AssertionError:
+        assert True
+
+def test_invalid_starting_date():
+    episode_date = Date.today() + TimeDelta(days=2)
+    episodes = some_episodes_with_date(5, episode_date)
+    starting_at = invalid_date()
+    ending_at = Date.today() + TimeDelta(days=5)
+    try:
+        result = episodes_between_dates(episodes, starting_at, ending_at)
+    except AssertionError:
+        assert True
+
+def test_invalid_ending_date():
+    episode_date = Date.today() + TimeDelta(days=2)
+    episodes = some_episodes_with_date(5, episode_date)
+    starting_at = Date.today()
+    ending_at = invalid_date()
+    try:
+        result = episodes_between_dates(episodes, starting_at, ending_at)
+    except AssertionError:
+        assert True
+
+def test_invalid_interval():
+    episode_date = Date.today() - TimeDelta(days=2)
+    episodes = some_episodes_with_date(5, episode_date)
+    starting_at = Date.today()
+    ending_at = Date.today() - TimeDelta(days=5)
+    result = episodes_between_dates(episodes, starting_at, ending_at)
+    assert isinstance(result, filter)
+    assert (len(list(result)) == 0)
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/episodes/tests/test_episodes_between_dates.py
 #+end_src
 
 *** Implementación de referencia
