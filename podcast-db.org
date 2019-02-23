@@ -1894,7 +1894,7 @@ Por lo que se puede ver en el HTML, muchos de los datos que necesitamos se encue
 - [X] Obtener el listado de los episodios de un podcast
 - [X] Para cada episodio obtener el título, la fecha, el URL del audio y su duración
 - [X] Filtrar el listado por una palabra clave
-- [ ] Filtrar el listado por año, mes, día o intervalo de fechas
+- [X] Filtrar el listado por año, mes, día o intervalo de fechas
 
 **** TODO Mejoras
 
@@ -4564,57 +4564,6 @@ def test_invalid_interval():
 #+begin_src sh
 pytest franceinter/episodes/tests/test_episodes_between_dates.py
 #+end_src
-
-*** Implementación de referencia
-
-#+begin_src python
-from bs4 import BeautifulSoup
-from urllib.request import urlopen
-from franceinter.podcasts.podcasts_from_filename import podcasts_from_filename
-from franceinter.podcasts.podcasts_from_query import podcasts_from_query
-
-import re
-
-def lastpage_from_filename(filename):
-    with open(filename) as html:
-        soup = BeautifulSoup(html, "html.parser")
-        lastpage = 1
-        item = soup.find("li", class_="last")
-        if item:
-            href = item.find("a").attrs["href"]
-            match = re.search("([0-9]+)$", href)
-            if match:
-                lastpage = int(match.groups()[0])
-        return lastpage
-
-def page_list(podcast):
-    lastpage = lastpage_from_filename("./franceinter/html/episode-list.html")
-    for pagenum in range(1, lastpage+1):
-        yield podcast.url + "?p=" + str(pagenum)
-
-#return lastpage_from_filename("episodes.html")
-podcasts = podcasts_from_filename('./franceinter/html/podcast-list.html')
-darwin = list(podcasts_from_query(podcasts, "darwin"))[0]
-pages = list(page_list(darwin))
-
-print(pages)
-#+end_src
-
-
-#+begin_src sh
-#curl -o episodes.html https://franceinter.fr/emissions/sur-les-epaules-de-darwin
-#ls -alh *.html
-#cat episodes.html | grep "pager-item"
-ls franceinter/html
-#+end_src
-
-#+RESULTS:
-:results:
-episode-list.html
-podcast-list-short.html
-podcast-list.html
-wrong-page.html
-:end:
 
 ** HTML
 
