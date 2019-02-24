@@ -1998,6 +1998,169 @@ Por lo que se puede ver en el HTML, muchos de los datos que necesitamos se encue
 - [X] Filtrar el listado por una palabra clave
 - [X] Filtrar el listado por año, mes, día o intervalo de fechas
 
+***** Obtener el listado de los episodios de un podcast
+
+#+begin_src python
+import itertools
+import requests
+import requests_cache
+from franceinter.podcasts.podcast import Podcast
+from franceinter.episodes.episodes_from_podcast import episodes_from_podcast
+
+requests_cache.install_cache()
+
+title = "Sur les épaules de Darwin"
+url = "https://www.franceinter.fr/emissions/sur-les-epaules-de-darwin"
+author = "Jean-Claude Ameisen"
+podcast = Podcast(title, url, author)
+episodes = episodes_from_podcast(podcast)
+first_five = itertools.islice(episodes, 5)
+for episode in first_five:
+    print(episode)
+    print("\n")
+
+#+end_src
+
+#+RESULTS:
+:results:
+Episode(title='Les chants des abeilles', date='2019-02-16')
+
+
+Episode(title='L'Apiculteur aveugle', date='2019-02-09')
+
+
+Episode(title='Les chants du monde', date='2019-02-02')
+
+
+Episode(title='Une année dans le monde', date='2019-01-26')
+
+
+Episode(title='Aux origines du chocolat (8)', date='2019-01-19')
+
+
+:end:
+
+***** Para cada episodio obtener el título, la fecha, el URL del audio y su duración
+
+#+begin_src python
+import itertools
+import requests
+import requests_cache
+from franceinter.podcasts.podcast import Podcast
+from franceinter.episodes.episodes_from_podcast import episodes_from_podcast
+
+requests_cache.install_cache()
+
+title = "Sur les épaules de Darwin"
+url = "https://www.franceinter.fr/emissions/sur-les-epaules-de-darwin"
+author = "Jean-Claude Ameisen"
+podcast = Podcast(title, url, author)
+episodes = episodes_from_podcast(podcast)
+first = list(itertools.islice(episodes, 5))[0]
+print ("   Title: " + first.title)
+print ("    Date: " + first.date)
+print ("     URL: " + first.url)
+print ("Duration: " + str(first.duration))
+
+#+end_src
+
+#+RESULTS:
+:results:
+   Title: Les chants des abeilles
+    Date: 2019-02-16
+     URL: https://media.radiofrance-podcast.net/podcast09/11549-16.02.2019-ITEMA_21984001-0.mp3
+Duration: 3253
+:end:
+
+***** Filtrar el listado por una palabra clave
+
+#+begin_src python
+import itertools
+import requests
+import requests_cache
+from franceinter.podcasts.podcast import Podcast
+from franceinter.episodes.episodes_from_podcast import episodes_from_podcast
+from franceinter.episodes.episodes_from_query import episodes_from_query
+
+requests_cache.install_cache()
+
+title = "Sur les épaules de Darwin"
+url = "https://www.franceinter.fr/emissions/sur-les-epaules-de-darwin"
+author = "Jean-Claude Ameisen"
+podcast = Podcast(title, url, author)
+episodes = episodes_from_podcast(podcast)
+choco_episodes = episodes_from_query(episodes, "chocolat")
+first_five = itertools.islice(choco_episodes, 5)
+for episode in first_five:
+    print(episode)
+    print("\n")
+
+#+end_src
+
+#+RESULTS:
+:results:
+Episode(title='Aux origines du chocolat (8)', date='2019-01-19')
+
+
+Episode(title='Aux Origines du Chocolat (7)', date='2019-01-12')
+
+
+Episode(title='Aux Origines du Chocolat (6)', date='2019-01-05')
+
+
+Episode(title='Aux origines du chocolat (5)', date='2018-12-15')
+
+
+Episode(title='Aux origines du chocolat (4)', date='2018-12-08')
+
+
+:end:
+
+***** Filtrar el listado por año, mes, día o intervalo de fechas
+
+#+begin_src python
+import itertools
+import requests
+import requests_cache
+from datetime import date as Date
+from franceinter.podcasts.podcast import Podcast
+from franceinter.episodes.episodes_from_podcast import episodes_from_podcast
+from franceinter.episodes.episodes_between_dates import episodes_between_dates
+
+requests_cache.install_cache()
+
+title = "Sur les épaules de Darwin"
+url = "https://www.franceinter.fr/emissions/sur-les-epaules-de-darwin"
+author = "Jean-Claude Ameisen"
+podcast = Podcast(title, url, author)
+episodes = episodes_from_podcast(podcast)
+first_100 = itertools.islice(episodes, 100)
+june_episodes = episodes_between_dates(first_100, Date(2018, 6, 1), Date(2018, 6, 30))
+for episode in june_episodes:
+    print(episode)
+    print("\n")
+
+#+end_src
+
+#+RESULTS:
+:results:
+Episode(title='Dans les ombres rêveuses', date='2018-06-30')
+
+
+Episode(title='Le plomb et l'argent (4)', date='2018-06-23')
+
+
+Episode(title='Le plomb et l'argent (3)', date='2018-06-16')
+
+
+Episode(title='Le plomb et l'argent (2)', date='2018-06-09')
+
+
+Episode(title='Le plomb et l'argent', date='2018-06-02')
+
+
+:end:
+
 **** TODO Mejoras
 
 - [ ] Crear una nueva función =attribute_from_tag= para extraer un atributo de un tag con una clase determinada
@@ -2015,6 +2178,13 @@ A primera vista, la función =html_from_url= parecería ser una función trivial
 Notamos que la función =tags_from_html= está repetida en los módulos Podcasts y Episodes. Esto nos sugiere que habría que hacer un cambio en el diseño para extraer esa lógica común a otro módulo, para eliminar la duplicación de ese código.
 
 - [ ] Cambiar el tipo de dato de la fecha del episodio =Episode.date= para que sea un =datetime.date=
+
+- [ ] Revisar el listado de episodios de "Sur les épaules de Darwin" porque está dando URL inválido para un episodio de 2011
+
+#+begin_src txt
+AssertionError: received tag has an invalid episode URL
+ <button class="replay-button playable" data-clip-type="reecoute" data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-25-juin-2011" data-diffusion-title='"Entendre leurs voix" avec Florence Aubenas' data-diffusion-uuid="136e81f2-a7b2-11e0-b8ee-842b2b72cd1d" data-duration="54 min" data-duration-seconds="3241" data-emission-business-reference="16177" data-emission-title="Sur les épaules de Darwin" data-emission-uuid="6f540125-eb9f-11e1-a7b7-782bcb76618d" data-end-time="1551032275" data-extract-id="" data-extract-title="" data-is-aod="1" data-next-media-info="/get_next_audio/136e81f2-a7b2-11e0-b8ee-842b2b72cd1d" data-start-time="1551029034" data-theme="" data-theme-uuid="" data-url="https://s3-eu-west-1.amazonaws.com/cruiser-production/static/inter/sons/2011/07/s27/carrefour (2).mp3" data-uuid="0962e356-a7b2-11e0-b8ee-842b2b72cd1d" data-xiti-action="C" data-xiti-id="0962e356" data-xiti-level="4" data-xiti-libelle='Reecouter::Sur les épaules de Darwin-"Entendre leurs voix" avec Florence Aubenas-0962e356' data-xiti-trackable="true" data-xiti-type="A" title='réecouter "Entendre leurs voix" avec Florence Aubenas'><svg class="icon replay-button-icon icon-play-player"><use xlink:href="#icon_player-play" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg><svg class="icon replay-button-icon icon-pause-player"><use xlink:href="#icon_player-pause" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg><svg class="icon replay-button-icon icon-play"><use xlink:href="#icon_play" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg><svg class="icon replay-button-icon icon-pause"><use xlink:href="#icon_pause" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg><svg class="icon replay-button-icon icon-play-disabled"><use xlink:href="#icon_playdisabled" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg><svg class="icon replay-button-icon icon-direct-audio"><use xlink:href="#icon_direct-audio" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg></button>
+#+end_src
 
 *** Submódulos
 **** Episodes
@@ -2749,7 +2919,9 @@ class Episode:
         self.duration = duration
 
     def __repr__(self):
-        return "Episode(title='%s', url='%s')" % (self.title, self.url)
+        return "Episode(title='%s', date='%s')" % (
+            self.title, self.date
+        )
 
 #+end_src
 
