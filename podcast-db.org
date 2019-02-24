@@ -98,9 +98,9 @@ Quiero que mi base de datos pueda consultar las siguientes fuentes de podcasts:
 
 - [ ] Listar las fuentes de podcasts disponibles
 - [X] Listar los podcasts de una fuente
-- [ ] Listar los episodios de un podcast
-- [ ] Obtener el detalle de un episodio
-- [ ] Filtrar los episodios de un podcast según algún criterio (año, mes, palabra clave)
+- [X] Listar los episodios de un podcast
+- [X] Obtener el detalle de un episodio
+- [X] Filtrar los episodios de un podcast según algún criterio (año, mes, palabra clave)
 - [ ] Generar una playlist o feed RSS de los episodios filtrados
 - [ ] Crear una cola de descarga a partir de una playlist
 - [ ] Procesar los archivos descargados (p.ej, cambiar el bitrate a 64k)
@@ -201,6 +201,108 @@ Queremos obtener el listado de los podcasts desde un URL y también desde un arc
 - [X] Obtener el listado de los podcasts de France Inter
 - [X] Para cada podcast obtener el nombre, el url y el autor
 - [X] Filtrar el listado de podcasts por una palabra clave
+
+***** Obtener el listado de los podcasts de France Inter
+
+#+begin_src python
+import itertools
+import requests
+import requests_cache
+from franceinter.podcasts.podcasts_from_url import podcasts_from_url
+
+requests_cache.install_cache()
+
+url = "https://www.franceinter.fr/emissions/"
+podcasts = podcasts_from_url(url)
+first_five = itertools.islice(podcasts, 5)
+for podcast in first_five:
+    print(podcast)
+    print("\n")
+#+end_src
+
+#+RESULTS:
+:results:
+Podcast(title='1001 mondes', url='https://www.franceinter.fr/emissions/mille-et-un-mondes')
+
+
+Podcast(title='116 rue Albert-Londres', url='https://www.franceinter.fr/emissions/116-rue-albert-londres')
+
+
+Podcast(title='18 bis, boulevard Hache-Coeur', url='https://www.franceinter.fr/emissions/18-bis-boulevard-hache-coeur')
+
+
+Podcast(title='1914/1918 : la grande guerre, cent ans après', url='https://www.franceinter.fr/emissions/1914-1918-la-grande-guerre-cent-ans-apres')
+
+
+Podcast(title='1918, un monde en révolutions', url='https://www.franceinter.fr/emissions/1918-un-monde-en-revolutions')
+
+
+:end:
+
+***** Para cada podcast obtener el nombre, el url y el autor
+
+#+begin_src python
+import itertools
+import requests
+import requests_cache
+from franceinter.podcasts.podcasts_from_url import podcasts_from_url
+
+requests_cache.install_cache()
+
+url = "https://www.franceinter.fr/emissions/"
+podcasts = podcasts_from_url(url)
+first_five = list(itertools.islice(podcasts, 5))
+first = first_five[0]
+print(" Podcast title: " + first.title)
+print("   Podcast URL: " + first.url)
+print("Podcast author: " + first.author)
+#+end_src
+
+#+RESULTS:
+:results:
+ Podcast title: 1001 mondes
+   Podcast URL: https://www.franceinter.fr/emissions/mille-et-un-mondes
+Podcast author: Laura El Makki
+:end:
+
+***** Filtrar el listado de podcasts por una palabra clave
+
+#+begin_src python
+import itertools
+import requests
+import requests_cache
+from franceinter.podcasts.podcasts_from_url import podcasts_from_url
+from franceinter.podcasts.podcasts_from_query import podcasts_from_query
+
+requests_cache.install_cache()
+
+url = "https://www.franceinter.fr/emissions/"
+podcasts = podcasts_from_url(url)
+music_podcasts = podcasts_from_query(podcasts, "musique")
+first_five = itertools.islice(music_podcasts, 5)
+for podcast in first_five:
+    print(podcast)
+    print("\n")
+#+end_src
+
+#+RESULTS:
+:results:
+Podcast(title='Je veux de la musique !', url='https://www.franceinter.fr/emissions/je-veux-de-la-musique')
+
+
+Podcast(title='Michel Berger, tout pour la musique', url='https://www.franceinter.fr/emissions/michel-berger-tout-pour-la-musique')
+
+
+Podcast(title='La musique d'Inter', url='https://www.franceinter.fr/emissions/la-musique-d-inter')
+
+
+Podcast(title='On parle musique', url='https://www.franceinter.fr/emissions/parle-musique')
+
+
+Podcast(title='Quand la musique donne (été 2012)', url='https://www.franceinter.fr/emissions/quand-la-musique-donne-ete-2012')
+
+
+:end:
 
 **** TODO Mejoras
 
