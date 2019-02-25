@@ -96,12 +96,13 @@ Quiero que mi base de datos pueda consultar las siguientes fuentes de podcasts:
 
 ** Funcionalidades
 
-- [ ] Listar las fuentes de podcasts disponibles
+- [X] Listar las fuentes de podcasts disponibles
 - [X] Listar los podcasts de una fuente
 - [X] Listar los episodios de un podcast
 - [X] Obtener el detalle de un episodio
 - [X] Filtrar los episodios de un podcast según algún criterio (año, mes, palabra clave)
-- [ ] Generar una playlist o feed RSS de los episodios filtrados
+- [ ] Guardar las fuentes, los podcasts y sus episodios en una base de datos local
+- [ ] Generar una playlist o feed RSS a partir de un listado de episodios
 - [ ] Crear una cola de descarga a partir de una playlist
 - [ ] Procesar los archivos descargados (p.ej, cambiar el bitrate a 64k)
 
@@ -173,6 +174,86 @@ virtualenv-3.6 ./venv
 
 #+begin_src sh
 pip-3.6 install -r requirements.txt
+#+end_src
+
+* Sources
+** Diseño
+
+- [X] Listar las fuentes de podcasts disponibles
+
+Por el momento, la única fuente disponible es FranceInter
+
+** Submódulos
+*** Sources
+
+#+begin_src python :tangle sources/__init__.py
+__all__ = [
+    "list_sources"
+]
+#+end_src
+
+*** Tests
+
+#+begin_src python :tangle sources/tests/__init__.py
+__all__ = [
+    "test_list_sources"
+]
+#+end_src
+
+** list_sources
+*** 1. Objetivo
+
+Obtener el listado de fuentes de podcasts disponibles.
+
+*** 2. Firma
+
+La función no recibe argumentos y devuelve una lista de =str=.
+
+*** 3. Ejemplos
+
+Dado que la función no recibe argumentos, no es necesario confeccionar ejemplos.
+
+*** 4. Boceto
+
+#+begin_src python
+
+def list_sources():
+    # devuelve un list
+    sources = []
+    # hay que agregar la lista de fuentes de podcasts
+    return sources
+    
+#+end_src
+
+*** 5. Definición
+
+#+begin_src python :tangle sources/list_sources.py
+
+def list_sources():
+    sources = ["franceinter"]
+    return sources
+
+#+end_src
+
+*** 6. Casos de prueba
+
+- Caso exitoso, devuelve una lista de un solo elemento (=franceinter=).
+
+#+begin_src python :tangle sources/tests/test_list_sources.py
+from sources.list_sources import list_sources
+
+def test_sources_ok():
+    sources = list_sources()
+    assert (sources == ["franceinter"])
+    for source in sources:
+        assert isinstance(source, str)
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest sources/tests/test_list_sources.py
 #+end_src
 
 * France Inter
