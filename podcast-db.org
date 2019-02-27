@@ -114,10 +114,12 @@ Quiero que mi base de datos pueda consultar las siguientes fuentes de podcasts:
 .pytest_cache
 __pycache__
 .coverage
+cache.sqlite
 coverage
 downloads
 franceinter
 requirements.txt
+sources
 utils
 venv
 #+end_src

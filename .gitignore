@@ -2,9 +2,11 @@
 .pytest_cache
 __pycache__
 .coverage
+cache.sqlite
 coverage
 downloads
 franceinter
 requirements.txt
+sources
 utils
 venv
