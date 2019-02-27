@@ -2258,7 +2258,7 @@ A primera vista, la función =html_from_url= parecería ser una función trivial
 
 Notamos que la función =tags_from_html= está repetida en los módulos Podcasts y Episodes. Esto nos sugiere que habría que hacer un cambio en el diseño para extraer esa lógica común a otro módulo, para eliminar la duplicación de ese código.
 
-- [ ] Cambiar el tipo de dato de la fecha del episodio =Episode.date= para que sea un =datetime.date=
+- [X] Cambiar el tipo de dato de la fecha del episodio =Episode.date= para que sea un =datetime.date=
 
 - [ ] Revisar el listado de episodios de "Sur les épaules de Darwin" porque está dando URL inválido para un episodio de 2011
 
@@ -2600,11 +2600,11 @@ La fecha de emisión se encuentra en el atributo =data-diffusion-path= de un tag
 
 Ejemplo: ~data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-janvier-2019"~. 
 
-Tenemos que extraer la fecha del path y devolverla en formato =YYYY-MM-DD=
+Tenemos que extraer la fecha del path y devolverla como un =datetime.date=
 
 **** 2. Firma
 
-La función recibe un objeto =bs4.element.Tag= y devuelve un =str=
+La función recibe un objeto =bs4.element.Tag= y devuelve un =datetime.date=
 
 **** 3. Ejemplos
 
@@ -2689,14 +2689,14 @@ def date_from_tag(tag):
     # - seguidos del fin del string ($)
 
     # transformar el mes en números con una función auxiliar
-    # darle formato YYYY-MM-DD
+    # crear el objeto datetime.date con el año, el día y el mes
     # validar la fecha
     
     return date
     
 def month_from_name(month_name):
     # recibe el nombre (janvier, fevrier, etc)
-    # y devuelve el número (01, 02, etc)
+    # y devuelve el número (1, 2, etc)
     return month_num
 
 #+end_src
@@ -2710,7 +2710,7 @@ import datetime
 
 def date_from_tag(tag):
     assert isinstance(tag, bs4.element.Tag), invalid_tag(tag)
-    date = ""
+    date = None
     if (tag.name == "button" 
         and "class" in tag.attrs 
         and "replay-button" in tag.attrs["class"]
@@ -2719,37 +2719,37 @@ def date_from_tag(tag):
         attr = tag.attrs["data-diffusion-path"]
         match = re.search("([0-9]{2})-([a-z]+)-([0-9]{4})$", attr)
         if match:
-            date = "%s-%s-%s" % (
-                match.group(3), 
-                month_from_name(match.group(2)), 
-                match.group(1))
             try:
-                datetime.datetime.strptime(date, '%Y-%m-%d')
+                date = datetime.date(
+                    int(match.group(3)), 
+                    month_from_name(match.group(2)), 
+                    int(match.group(1))
+                )
             except ValueError:
-                assert False, invalid_date(date, tag)
+                assert False, invalid_date(match, tag)
     return date
 
 def invalid_tag(tag):
     return "tag parameter must be an instance of bs4.element.Tag, received %s instead" % str(type(tag))
 
 def invalid_date(date, tag):
-    return "received tag has an invalid date [%s]\n %s" % (date, str(tag))
+    return "received tag has an invalid date [%s]\n %s" % (str(date), str(tag))
 
 def month_from_name(month_name):
     try:
         return {
-            'janvier': "01",
-            'fevrier': "02",
-            'mars': "03",
-            'avril': "04",
-            'mai': "05",
-            'juin': "06",
-            'juillet': "07",
-            'aout': "08",
-            'septembre': "09",
-            'octobre': "10",
-            'novembre': "11",
-            'decembre': "12"
+            'janvier': 1,
+            'fevrier': 2,
+            'mars': 3,
+            'avril': 4,
+            'mai': 5,
+            'juin': 6,
+            'juillet': 7,
+            'aout': 8,
+            'septembre': 9,
+            'octobre': 10,
+            'novembre': 11,
+            'decembre': 12
         }[month_name]
     except KeyError:
         assert False, invalid_month(month_name)
@@ -2763,18 +2763,19 @@ def invalid_month(month_name):
 
 - Caso exitoso, cuando recibe un =<button>= con la clase =replay-button= y una fecha en el atributo =data-diffusion-path=, devuelve la fecha
 - Cuando recibe un tag que no es un bs4.element.tag, lanza un =AssertionError=
-- Cuando recibe un tag que no es un =<button>=, devuelve un string vacío
-- Cuando recibe un =<button>= que no tiene la clase =replay-button=, devuelve un string vacío
-- Cuando recibe un =<button>= que no tiene el atributo =data-diffusion-path=, devuelve un string vacío
+- Cuando recibe un tag que no es un =<button>=, devuelve =None=
+- Cuando recibe un =<button>= que no tiene la clase =replay-button=, devuelve =None=
+- Cuando recibe un =<button>= que no tiene el atributo =data-diffusion-path=, devuelve =None=
 - Cuando recibe un =<button>= que tiene una fecha inválida en el atributo =data-diffusion-path=, lanza un =AssertionError=
 
 #+begin_src python :tangle franceinter/episodes/tests/test_date_from_tag.py
+import datetime
 from franceinter.episodes.date_from_tag import date_from_tag
 from franceinter.episodes.tests.examples_date_from_tag import *
 
 def test_url_ok():
     tag = tag_with_date()
-    assert ("2019-01-26" == date_from_tag(tag))
+    assert (datetime.date(2019, 1, 26) == date_from_tag(tag))
 
 def test_invalid_tag():
     try:
@@ -2784,15 +2785,15 @@ def test_invalid_tag():
 
 def test_button_not_found():
     tag = tag_without_button()
-    assert ("" == date_from_tag(tag))
+    assert (None == date_from_tag(tag))
 
 def test_class_not_found():
     tag = tag_without_class()
-    assert ("" == date_from_tag(tag))
+    assert (None == date_from_tag(tag))
 
 def test_date_not_found():
     tag = tag_without_date()
-    assert ("" == date_from_tag(tag))
+    assert (None == date_from_tag(tag))
 
 def test_invalid_month():
     tag = tag_with_invalid_month()
@@ -3176,7 +3177,7 @@ def episode_from_tag(tag):
     assert is_valid_url(url), invalid_url(tag)
 
     date = date_from_tag(tag)
-    assert (date != ""), no_date(tag)
+    assert (date != None), no_date(tag)
 
     duration = duration_from_tag(tag)
     assert (duration != 0), invalid_duration(tag)
