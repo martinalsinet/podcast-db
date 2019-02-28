@@ -93,6 +93,7 @@ Quiero que mi base de datos pueda consultar las siguientes fuentes de podcasts:
 - BBC
 - Team Human
 - Radiolab
+- RSS feeds
 
 ** Funcionalidades
 
@@ -2329,6 +2330,1954 @@ __all__ = [
 ]
 #+end_src
 
+*** episodes_from_podcast
+**** 1. Objetivo
+
+Obtener el listado de episodios de un podcast.
+
+Con el podcast obtiene el listado de páginas y de cada página extrae el listado de episodios.
+
+**** 2. Firma
+
+La función recibe un =franceinter.podcast.Podcast= y devuelve un =GeneratorType= de =franceinter.episodes.Episode=
+
+**** 3. Ejemplos
+
+- Caso exitoso, un podcast válido
+- Un podcast con el URL vacío
+- Un podcast con el URL inválido
+- Un objeto que no es un =franceinter.podcasts.Podcast=
+
+#+begin_src python :tangle franceinter/episodes/tests/examples_episodes_from_podcast.py
+from franceinter.podcasts.podcast import Podcast
+
+def valid_podcast():
+    title = "Sur les epaules de Darwin"
+    url = "http://localhost:3000/episode-list.html"
+    author = "Jean-Claude Ameisen"
+    return Podcast(title, url, author)
+
+def podcast_with_empty_url():
+    title = "Sur les epaules de Darwin"
+    url = ""
+    author = "Jean-Claude Ameisen"
+    return Podcast(title, url, author)
+
+def podcast_with_invalid_url():
+    title = "Sur les epaules de Darwin"
+    url = "ghu:\\{this]url^is((not?valid.com"
+    author = "Jean-Claude Ameisen"
+    return Podcast(title, url, author)
+
+def invalid_podcast():
+    return "this is not a podcast object"
+
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+
+def episodes_from_podcast(podcast):
+    # validar el podcast
+    # obtener el listado de URLs usando pages_from_podcast
+    # para cada URL obtener los episodios usando episodes_from_url
+    yield episode
+
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle franceinter/episodes/episodes_from_podcast.py
+from franceinter.podcasts.podcast import Podcast
+from franceinter.episodes.pages_from_podcast import pages_from_podcast
+from franceinter.episodes.episodes_from_url import episodes_from_url
+
+def episodes_from_podcast(podcast):
+    assert isinstance(podcast, Podcast), invalid_podcast(podcast)
+    pages = pages_from_podcast(podcast)
+    for url in pages:
+        episodes = episodes_from_url(url)
+        for episode in episodes:
+            yield episode
+
+def invalid_podcast(podcast):
+    return "podcast parameter must be a Podcast, received %s instead" % str(type(podcast))
+
+#+end_src
+
+**** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un podcast válido, devuelve un =GeneratorType= con los episodios del podcast
+- Cuando recibe un podcast con el URL vacío, lanza un =AssertionError=
+- Cuando recibe un podcast con el URL inválido, lanza un =AssertionError=
+- Cuando recibe un objeto que no es un =franceinter.podcasts.Podcast=, lanza un =AssertionError=
+
+#+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_podcast.py
+import types
+import pytest
+import threading
+from franceinter.episodes.episode import Episode
+from franceinter.episodes.episodes_from_podcast import episodes_from_podcast
+from franceinter.episodes.tests.examples_episodes_from_podcast import *
+from utils.http_server import LocalFolderHTTPServer as HTTPServer
+
+def test_url_ok(http_server):
+    podcast = valid_podcast()
+    episodes = episodes_from_podcast(podcast)
+    assert isinstance(episodes, types.GeneratorType)
+    for episode in episodes:
+        assert isinstance(episode, Episode)
+
+def test_podcast_with_empty_url():
+    podcast = podcast_with_empty_url()
+    try:
+        episodes = list(episodes_from_podcast(podcast))
+    except AssertionError:
+        assert True
+
+def test_podcast_with_invalid_url():
+    podcast = podcast_with_invalid_url()
+    try:
+        episodes = list(episodes_from_podcast(podcast))
+    except AssertionError:
+        assert True
+
+def test_invalid_podcast():
+    podcast = invalid_podcast()
+    try:
+        episodes = list(episodes_from_podcast(podcast))
+    except AssertionError:
+        assert True
+
+@pytest.fixture(scope="module")
+def http_server():
+    web_dir = './franceinter/html'
+    httpd = HTTPServer(web_dir, ("", 3000))
+    threading.Thread(target=httpd.serve_forever).start()
+    yield httpd
+    httpd.shutdown()
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest ./franceinter/episodes/tests/test_episodes_from_podcast.py
+#+end_src
+
+*** episodes_from_query
+**** 1. Objetivo
+
+Filtrar un listado de episodios y obtener solamente los que contienen una palabra clave en el título
+
+Se debe buscar la palabra clave sin tener encuenta las mayúsculas o minúsculas (case insensitive match)
+
+**** 2. Firma
+
+La función recibe un listado de objetos =franceinter.episodes.Episode= y un =str=, y devuelve un =filter= de objetos =franceinter.episodes.Episode=
+
+Para el listado de episodios vamos a recibir cualquier objeto que sea iterable, como por ejemplo un =list= o un =GeneratorType=
+
+**** 3. Ejemplos
+
+- Un listado de 5 episodios en el que hay 2 que tienen la palabra clave el título 
+- Un listado de 5 episodios en el que ninguno tiene la palabra clave en el título
+- Un listado de episodios que no es iterable
+- Un listado de episodios que no tiene objetos =franceinter.episodes.Episode=
+- Una query que no es un =str=
+
+#+begin_src python :tangle franceinter/episodes/tests/examples_episodes_from_query.py
+import random
+from franceinter.episodes.episode import Episode
+
+def episodes_with_word_in_title(word):
+    episodes = list(some_episodes(3))
+    ep = new_episode()
+    ep.title+= " " + word
+    episodes.append(ep)
+    episodes.append(ep)
+    random.shuffle(episodes)
+    return episodes
+
+def some_episodes(how_many):
+    for i in range(0, how_many):
+        yield new_episode()
+
+def episodes_not_iterable():
+    return 42
+        
+def invalid_episodes():
+    return range(0,10)
+
+def invalid_query():
+    return 42
+
+def new_episode():
+    title = "Este es un episodio de ejemplo"
+    url = "http://podcastplace.com/shows/my-podcast/season-01-episode-01.mp3"
+    date = "2018-09-12"
+    duration = 3265
+    return Episode(title, url, date, duration)
+
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+
+def episodes_from_query(episodes, query):
+    # validar que los episodios sean iterables
+    # validar que la query sea un str
+    # validar que cada episodio sea un Episode
+    # filtrar los episodios con una función que devuelva true 
+    # si el título contiene la query
+
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle franceinter/episodes/episodes_from_query.py
+import re
+from franceinter.episodes.episode import Episode
+
+def episodes_from_query(episodes, query):
+    try:
+        it = iter(episodes)
+    except TypeError:
+        assert False, invalid_episodes(episodes)
+    assert isinstance(query, str), invalid_query(query)
+    valid_episodes = filter(is_episode, episodes)
+    contains_query = query_matcher(query)
+    return filter(contains_query, valid_episodes)
+
+def is_episode(episode):
+    assert isinstance(episode, Episode), invalid_episode(episode)
+    return True
+    
+def query_matcher(query):
+    def matcher(episode):
+        return re.search(query, episode.title, re.IGNORECASE)
+    return matcher
+    
+def invalid_episodes(episodes):
+    return "episodes parameter must be iterable, received %s instead" % type(episodes)
+
+def invalid_query(query):
+    return "query parameter must be a string, received %s instead" % type(query)
+
+def invalid_episode(episode):
+    return "episode parameter must be an Episode, received %s instead" % type(episode)
+
+#+end_src
+
+**** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un listado de 5 episodios en el que hay 2 que tienen la palabra clave el título, devuelve un =filter= con los 2 episodios que cumplen la condición
+- Cuando recibe un listado de 5 episodios en el que ninguno tiene la palabra clave en el título, devuelve un =filter= vacío
+- Cuando recibe un listado de podcasts que no es iterable, lanza un =AssertionError=
+- Un listado de episodios que no tiene objetos =franceinter.episodes.Episode=, lanza un =AssertionError=
+- Una query que no es un =str=, lanza un =AssertionError=
+
+#+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_query.py
+import types
+from franceinter.episodes.episodes_from_query import episodes_from_query
+from franceinter.episodes.tests.examples_episodes_from_query import *
+
+def test_episodes_with_word_in_title():
+    episodes = episodes_with_word_in_title("radio")
+    result = episodes_from_query(episodes, "radio")
+    assert isinstance(result, filter)
+    assert (len(list(result)) == 2)
+
+def test_episodes_without_word():
+    episodes = some_episodes(5)
+    result = episodes_from_query(episodes, "radio")
+    assert isinstance(result, filter)
+    assert (len(list(result)) == 0)
+
+def test_episodes_not_iterable():
+    episodes = episodes_not_iterable()
+    try:
+        result = episodes_from_query(episodes, "radio")
+    except AssertionError:
+        assert True
+
+def test_invalid_episodes():
+    episodes = invalid_episodes()
+    try:
+        result = episodes_from_query(episodes, "radio")
+        assert (len(list(result)) == 0)
+    except AssertionError:
+        assert True
+
+def test_invalid_query():
+    episodes = some_episodes(10)
+    query = invalid_query()
+    try:
+        result = episodes_from_query(episodes, query)
+    except AssertionError:
+        assert True
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/episodes/tests/test_episodes_from_query.py
+#+end_src
+
+*** episodes_between_dates
+**** 1. Objetivo
+
+Filtrar un listado de episodios y obtener solamente los que fueron publicados entre dos fechas
+
+**** 2. Firma
+
+La función recibe un listado de objetos =franceinter.episodes.Episode= y dos objetos =datetime.date= (de inicio y fin del intervalo), y devuelve un =filter= de objetos =franceinter.episodes.Episode=
+
+Para el listado de episodios vamos a recibir cualquier objeto que sea iterable, como por ejemplo un =list= o un =GeneratorType=
+
+**** 3. Ejemplos
+
+- Un listado de 5 episodios en el que hay 2 que fueron publicados entre las fechas dadas
+- Un listado de 5 episodios en el que ninguno fue publicado entre las fechas dadas
+- Un listado de episodios que no es iterable
+- Un listado de episodios que no tiene objetos =franceinter.episodes.Episode=
+- Una fecha de inicio que no es un =datetime.date=
+- Una fecha de fin que no es un =datetime.date=
+- Una fecha de inicio que es posterior a la fecha de fin
+
+#+begin_src python :tangle franceinter/episodes/tests/examples_episodes_between_dates.py
+import random
+from datetime import date as Date, timedelta as TimeDelta
+from franceinter.episodes.episode import Episode
+
+def some_episodes_between_dates(starting_at, ending_at):
+    date_outside = ending_at + TimeDelta(days=5)
+    episodes = list(some_episodes_with_date(3, date_outside))
+    date_between = random_date_between(starting_at, ending_at)
+    ep = new_episode(date_between)
+    episodes.append(ep)
+    episodes.append(ep)
+    random.shuffle(episodes)
+    return episodes
+
+def random_date_between(date1, date2):
+    days = (date2 - date1).days
+    random_days = random.randint(0, days)
+    random_date = date1 + TimeDelta(days=random_days)
+    return random_date
+
+def some_episodes_with_date(how_many, episode_date):
+    for i in range(0, how_many):
+        yield new_episode(episode_date)
+
+def episodes_not_iterable():
+    return 42
+        
+def invalid_episodes():
+    return range(0,10)
+
+def invalid_date():
+    return 42
+
+def new_episode(episode_date):
+    title = "Este es un episodio de ejemplo"
+    url = "http://podcastplace.com/shows/my-podcast/season-01-episode-01.mp3"
+    date = str(episode_date)
+    duration = 3265
+    return Episode(title, url, date, duration)
+
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+
+def episodes_between_dates(episodes, starting_at, ending_at):
+    # validar que los episodios sean iterables
+    # validar que las fechas sean datetime.date
+    # validar que cada episodio sea un Episode
+    # filtrar los episodios con una función que devuelva true 
+    # si la fecha está entre starting_at y ending_at
+
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle franceinter/episodes/episodes_between_dates.py
+from datetime import date as Date, datetime as DateTime
+from franceinter.episodes.episode import Episode
+
+def episodes_between_dates(episodes, starting_at, ending_at):
+    try:
+        it = iter(episodes)
+    except TypeError:
+        assert False, invalid_episodes(episodes)
+    assert isinstance(starting_at, Date), invalid_date(starting_at)
+    assert isinstance(ending_at, Date), invalid_date(ending_at)
+    valid_episodes = filter(is_episode, episodes)
+    is_between_dates = date_filter(starting_at, ending_at)
+    return filter(is_between_dates, valid_episodes)
+
+def is_episode(episode):
+    assert isinstance(episode, Episode), invalid_episode(episode)
+    return True
+    
+def date_filter(starting_at, ending_at):
+    def matcher(episode):
+        episode_date = DateTime.strptime(episode.date, "%Y-%m-%d").date()
+        return ((starting_at <= episode_date) 
+                and (episode_date <= ending_at))
+    return matcher
+    
+def invalid_episodes(episodes):
+    return "episodes parameter must be iterable, received %s instead" % type(episodes)
+
+def invalid_date(date):
+    return "starting_at and ending_at parameters must be a date, received %s instead" % type(date)
+
+def invalid_episode(episode):
+    return "episode parameter must be an Episode, received %s instead" % type(episode)
+
+#+end_src
+
+**** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un listado de 5 episodios en el que hay 2 que fueron publicados entre las fechas dadas, devuelve un =filter= con los 2 episodios que cumplen la condición
+- Cuando recibe un listado de 5 episodios en el que ninguno fue publicado entre las fechas dadas, devuelve un =filter= vacío
+- Cuando recibe un listado de episodios que no es iterable, lanza un =AssertionError=
+- Cuando recibe un listado de episodios que no tiene objetos =franceinter.episodes.Episode=, lanza un =AssertionError=
+- Cuando recibe una fecha de inicio que no es un =datetime.date=, lanza un =AssertionError=
+- Cuando recibe una fecha de fin que no es un =datetime.date=, lanza un =AssertionError=
+- Cuando recibe una fecha de inicio que es posterior a la fecha de fin, devuelve un =filter= vacío
+
+#+begin_src python :tangle franceinter/episodes/tests/test_episodes_between_dates.py
+import types
+from datetime import date as Date, timedelta as TimeDelta
+from franceinter.episodes.episodes_between_dates import episodes_between_dates
+from franceinter.episodes.tests.examples_episodes_between_dates import *
+
+def test_episodes_between_dates():
+    starting_at = Date.today()
+    ending_at = Date.today() + TimeDelta(days=5)
+    episodes = some_episodes_between_dates(starting_at, ending_at)
+    result = episodes_between_dates(episodes, starting_at, ending_at)
+    assert isinstance(result, filter)
+    assert (len(list(result)) == 2)
+
+def test_episodes_outside_interval():
+    date_outside = Date.today() - TimeDelta(days=30)
+    episodes = some_episodes_with_date(5, date_outside)
+    starting_at = Date.today()
+    ending_at = Date.today() + TimeDelta(days=5)
+    result = episodes_between_dates(episodes, starting_at, ending_at)
+    assert isinstance(result, filter)
+    assert (len(list(result)) == 0)
+
+def test_episodes_not_iterable():
+    episodes = episodes_not_iterable()
+    try:
+        starting_at = Date.today()
+        ending_at = Date.today() + TimeDelta(days=5)
+        result = episodes_between_dates(episodes, starting_at, ending_at)
+    except AssertionError:
+        assert True
+
+def test_invalid_episodes():
+    episodes = invalid_episodes()
+    try:
+        starting_at = Date.today()
+        ending_at = Date.today() + TimeDelta(days=5)
+        result = episodes_between_dates(episodes, starting_at, ending_at)
+        assert (len(list(result)) == 0)
+    except AssertionError:
+        assert True
+
+def test_invalid_starting_date():
+    episode_date = Date.today() + TimeDelta(days=2)
+    episodes = some_episodes_with_date(5, episode_date)
+    starting_at = invalid_date()
+    ending_at = Date.today() + TimeDelta(days=5)
+    try:
+        result = episodes_between_dates(episodes, starting_at, ending_at)
+    except AssertionError:
+        assert True
+
+def test_invalid_ending_date():
+    episode_date = Date.today() + TimeDelta(days=2)
+    episodes = some_episodes_with_date(5, episode_date)
+    starting_at = Date.today()
+    ending_at = invalid_date()
+    try:
+        result = episodes_between_dates(episodes, starting_at, ending_at)
+    except AssertionError:
+        assert True
+
+def test_invalid_interval():
+    episode_date = Date.today() - TimeDelta(days=2)
+    episodes = some_episodes_with_date(5, episode_date)
+    starting_at = Date.today()
+    ending_at = Date.today() - TimeDelta(days=5)
+    result = episodes_between_dates(episodes, starting_at, ending_at)
+    assert isinstance(result, filter)
+    assert (len(list(result)) == 0)
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/episodes/tests/test_episodes_between_dates.py
+#+end_src
+
+*** episodes_from_url
+**** 1. Objetivo
+
+Extraer el listado de episodios desde un URL
+
+**** 2. Firma
+
+La función recibe un URL y devuelve un =GeneratorType= de objetos =franceinter.episodes.Episode=
+
+**** 3. Ejemplos
+
+- Un URL con el listado de episodios
+- Un URL de otra página, que no tiene episodios
+- Un URL de una página inexistente, que dispare un error 404 (not found)
+- Un URL de un sitio inexistente, que dispare un error de DNS
+- Un URL inválido
+
+#+begin_src python :tangle franceinter/episodes/tests/examples_episodes_from_url.py
+
+def url_ok():
+    url = "http://localhost:3000/episode-list.html"
+    return url
+
+def wrong_page_url():
+    url = "http://localhost:3000/wrong-page.html"
+    return url
+
+def not_found_url():
+    url = "http://localhost:3000/this-page-does-not-exist.html"
+    return url
+
+def wrong_site_url():
+    url = "http://host.local:3000/this-page-does-not-exist.html"
+    return url
+
+def invalid_url():
+    url = "ht pt:\\hostlocal:3000/this-url-is-not-valid.html"
+    return url
+
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+
+def episodes_from_url(url):
+    # validar el url
+    # realizar una petición al url
+    # obtener la respuesta del url
+    # obtener los episodes llamando a episodes_from_response
+    # revisar si da un error de conexión
+    return episodes
+
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle franceinter/episodes/episodes_from_url.py
+import requests
+from validators.url import url as is_valid_url
+from franceinter.episodes.episodes_from_response import episodes_from_response
+
+def episodes_from_url(url):
+    assert is_valid_url(url), invalid_url(url)
+    try:
+        response = requests.get(url)
+        episodes = episodes_from_response(response)
+        return episodes
+    except requests.ConnectionError:
+        assert False, connection_error(url)
+
+def invalid_url(url):
+    return "url parameter must be a valid URL, received %s instead" % url
+
+def connection_error(url):
+    return "request to %s failed with a connection error" % url
+#+end_src
+
+**** 6. Casos de prueba
+
+- Cuando recibe un URL con el listado de episodios, devuelve un =GeneratorType= de objetos =Episode=
+- Cuando recibe un URL de otra página, que no tiene episodios, devuelve un =GeneratorType= vacío
+- Cuando recibe un URL de una página inexistente, devuelve un =GeneratorType= vacío
+- Cuando recibe un URL de un sitio inexistente (error de DNS), lanza un =AssertionError=
+- Cuando recibe un URL inválido, lanza un =AssertionError=
+
+#+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_url.py
+import pytest
+import threading
+import types
+from franceinter.episodes.episode import Episode
+from franceinter.episodes.episodes_from_url import episodes_from_url
+from franceinter.episodes.tests.examples_episodes_from_url import *
+from utils.http_server import LocalFolderHTTPServer as HTTPServer
+
+def test_url_ok(http_server):
+    url = url_ok()
+    gen = episodes_from_url(url)
+    assert isinstance(gen, types.GeneratorType)
+    episodes = list(gen)
+    assert (len(episodes) > 0)
+    for e in episodes:
+        assert isinstance(e, Episode)
+
+def test_wrong_page_url(http_server):
+    url = wrong_page_url()
+    episodes = list(episodes_from_url(url))
+    assert (len(episodes) == 0)
+
+def test_not_found_url(http_server):
+    url = not_found_url()
+    episodes = list(episodes_from_url(url))
+    assert (len(episodes) == 0)
+
+@pytest.mark.skip(reason="Slow test (~10 sec) waiting for DNS error")
+def test_wrong_site_url(http_server):
+    url = wrong_site_url()
+    try:
+        episodes = list(episodes_from_url(url))
+    except AssertionError:
+        assert True
+
+def test_invalid_url():
+    url = invalid_url()
+    try:
+        episodes = episodes_from_url(url)
+    except AssertionError:
+        assert True
+
+@pytest.fixture(scope="module")
+def http_server():
+    web_dir = './franceinter/html'
+    httpd = HTTPServer(web_dir, ("", 3000))
+    threading.Thread(target=httpd.serve_forever).start()
+    yield httpd
+    httpd.shutdown()
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/episodes/tests/test_episodes_from_url.py
+#+end_src
+
+*** episodes_from_response
+**** 1. Objetivo
+
+Extraer el listado de episodios de la respuesta de una petición HTTP
+
+**** 2. Firma
+
+La función recibe una =requests.model.Response= y devuelve un =GeneratorType= de objetos =franceinter.episodes.Episode=
+
+**** 3. Ejemplos
+
+- Una respuesta válida, con el HTML de una página del listado de episodios
+- Una respuesta inválida, que no es de la clase =requests.model.Response=
+- Una respuesta válida, pero que tiene el HTML de otra página
+
+#+begin_src python :tangle franceinter/episodes/tests/examples_episodes_from_response.py
+from requests.models import Response
+
+def response_ok():
+    resp = Response()
+    resp.status_code = 200
+    filename = "./franceinter/html/episode-list.html" 
+    with open(filename, "rb") as f:
+        resp._content = f.read()
+    return resp
+
+def invalid_response():
+    return "i am not a Response"
+
+def wrong_page_response():
+    resp = Response()
+    resp.status_code = 200
+    filename = "./franceinter/html/wrong-page.html" 
+    with open(filename, "rb") as f:
+        resp._content = f.read()
+    return resp
+
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+import requests
+
+def episodes_from_response(resp):
+    # validar la respuesta
+    # obtener el HTML de resp.text
+    # extraer los tags usando tags_from_html
+    # obtener los podcasts usando episodes_from_tags
+
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle franceinter/episodes/episodes_from_response.py
+import requests
+from franceinter.episodes.tags_from_html import tags_from_html
+from franceinter.episodes.episodes_from_tags import episodes_from_tags
+
+def episodes_from_response(resp):
+    assert isinstance(resp, requests.models.Response), invalid_type(resp)
+    html = resp.text
+    tags = tags_from_html(html)
+    episodes = episodes_from_tags(tags)
+    return episodes
+    
+def invalid_type(resp):
+    return "resp parameter must be a requests.models.Response, received %s instead" % type(resp)
+
+#+end_src
+
+**** 6. Casos de prueba
+
+- Cuando recibe una respuesta válida, devuelve un =GeneratorType= de objetos =franceinter.episodes.Episode=
+- Cuando recibe una respuesta que no es de la clase =requests.model.Response=, lanza un =AssertionError=
+- Cuando recibe una respuesta válida que tiene el HTML de otra página, devuelve un =GeneratorType= vacío
+
+#+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_response.py
+import types
+from franceinter.episodes.episode import Episode
+from franceinter.episodes.episodes_from_response import episodes_from_response
+from franceinter.episodes.tests.examples_episodes_from_response import *
+
+def test_response_ok():
+    resp = response_ok()
+    episodes = episodes_from_response(resp)
+    assert isinstance(episodes, types.GeneratorType)
+    for e in episodes:
+        assert isinstance(e, Episode)
+
+def test_invalid_response():
+    resp = invalid_response()
+    try:
+        episodes = episodes_from_response(resp)
+    except AssertionError:
+        assert True
+    
+def test_wrong_page_response():
+    resp = wrong_page_response()
+    episodes = episodes_from_response(resp)
+    assert isinstance(episodes, types.GeneratorType)
+    assert (len(list(episodes)) == 0)
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/episodes/tests/test_episodes_from_response.py
+#+end_src
+
+*** episodes_from_filename
+**** 1. Objetivo
+
+Extraer un listado de episodios desde un archivo
+
+**** 2. Firma
+
+La función recibe un =str= con el nombre del archivo y devuelve un =GeneratorType= de objetos =franceinter.episodes.Episode=
+
+**** 3. Ejemplos
+
+- Un archivo HTML que tiene un listado de episodios
+- Un archivo HTML de otra página, que no tiene episodios
+- Un archivo que no existe
+- Un nombre de archivo que no es un =str=
+
+#+begin_src python :tangle franceinter/episodes/tests/examples_episodes_from_filename.py
+
+def ok_filename():
+    return "./franceinter/html/episode-list.html"
+
+def wrong_filename():
+    return "./franceinter/html/wrong-page.html"
+
+def not_found_filename():
+    return "./franceinter/html/this-file-does-not-exist.html"
+
+def invalid_filename():
+    return [1, 2, 3]
+
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+
+def episodes_from_filename(filename):
+    # validar que filename sea un str
+    # validar que el archivo exista
+    episodes = []
+    # crear un requests.models.Response con el contenido del archivo
+    # obtener los episodios llamando a episodes_from_response
+    return episodes
+     
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle franceinter/episodes/episodes_from_filename.py
+from requests.models import Response
+from franceinter.episodes.episodes_from_response import episodes_from_response
+
+def episodes_from_filename(filename):
+    assert isinstance(filename, str), invalid_filename(filename)
+    resp = Response()
+    episodes = []
+    try:
+        with open(filename, "rb") as f:
+            resp._content = f.read()
+            episodes = episodes_from_response(resp)
+    except (OSError, IOError) as error:
+        assert False, not_found(filename, error)
+    return episodes
+
+def invalid_filename(filename):
+    return "filename parameter must be a str, %s received instead" % filename
+
+def not_found(filename, error):
+    return "filename %s cannot be read, thrown error :\n%s" % (filename, error)
+#+end_src
+
+**** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un archivo HTML que tiene un listado de podcasts, devuelve un =GeneratorType= de objetos =franceinter.episodes.Episode=
+- Cuando recibe un archivo HTML de otra página, que no tiene podcasts, devuelve un =GeneratorType= vacío
+- Cuando recibe un archivo que no existe, lanza un =AssertionError=
+- Cuando recibe un nombre de archivo que no es un =str=, lanza un =AssertionError=
+
+#+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_filename.py
+import types
+from franceinter.episodes.episode import Episode
+from franceinter.episodes.episodes_from_filename import episodes_from_filename
+from franceinter.episodes.tests.examples_episodes_from_filename import *
+
+def test_ok_filename():
+    filename = ok_filename()
+    episodes = episodes_from_filename(filename)
+    assert isinstance(episodes, types.GeneratorType)
+    episodes = list(episodes)
+    assert (len(episodes) > 0)
+    for e in episodes:
+        assert isinstance(e, Episode)
+
+def test_wrong_filename():
+    filename = wrong_filename()
+    episodes = episodes_from_filename(filename)
+    assert isinstance(episodes, types.GeneratorType)
+    episodes = list(episodes)
+    assert (len(episodes) == 0)
+
+def test_not_found_filename():
+    filename = not_found_filename()
+    try:
+        episodes = episodes_from_filename(filename)
+    except AssertionError:
+        assert True
+
+def test_invalid_filename():
+    filename = invalid_filename()
+    try:
+        episodes = episodes_from_filename(filename)
+    except AssertionError:
+        assert True
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest ./franceinter/episodes/tests/test_episodes_from_filename.py
+#+end_src
+
+#+RESULTS:
+:results:
+:end:
+
+*** episodes_from_tags
+**** 1. Objetivo
+
+Generar un listado de episodios a partir de un listado de fragmentos de HTML tomados de la página
+
+**** 2. Firma
+
+La función recibe un listado de objetos =bs4.element.Tag= y devuelve un =GeneratorType= de objetos =franceinter.episodes.Episode=
+
+Vamos a aceptar tanto un =list= como un =GeneratorType=
+
+**** 3. Ejemplos
+
+- Un objeto que no es iterable
+- Una lista vacía
+- Una lista con tags válidos
+- Una lista con objetos que no son del tipo =bs4.element.Tag=
+- Una lista con tags válidos y un tag inválido (sin el título o el URL)
+
+#+begin_src python :tangle franceinter/episodes/tests/examples_episodes_from_tags.py
+import random
+from franceinter.episodes.tags_from_html import tags_from_html
+from franceinter.episodes.tests.examples_episode_from_tag import (
+    tag_ok,
+    tag_without_title
+)
+
+def invalid_list():
+    return 123
+
+def empty_list():
+    return []
+
+def list_without_tags():
+    return [1, 2, 3, 4, 5]
+
+def list_with_valid_tags(how_many):
+    html = "<div class='diffusions-list'>"
+    for i in range(1, how_many):
+        html+= str(tag_ok())
+    html+= "</div>"
+    tags = tags_from_html(html)
+    return tags
+
+def list_with_invalid_tag(how_many):
+    tags = list(list_with_valid_tags(how_many - 1))
+    tags.append(tag_without_title())
+    random.shuffle(tags)
+    return tags
+
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+from franceinter.episodes.tags_from_html import tags_from_html
+
+def podcasts_from_tags(tags):
+    # validar que tags sea un GeneratorType
+    # para cada tag de la lista
+    # usar episode_from_tag() para obtener un podcast
+    # yield posdcast
+
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle franceinter/episodes/episodes_from_tags.py
+from franceinter.episodes.episode_from_tag import episode_from_tag
+
+def episodes_from_tags(tags):
+    try:
+        it = iter(tags)
+    except TypeError:
+        assert False, invalid_tags(tags)
+    for tag in tags:
+        yield episode_from_tag(tag)
+
+def invalid_tags(tags):
+    return "tags parameter must be iterable, received %s instead" % type(tags)
+#+end_src
+
+**** 6. Casos de prueba
+
+- Si recibe un objeto que no es iterable, lanza un =AssertionError=
+- Si recibe una lista vacía, devuelve un =GeneratorType= vacío
+- Si recibe una lista de tags válidos, devuelve un =GeneratorType= de objetos =franceinter.episodes.Episode=
+- Si recibe una lista con objetos que no son del tipo =bs4.element.Tag=, lanza un =AssertionError=
+- Si recibe una lista con algún tag inválido (que no tenga el título o el URL), lanza un =AssertionError=
+
+#+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_tags.py
+import types
+from franceinter.episodes.episodes_from_tags import episodes_from_tags
+from franceinter.episodes.tests.examples_episodes_from_tags import *
+from franceinter.episodes.episode import Episode
+
+def test_invalid_list():
+    tags = invalid_list()
+    try:
+        episodes = list(episodes_from_tags(tags))
+    except AssertionError:
+        assert True
+
+def test_empty_list():
+    tags = empty_list()
+    episodes = episodes_from_tags(tags)
+    assert isinstance(episodes, types.GeneratorType)
+    assert (len(list(episodes))==0)
+
+def test_list_with_valid_tags():
+    tags = list_with_valid_tags(6)
+    episodes = episodes_from_tags(tags)
+    assert isinstance(episodes, types.GeneratorType)
+    for e in episodes:
+        assert (isinstance(e, Episode))
+
+def test_list_without_tags():
+    tags = list_without_tags()
+    try:
+        episodes = list(episodes_from_tags(tags))
+    except AssertionError:
+        assert True
+
+def test_list_with_invalid_tag():
+    tags = list_with_invalid_tag(6)
+    episodes = episodes_from_tags(tags)
+    try:
+        for e in episodes:
+            assert (isinstance(e, Episode))
+    except AssertionError:
+        assert True
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/episodes/tests/test_episodes_from_tags.py
+#+end_src
+
+*** pages_from_podcast
+**** 1. Objetivo
+
+Obtener un listado de URLs de las páginas del listado de episodios a partir de los datos de un podcast.
+
+**** 2. Firma
+
+La función recibe un objeto =franceinter.podcasts.Podcast= y devuelve un =GeneratorType= con los URLs de las páginas del historial de episodios.
+
+**** 3. Ejemplos
+
+- Caso exitoso, un podcast válido
+- Un podcast con el URL vacío
+- Un podcast con el URL inválido
+- Un objeto que no es un =franceinter.podcasts.Podcast=
+
+#+begin_src python :tangle franceinter/episodes/tests/examples_pages_from_podcast.py
+from franceinter.podcasts.podcast import Podcast
+
+def valid_podcast():
+    title = "Sur les epaules de Darwin"
+    url = "http://localhost:3000/episode-list.html"
+    author = "Jean-Claude Ameisen"
+    return Podcast(title, url, author)
+
+def podcast_with_empty_url():
+    title = "Sur les epaules de Darwin"
+    url = ""
+    author = "Jean-Claude Ameisen"
+    return Podcast(title, url, author)
+
+def podcast_with_invalid_url():
+    title = "Sur les epaules de Darwin"
+    url = "ghu:\\{this]url^is((not?valid.com"
+    author = "Jean-Claude Ameisen"
+    return Podcast(title, url, author)
+
+def invalid_podcast():
+    return "this is not a podcast object"
+
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+
+def pages_from_podcast(podcast):
+    # validar que el podcast sea una instancia de Podcast
+    # validar el url
+    # obtener el HTML del URL
+    # obtener el número de la última página del HTML
+    # generar los URLs de las páginas agregando ?p=XX al URL del podcast
+    yield page_url
+
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle franceinter/episodes/pages_from_podcast.py
+from franceinter.podcasts.podcast import Podcast
+from franceinter.episodes.html_from_url import html_from_url
+from franceinter.episodes.lastpage_from_html import lastpage_from_html
+
+def pages_from_podcast(podcast):
+    assert isinstance(podcast, Podcast), invalid_podcast(podcast)
+    html = html_from_url(podcast.url)
+    lastpage = lastpage_from_html(html)
+    for page_number in range(1, lastpage + 1):
+        page_url = podcast.url + "?p=" + str(page_number)
+        yield page_url
+
+def invalid_podcast(podcast):
+    return "podcast parameter must be a Podcast, received %s instead" % str(type(podcast))
+
+#+end_src
+
+**** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un podcast válido, devuelve un =GeneratorType= con los URLs de las páginas del podcast
+- Cuando recibe un podcast con el URL vacío, lanza un =AssertionError=
+- Cuando recibe un podcast con el URL inválido, lanza un =AssertionError=
+- Cuando recibe un objeto que no es un =franceinter.podcasts.Podcast=, lanza un =AssertionError=
+
+#+begin_src python :tangle franceinter/episodes/tests/test_pages_from_podcast.py
+import types
+import pytest
+import threading
+from validators.url import url as is_valid_url
+from franceinter.episodes.pages_from_podcast import pages_from_podcast
+from franceinter.episodes.tests.examples_pages_from_podcast import *
+from utils.http_server import LocalFolderHTTPServer as HTTPServer
+
+def test_url_ok(http_server):
+    podcast = valid_podcast()
+    pages = pages_from_podcast(podcast)
+    assert isinstance(pages, types.GeneratorType)
+    for page in pages:
+        assert is_valid_url(page)
+
+def test_podcast_with_empty_url():
+    podcast = podcast_with_empty_url()
+    try:
+        pages = list(pages_from_podcast(podcast))
+    except AssertionError:
+        assert True
+
+def test_podcast_with_invalid_url():
+    podcast = podcast_with_invalid_url()
+    try:
+        pages = list(pages_from_podcast(podcast))
+    except AssertionError:
+        assert True
+
+def test_invalid_podcast():
+    podcast = invalid_podcast()
+    try:
+        pages = list(pages_from_podcast(podcast))
+    except AssertionError:
+        assert True
+
+@pytest.fixture(scope="module")
+def http_server():
+    web_dir = './franceinter/html'
+    httpd = HTTPServer(web_dir, ("", 3000))
+    threading.Thread(target=httpd.serve_forever).start()
+    yield httpd
+    httpd.shutdown()
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest ./franceinter/episodes/tests/test_pages_from_podcast.py
+#+end_src
+
+*** lastpage_from_html
+**** 1. Objetivo
+
+Obtener la cantidad de páginas del HTML del listado de episodios.
+
+En el HTML del listado de episodios de un podcast hay un paginador donde podemos encontrar la cantidad total de páginas, buscando un tag =<li>= que tiene la clase =last=. Dentro de ese =<li>= hay un link a la última página, que se encuentra en el atributo =href=. 
+
+**** 2. Firma
+
+La función recibe un =str= con el HTML y devuelve un =int= con el número de la última página.
+
+**** 3. Ejemplos
+
+- Caso exitoso, un HTML con el tag =<li>= que tiene la clase =last= y el =<a>= con el atributo =href= correcto
+- Un HTML que no es un =str=
+- Un HTML que no tiene el tag =<li>=
+- Un HTML que tiene el tag =<li>=, pero éste no tiene la clase =last=
+- Un HTML que tiene el tag =<li>= con la clase =last=, pero éste no tiene el =<a>=
+
+#+begin_src python :tangle franceinter/episodes/tests/examples_lastpage_from_html.py
+
+def html_ok():
+    html = '''<div>
+<li class="pager-item last">
+    <a href="/emissions/sur-les-epaules-de-darwin?p=22"
+    title="Aller à la denière page"> >>
+    </a>
+</li>
+    </div>'''
+    return html
+
+def invalid_html():
+    return 4321
+
+def html_without_item():
+    html = '''<div>
+<span class="pager-item last">
+    <a href="/emissions/sur-les-epaules-de-darwin?p=22"
+    title="Aller à la denière page"> >>
+    </a>
+</span>
+    </div>'''
+    return html
+
+def html_without_class():
+    html = '''<div>
+<li>
+    <a href="/emissions/sur-les-epaules-de-darwin?p=22"
+    title="Aller à la denière page"> >>
+    </a>
+</li>
+    </div>'''
+    return html
+
+def html_without_link():
+    html = '''<div>
+<li>
+    <a href="/emissions/sur-les-epaules-de-darwin?p=22"
+    title="Aller à la denière page"> >>
+    </a>
+</li>
+    </div>'''
+    return html
+
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+
+def lastpage_from_html(html):
+    # validar que el html sea un str
+    # buscar un <li> con la clase =last=
+    # si existe buscar dentro un <a> y extraer el atributo "href"
+    # extraer al final del href uno o más números [0-9]
+    lastpage = 1
+    return lastpage
+
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle franceinter/episodes/lastpage_from_html.py
+from bs4 import BeautifulSoup
+import re
+
+def lastpage_from_html(html):
+    assert isinstance(html, str), invalid_html(html)
+    soup = BeautifulSoup(html, "html.parser")
+    lastpage = 1
+    item = soup.find("li", class_="last")
+    if item:
+        href = item.find("a").attrs["href"]
+        match = re.search("([0-9]+)$", href)
+        if match:
+            lastpage = int(match.groups()[0])
+    return lastpage
+     
+def invalid_html(html):
+    return "html parameter must be a string, %s received" % str(type(html))
+
+#+end_src
+
+**** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un HTML con el tag =<li>= que tiene la clase =last=, devuelve el número de la última página
+- Cuando recibe un HTML que no es un =str=, lanza un =AssertionError=
+- Cuando recibe un HTML que no tiene el tag =<li>=, devuelve la primera página (=1=)
+- Cuando recibe un HTML que tiene el tag =<li>=, pero éste no tiene la clase =last=, devuelve la primera página (=1=)
+- Cuando recibe un HTML que tiene el tag =<li>= con la clase =last=, pero éste no tiene el =<a>=, devuelve la primera página (=1=)
+
+#+begin_src python :tangle franceinter/episodes/tests/test_lastpage_from_html.py
+from franceinter.episodes.lastpage_from_html import lastpage_from_html
+from franceinter.episodes.tests.examples_lastpage_from_html import *
+
+def test_html_ok():
+    html = html_ok()
+    lastpage = lastpage_from_html(html)
+    assert (lastpage == 22)
+
+def test_invalid_html():
+    html = invalid_html()
+    try:
+        lastpage = lastpage_from_html(html)
+    except AssertionError:
+        assert True
+
+def test_html_without_item():
+    html = html_without_item()
+    lastpage = lastpage_from_html(html)
+    assert (lastpage == 1)
+
+def test_html_without_class():
+    html = html_without_class()
+    lastpage = lastpage_from_html(html)
+    assert (lastpage == 1)
+
+def test_html_without_link():
+    html = html_without_link()
+    lastpage = lastpage_from_html(html)
+    assert (lastpage == 1)
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/episodes/tests/test_lastpage_from_html.py
+#+end_src
+
+*** html_from_url
+**** 1. Objetivo
+
+Obtener el HTML de un URL
+
+**** 2. Firma
+
+La función recibe un =str= con un URL válido y devuelve otro =str= con el HTML del URL
+
+**** 3. Ejemplos
+
+- Caso exitoso, un URL válido
+- Un URL que no es un =str=
+- Un URL inválido
+- Un URL válido, pero que causa un =ConnectionError= porque el host no existe
+- Un URL válido, pero de una página que no existe
+
+#+begin_src python :tangle franceinter/episodes/tests/examples_html_from_url.py
+
+def valid_url():
+    url = "http://localhost:3000/episode-list.html"
+    return url
+
+def not_str_url():
+    url = 1234
+    return url
+
+def invalid_url():
+    url = "ghu:\\{this]url^is((not?valid.com"
+    return url
+
+def not_found_url():
+    url = "http://localhost:3000/this-page-does-not-exist.html"
+    return url
+
+def connection_error_url():
+    url = "http://host.local:3000/this-page-does-not-exist.html"
+    return url
+
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+
+def html_from_url(url):
+    # validar el URL
+    # ejecutar la petición HTTP
+    # si no hay error de conexión
+    # devolver el texto de la respuesta
+
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle franceinter/episodes/html_from_url.py
+import requests
+from validators.url import url as is_valid_url
+
+def html_from_url(url):
+    assert isinstance(url, str), invalid_str(url)
+    assert is_valid_url(url), invalid_url(url)
+    try:
+        response = requests.get(url)
+        return response.text
+    except requests.ConnectionError:
+        assert False, connection_error(url)
+        
+def invalid_str(url):
+    return "url parameter must be string, received %s instead" % str(type(url))
+
+def invalid_url(url):
+    return "url parameter must be a valid URL, received %s instead" % url
+
+def connection_error(url):
+    return "request to %s failed with a connection error" % url
+
+#+end_src
+
+**** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un URL válido devuelve el HTML de la página
+- Cuando recibe un URL que no es un =str=, lanza un =AssertionError=
+- Cuando recibe un URL inválido, lanza un =AssertionError=
+- Cuando recibe un URL válido pero cuyo host no existe, lanza un =AssertionError=
+- Cuando recibe un URL válido pero cuya página, devuelve un =str= vacío
+
+#+begin_src python :tangle franceinter/episodes/tests/test_html_from_url.py
+import re
+import pytest
+import threading
+from franceinter.episodes.html_from_url import html_from_url
+from franceinter.episodes.tests.examples_html_from_url import *
+from utils.http_server import LocalFolderHTTPServer as HTTPServer
+
+def test_url_ok(http_server):
+    url = valid_url()
+    html = html_from_url(url)
+    assert isinstance(html, str)
+    assert (len(html) > 0)
+
+def test_not_str_url(http_server):
+    url = not_str_url()
+    try:
+        html = html_from_url(url)
+    except AssertionError:
+        assert True
+
+def test_invalid_url():
+    url = invalid_url()
+    try:
+        html = html_from_url(url)
+    except AssertionError:
+        assert True
+
+def test_not_found_url(http_server):
+    url = not_found_url()
+    html = html_from_url(url)
+    assert re.search("NOT_FOUND", html)
+
+@pytest.mark.skip(reason="Slow test (~10 sec) waiting for DNS error")
+def test_wrong_site_url(http_server):
+    url = connection_error_url()
+    try:
+        html = html_from_url(url)
+    except AssertionError:
+        assert True
+
+@pytest.fixture(scope="module")
+def http_server():
+    web_dir = './franceinter/html'
+    httpd = HTTPServer(web_dir, ("", 3000))
+    threading.Thread(target=httpd.serve_forever).start()
+    yield httpd
+    httpd.shutdown()
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/episodes/tests/test_html_from_url.py
+#+end_src
+
+*** tags_from_html
+**** 1. Objetivo
+
+Obtener un array de tags con los fragmentos de html que tienen el detalle del episodio (título, URL, fecha de emisión y duración) a partir del html de la página con el listado de episodios.
+
+Hay que extraer todos los =<button>= que tengan la clase =replay-button= y que estén dentro de un =<div>= que tiene clase =diffusions-list=. Necesitamos extraer solamente los botones que están dentro de este div porque en el HTML de la página hay otros botones que son de otros podcasts.
+
+**** 2. Firma
+
+La función recibe un =str= con el html de la página y devuelve un =GeneratorType= de elementos =bs4.element.Tag=
+
+**** 3. Ejemplos
+
+- Un html que tiene un =<div>= con la clase buscada y que contiene varios =<button>= con la clase =replay-button=
+- Un html que no es un =str=
+- Un html que no tiene ningún =<div>=
+- Un html que tiene varios =<div>= pero que ninguno tiene la clase =diffusions-list=
+- Un html que tiene un =<div>= con la clase buscada y que contiene algunos =<buttons>= con la clase =replay-button= y otros que no la tienen
+
+#+begin_src python :tangle franceinter/episodes/tests/examples_tags_from_html.py
+from bs4 import BeautifulSoup
+import random
+
+def html_with_buttons(how_many):
+    btn_class = "replay-button"
+    buttons = map(lambda x: button("click here", btn_class), range(how_many))
+    cls_name = "diffusions-list"
+    return html(buttons, cls_name)
+
+def html_is_not_string():
+    return 42
+
+def html_without_divs():
+    html = '''<header><h1>dummy title</h1></header>
+<p>bla bla bla</p>
+<ul>
+  <li> item 1 </li>
+  <li> item 2 </li>
+</ul>
+<footer>All rights reserved!</footer>'''
+    return html
+
+def html_divs_without_class(how_many):
+    content = "blablabla"
+    divs = map(lambda x: div(content), range(how_many))
+    return html(divs)
+
+def html_some_buttons_with_class(how_many_with, how_many_without):
+    cls = "replay-button"
+    buttons_with = list(map(lambda x: button("click here", cls), range(how_many_with)))
+    buttons_without = list(map(lambda x: button("click here"), range(how_many_without)))
+    buttons = buttons_with + buttons_without
+    random.shuffle(buttons)
+    class_name = "diffusions-list"
+    return html(buttons, class_name)
+
+def button(content, class_name=""):
+    attr = ""
+    if class_name:
+        attr = 'class="%s"' % class_name
+    html = '''<button %s>%s</button>''' % (attr, content)
+    soup = BeautifulSoup(html, "html.parser")
+    return soup.button
+
+def div(content):
+    html = '''<div>%s</div>''' % content
+    soup = BeautifulSoup(html, "html.parser")
+    return soup.div
+
+def html(elements, class_name=""):
+    attr = ""
+    if class_name:
+        attr = 'class="%s"' % class_name
+    content = "".join(map(lambda e: str(e), elements))
+    html = '''<header><h1>dummy title</h1></header>
+<p>bla bla bla</p>
+<div %s>
+%s
+</div>
+<ul>
+  <li> item 1 </li>
+  <li> item 2 </li>
+</ul>
+<footer>All rights reserved!</footer>
+    ''' % (attr, content)
+    return html
+    
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+from bs4 import BeautifulSoup
+
+def tags_from_html(html):
+    # validar que el html sea un string
+    tags = []
+    # instanciar un objeto BeautifulSoup
+    # buscar el <div> que tiene la clase "diffusions-list"
+    # dentro de ese <div> filtrar todos los <button> 
+    # que tienen la clase =replay-button=
+    yield tag
+
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle franceinter/episodes/tags_from_html.py
+from bs4 import BeautifulSoup
+
+def tags_from_html(html):
+    assert isinstance(html, str), invalid_html(html)
+    soup = BeautifulSoup(html, "html.parser")
+    div = soup.find("div", class_="diffusions-list")
+    if div:
+        buttons = div.find_all("button", class_="replay-button")
+        for tag in buttons:
+            yield tag
+
+def invalid_html(html):
+    return "html parameter must be a string, received %s instead" % type(html)
+
+#+end_src
+
+**** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un html que tiene un =<div>= con la clase buscada y que contiene varios =<button>= con la clase =replay-button=, devuelve un =GeneratorType= que tiene tantos elementos como =<button>= haya en el html
+- Cuando recibe un html que no es un string, lanza un =AssertionError=
+- Cuando recibe un html que no tiene ningún =<div>=, devuelve un =GeneratorType= vacío
+- Cuando recibe un html que tiene varios =<div>= pero ninguno tiene la clase =rich-section-list-item-content=, devuelve un =GeneratorType= vacío
+- Cuando recibe un html que tiene algunos =<div>= con la clase buscada y otros que no la tienen, devuelve un =GeneratorType= con solamente los =<div>= que tienen la clase
+
+#+begin_src python :tangle franceinter/episodes/tests/test_tags_from_html.py
+import types
+from franceinter.episodes.tags_from_html import tags_from_html
+from franceinter.episodes.tests.examples_tags_from_html import *
+
+def test_html_with_buttons():
+    html = html_with_buttons(5)
+    tags = tags_from_html(html)
+    assert isinstance(tags, types.GeneratorType)
+    assert (len(list(tags)) == 5)
+
+def test_html_is_not_string():
+    try:
+        html = html_is_not_string()
+        tags = list(tags_from_html(html))
+    except AssertionError:
+        assert True
+
+def test_html_without_divs():
+    html = html_without_divs()
+    tags = tags_from_html(html)
+    assert isinstance(tags, types.GeneratorType)
+    assert (len(list(tags)) == 0)
+
+def test_divs_without_class():
+    html = html_divs_without_class(4)
+    tags = tags_from_html(html)
+    assert isinstance(tags, types.GeneratorType)
+    assert (len(list(tags)) == 0)
+
+def test_some_buttons_with_class():
+    html = html_some_buttons_with_class(2,3)
+    tags = tags_from_html(html)
+    assert isinstance(tags, types.GeneratorType)
+    assert (len(list(tags)) == 2)
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/episodes/tests/test_tags_from_html.py
+#+end_src
+
+*** episode_from_tag
+**** 1. Objetivo
+
+Obtener un episodio de un fragmento de html.
+
+Un episodio tiene cuatro propiedades, a saber:
+
+- título :: es un =str= y es obligatorio
+- url :: es un =str=, es obligatorio y debe ser un URL válido
+- fecha de emisión :: es un =str=, es obligatoria y debe ser una fecha válida en formato =YYYY-MM-DD=
+- duración en segundos :: es un =int= y es obligatoria
+
+**** 2. Firma
+
+La función recibe un objeto =bs4.element.Tag= y devuelve un objeto =franceinter.episodes.episode=
+
+Necesitamos entonces definir la clase =episode=
+
+#+begin_src python :tangle franceinter/episodes/episode.py
+
+class Episode:
+    def __init__(self, title, url, date, duration):
+        self.title = title
+        self.url = url
+        self.date = date
+        self.duration = duration
+
+    def __repr__(self):
+        return "Episode(title='%s', date='%s')" % (
+            self.title, self.date
+        )
+
+#+end_src
+
+**** 3. Ejemplos
+
+- Un tag que tiene todos los elementos para generar un episodio válido (título, URL, fecha y duración)
+- Un tag que no es un =bs4.element.Tag=
+- Un tag que no tiene el elemento del título
+- Un tag que no tiene el elemento del URL
+- Un tag que no tiene el elemento de la fecha
+- Un tag que no tiene el elemento de la duración
+- Un tag que tiene el elemento del URL, pero el URL no es válido
+- Un tag que tiene el elemento de la fecha, pero ésta no es válida
+- Un tag que tiene el elemento de la duración, pero ésta no es válida
+
+#+begin_src python :tangle franceinter/episodes/tests/examples_episode_from_tag.py
+from bs4 import BeautifulSoup
+
+def tag_ok():
+    html = '''<button class="replay-button playable"
+data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-janvier-2019"
+            data-diffusion-title="Une année dans le monde"
+            data-duration-seconds="3256"
+            data-is-aod="1"
+            data-start-time="1549664208"
+data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3"
+data-xiti-level="4">'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.button
+    return tag
+
+def invalid_tag():
+    return "I am not a tag"
+
+def tag_without_title():
+    html = '''<button class="replay-button playable"
+data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-janvier-2019"
+            data-duration-seconds="3256"
+            data-is-aod="1"
+            data-start-time="1549664208"
+data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3"
+data-xiti-level="4">'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.button
+    return tag
+
+def tag_without_url():
+    html = '''<button class="replay-button playable"
+            data-diffusion-title="Une année dans le monde"
+data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-janvier-2019"
+            data-duration-seconds="3256"
+            data-is-aod="1"
+            data-start-time="1549664208"
+data-xiti-level="4">'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.button
+    return tag
+
+def tag_without_date():
+    html = '''<button class="replay-button playable"
+            data-diffusion-title="Une année dans le monde"
+            data-duration-seconds="3256"
+            data-is-aod="1"
+            data-start-time="1549664208"
+data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3"
+data-xiti-level="4">'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.button
+    return tag
+
+def tag_without_duration():
+    html = '''<button class="replay-button playable"
+data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-janvier-2019"
+            data-diffusion-title="Une année dans le monde"
+            data-is-aod="1"
+            data-start-time="1549664208"
+data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3"
+data-xiti-level="4">'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.button
+    return tag
+
+def tag_with_invalid_url():
+    html = '''<button class="replay-button playable"
+data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-janvier-2019"
+            data-diffusion-title="Une année dans le monde"
+            data-duration-seconds="3256"
+            data-is-aod="1"
+            data-start-time="1549664208"
+data-url="this://isnot[?=>avalid[[/\\url"
+data-xiti-level="4">'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.button
+    return tag
+
+def tag_with_invalid_date():
+    html = '''<button class="replay-button playable"
+data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-mercredi-2019"
+            data-diffusion-title="Une année dans le monde"
+            data-duration-seconds="3256"
+            data-is-aod="1"
+            data-start-time="1549664208"
+data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3"
+data-xiti-level="4">'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.button
+    return tag
+
+def tag_with_invalid_duration():
+    html = '''<button class="replay-button playable"
+data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-janvier-2019"
+            data-diffusion-title="Une année dans le monde"
+            data-duration-seconds="forty minutes"
+            data-is-aod="1"
+            data-start-time="1549664208"
+data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3"
+data-xiti-level="4">'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.button
+    return tag
+
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+
+def episode_from_tag(tag):
+    # validar que el tag sea un bs4.element.Tag
+
+    # extraer el título con title_from_tag
+    # validar que el título no sea un string vacío
+
+    # extraer el url con url_from_tag
+    # validar que el url no sea un string vacío
+    # validar el url
+
+    # extraer la fecha con date_from_tag
+    # validar la fecha
+
+    # extraer la duración con duration_from_tag
+    # validar que la duración sea > 0
+
+    # crear una instancia de franceinter.epidsodes.Episode
+    # con el título, el url, la fecha y la duración
+    return episode
+
+#+end_src
+
+**** 5. Definición
+
+Usamos la biblioteca [[https://validators.readthedocs.io/][validators]] para validar el URL del podcast
+
+#+begin_src python :tangle franceinter/episodes/episode_from_tag.py
+from franceinter.episodes.title_from_tag import title_from_tag
+from franceinter.episodes.url_from_tag import url_from_tag
+from franceinter.episodes.date_from_tag import date_from_tag
+from franceinter.episodes.duration_from_tag import duration_from_tag
+from franceinter.episodes.episode import Episode
+from validators.url import url as is_valid_url
+import datetime
+import bs4
+
+def episode_from_tag(tag):
+    assert isinstance(tag, bs4.element.Tag), invalid_tag(tag)
+    title = title_from_tag(tag)
+    assert (title != ""), no_title(tag)
+
+    url = url_from_tag(tag)
+    assert (url != ""), no_url(tag)
+    assert is_valid_url(url), invalid_url(tag)
+
+    date = date_from_tag(tag)
+    assert (date != None), no_date(tag)
+
+    duration = duration_from_tag(tag)
+    assert (duration != 0), invalid_duration(tag)
+
+    return Episode(title, url, date, duration)
+
+def no_url(tag):
+    return "received tag does not have an episode URL\n %s" % str(tag)
+
+def invalid_url(tag):
+    return "received tag has an invalid episode URL\n %s" % str(tag)
+
+def no_title(tag):
+    return "received tag does not have an episode title\n %s" % str(tag)
+
+def no_date(tag):
+    return "received tag does not have an episode publication date\n %s" % str(tag)
+
+def invalid_tag(tag):
+    return "tag parameter must be an instance of bs4.element.Tag, received %s instead" % str(type(tag))
+
+def invalid_duration(tag):
+    return "received tag has an invalid duration\n %s" % str(tag)
+
+#+end_src
+
+**** 6. Casos de prueba
+
+- Caso exitoso, devuelve un episodio (=franceinter.episodes.Episode=)
+- Cuando recibe un tag que no es un =bs4.element.Tag=, lanza un =AssertionError=
+- Cuando recibe un tag que no tiene el elemento del título, lanza un =AssertionError=
+- Cuando recibe un tag que no tiene el elemento del URL, lanza un =AssertionError=
+- Cuando recibe un tag que no tiene el elemento de la fecha, lanza un =AssertionError=
+- Cuando recibe un tag que no tiene el elemento de la duración, lanza un =AssertionError=
+- Cuando recibe un tag que tiene el elemento del URL, pero el URL no es válido, lanza un =AssertionError=
+- Cuando recibe un tag que tiene el elemento de la fecha, pero ésta no es válida, lanza un =AssertionError=
+- Cuando recibe un tag que tiene el elemento de la duración, pero ésta no es válida, lanza un =AssertionError=
+
+#+begin_src python :tangle franceinter/episodes/tests/test_episode_from_tag.py
+from franceinter.episodes.episode import Episode
+from franceinter.episodes.episode_from_tag import episode_from_tag
+from franceinter.episodes.tests.examples_episode_from_tag import *
+
+def test_episode_ok():
+    tag = tag_ok()
+    episode = episode_from_tag(tag)
+    assert isinstance(episode, Episode)
+    assert (len(str(episode)) > 0)
+
+def test_tag_without_title():
+    tag = tag_without_title()
+    try:
+        episode = episode_from_tag(tag)
+    except AssertionError:
+        assert True
+
+def test_tag_without_url():
+    tag = tag_without_url()
+    try:
+        episode = episode_from_tag(tag)
+    except AssertionError:
+        assert True
+
+def test_tag_without_date():
+    tag = tag_without_date()
+    try:
+        episode = episode_from_tag(tag)
+    except AssertionError:
+        assert True
+
+def test_tag_without_duration():
+    tag = tag_without_duration()
+    try:
+        episode = episode_from_tag(tag)
+    except AssertionError:
+        assert True
+
+def test_tag_with_invalid_url():
+    tag = tag_with_invalid_url()
+    try:
+        episode = episode_from_tag(tag)
+    except AssertionError:
+        assert True
+
+def test_tag_with_invalid_date():
+    tag = tag_with_invalid_date()
+    try:
+        episode = episode_from_tag(tag)
+    except AssertionError:
+        assert True
+
+def test_tag_with_invalid_duration():
+    tag = tag_with_invalid_duration()
+    try:
+        episode = episode_from_tag(tag)
+    except AssertionError:
+        assert True
+
+def test_invalid_tag():
+    tag = invalid_tag()
+    try:
+        episode = episode_from_tag(tag)
+    except AssertionError:
+        assert True
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/episodes/tests/test_episode_from_tag.py
+#+end_src
+
 *** title_from_tag
 **** 1. Objetivo
 
@@ -2973,1954 +4922,6 @@ def test_invalid_duration():
 
 #+begin_src sh
 pytest ./franceinter/episodes/tests/test_duration_from_tag.py
-#+end_src
-
-*** episode_from_tag
-**** 1. Objetivo
-
-Obtener un episodio de un fragmento de html.
-
-Un episodio tiene cuatro propiedades, a saber:
-
-- título :: es un =str= y es obligatorio
-- url :: es un =str=, es obligatorio y debe ser un URL válido
-- fecha de emisión :: es un =str=, es obligatoria y debe ser una fecha válida en formato =YYYY-MM-DD=
-- duración en segundos :: es un =int= y es obligatoria
-
-**** 2. Firma
-
-La función recibe un objeto =bs4.element.Tag= y devuelve un objeto =franceinter.episodes.episode=
-
-Necesitamos entonces definir la clase =episode=
-
-#+begin_src python :tangle franceinter/episodes/episode.py
-
-class Episode:
-    def __init__(self, title, url, date, duration):
-        self.title = title
-        self.url = url
-        self.date = date
-        self.duration = duration
-
-    def __repr__(self):
-        return "Episode(title='%s', date='%s')" % (
-            self.title, self.date
-        )
-
-#+end_src
-
-**** 3. Ejemplos
-
-- Un tag que tiene todos los elementos para generar un episodio válido (título, URL, fecha y duración)
-- Un tag que no es un =bs4.element.Tag=
-- Un tag que no tiene el elemento del título
-- Un tag que no tiene el elemento del URL
-- Un tag que no tiene el elemento de la fecha
-- Un tag que no tiene el elemento de la duración
-- Un tag que tiene el elemento del URL, pero el URL no es válido
-- Un tag que tiene el elemento de la fecha, pero ésta no es válida
-- Un tag que tiene el elemento de la duración, pero ésta no es válida
-
-#+begin_src python :tangle franceinter/episodes/tests/examples_episode_from_tag.py
-from bs4 import BeautifulSoup
-
-def tag_ok():
-    html = '''<button class="replay-button playable"
-data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-janvier-2019"
-            data-diffusion-title="Une année dans le monde"
-            data-duration-seconds="3256"
-            data-is-aod="1"
-            data-start-time="1549664208"
-data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3"
-data-xiti-level="4">'''
-    soup = BeautifulSoup(html, "html.parser")
-    tag = soup.button
-    return tag
-
-def invalid_tag():
-    return "I am not a tag"
-
-def tag_without_title():
-    html = '''<button class="replay-button playable"
-data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-janvier-2019"
-            data-duration-seconds="3256"
-            data-is-aod="1"
-            data-start-time="1549664208"
-data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3"
-data-xiti-level="4">'''
-    soup = BeautifulSoup(html, "html.parser")
-    tag = soup.button
-    return tag
-
-def tag_without_url():
-    html = '''<button class="replay-button playable"
-            data-diffusion-title="Une année dans le monde"
-data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-janvier-2019"
-            data-duration-seconds="3256"
-            data-is-aod="1"
-            data-start-time="1549664208"
-data-xiti-level="4">'''
-    soup = BeautifulSoup(html, "html.parser")
-    tag = soup.button
-    return tag
-
-def tag_without_date():
-    html = '''<button class="replay-button playable"
-            data-diffusion-title="Une année dans le monde"
-            data-duration-seconds="3256"
-            data-is-aod="1"
-            data-start-time="1549664208"
-data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3"
-data-xiti-level="4">'''
-    soup = BeautifulSoup(html, "html.parser")
-    tag = soup.button
-    return tag
-
-def tag_without_duration():
-    html = '''<button class="replay-button playable"
-data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-janvier-2019"
-            data-diffusion-title="Une année dans le monde"
-            data-is-aod="1"
-            data-start-time="1549664208"
-data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3"
-data-xiti-level="4">'''
-    soup = BeautifulSoup(html, "html.parser")
-    tag = soup.button
-    return tag
-
-def tag_with_invalid_url():
-    html = '''<button class="replay-button playable"
-data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-janvier-2019"
-            data-diffusion-title="Une année dans le monde"
-            data-duration-seconds="3256"
-            data-is-aod="1"
-            data-start-time="1549664208"
-data-url="this://isnot[?=>avalid[[/\\url"
-data-xiti-level="4">'''
-    soup = BeautifulSoup(html, "html.parser")
-    tag = soup.button
-    return tag
-
-def tag_with_invalid_date():
-    html = '''<button class="replay-button playable"
-data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-mercredi-2019"
-            data-diffusion-title="Une année dans le monde"
-            data-duration-seconds="3256"
-            data-is-aod="1"
-            data-start-time="1549664208"
-data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3"
-data-xiti-level="4">'''
-    soup = BeautifulSoup(html, "html.parser")
-    tag = soup.button
-    return tag
-
-def tag_with_invalid_duration():
-    html = '''<button class="replay-button playable"
-data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-26-janvier-2019"
-            data-diffusion-title="Une année dans le monde"
-            data-duration-seconds="forty minutes"
-            data-is-aod="1"
-            data-start-time="1549664208"
-data-url="https://media.radiofrance-podcast.net/podcast09/11549-26.01.2019-ITEMA_21962401-0.mp3"
-data-xiti-level="4">'''
-    soup = BeautifulSoup(html, "html.parser")
-    tag = soup.button
-    return tag
-
-#+end_src
-
-**** 4. Boceto
-
-#+begin_src python
-
-def episode_from_tag(tag):
-    # validar que el tag sea un bs4.element.Tag
-
-    # extraer el título con title_from_tag
-    # validar que el título no sea un string vacío
-
-    # extraer el url con url_from_tag
-    # validar que el url no sea un string vacío
-    # validar el url
-
-    # extraer la fecha con date_from_tag
-    # validar la fecha
-
-    # extraer la duración con duration_from_tag
-    # validar que la duración sea > 0
-
-    # crear una instancia de franceinter.epidsodes.Episode
-    # con el título, el url, la fecha y la duración
-    return episode
-
-#+end_src
-
-**** 5. Definición
-
-Usamos la biblioteca [[https://validators.readthedocs.io/][validators]] para validar el URL del podcast
-
-#+begin_src python :tangle franceinter/episodes/episode_from_tag.py
-from franceinter.episodes.title_from_tag import title_from_tag
-from franceinter.episodes.url_from_tag import url_from_tag
-from franceinter.episodes.date_from_tag import date_from_tag
-from franceinter.episodes.duration_from_tag import duration_from_tag
-from franceinter.episodes.episode import Episode
-from validators.url import url as is_valid_url
-import datetime
-import bs4
-
-def episode_from_tag(tag):
-    assert isinstance(tag, bs4.element.Tag), invalid_tag(tag)
-    title = title_from_tag(tag)
-    assert (title != ""), no_title(tag)
-
-    url = url_from_tag(tag)
-    assert (url != ""), no_url(tag)
-    assert is_valid_url(url), invalid_url(tag)
-
-    date = date_from_tag(tag)
-    assert (date != None), no_date(tag)
-
-    duration = duration_from_tag(tag)
-    assert (duration != 0), invalid_duration(tag)
-
-    return Episode(title, url, date, duration)
-
-def no_url(tag):
-    return "received tag does not have an episode URL\n %s" % str(tag)
-
-def invalid_url(tag):
-    return "received tag has an invalid episode URL\n %s" % str(tag)
-
-def no_title(tag):
-    return "received tag does not have an episode title\n %s" % str(tag)
-
-def no_date(tag):
-    return "received tag does not have an episode publication date\n %s" % str(tag)
-
-def invalid_tag(tag):
-    return "tag parameter must be an instance of bs4.element.Tag, received %s instead" % str(type(tag))
-
-def invalid_duration(tag):
-    return "received tag has an invalid duration\n %s" % str(tag)
-
-#+end_src
-
-**** 6. Casos de prueba
-
-- Caso exitoso, devuelve un episodio (=franceinter.episodes.Episode=)
-- Cuando recibe un tag que no es un =bs4.element.Tag=, lanza un =AssertionError=
-- Cuando recibe un tag que no tiene el elemento del título, lanza un =AssertionError=
-- Cuando recibe un tag que no tiene el elemento del URL, lanza un =AssertionError=
-- Cuando recibe un tag que no tiene el elemento de la fecha, lanza un =AssertionError=
-- Cuando recibe un tag que no tiene el elemento de la duración, lanza un =AssertionError=
-- Cuando recibe un tag que tiene el elemento del URL, pero el URL no es válido, lanza un =AssertionError=
-- Cuando recibe un tag que tiene el elemento de la fecha, pero ésta no es válida, lanza un =AssertionError=
-- Cuando recibe un tag que tiene el elemento de la duración, pero ésta no es válida, lanza un =AssertionError=
-
-#+begin_src python :tangle franceinter/episodes/tests/test_episode_from_tag.py
-from franceinter.episodes.episode import Episode
-from franceinter.episodes.episode_from_tag import episode_from_tag
-from franceinter.episodes.tests.examples_episode_from_tag import *
-
-def test_episode_ok():
-    tag = tag_ok()
-    episode = episode_from_tag(tag)
-    assert isinstance(episode, Episode)
-    assert (len(str(episode)) > 0)
-
-def test_tag_without_title():
-    tag = tag_without_title()
-    try:
-        episode = episode_from_tag(tag)
-    except AssertionError:
-        assert True
-
-def test_tag_without_url():
-    tag = tag_without_url()
-    try:
-        episode = episode_from_tag(tag)
-    except AssertionError:
-        assert True
-
-def test_tag_without_date():
-    tag = tag_without_date()
-    try:
-        episode = episode_from_tag(tag)
-    except AssertionError:
-        assert True
-
-def test_tag_without_duration():
-    tag = tag_without_duration()
-    try:
-        episode = episode_from_tag(tag)
-    except AssertionError:
-        assert True
-
-def test_tag_with_invalid_url():
-    tag = tag_with_invalid_url()
-    try:
-        episode = episode_from_tag(tag)
-    except AssertionError:
-        assert True
-
-def test_tag_with_invalid_date():
-    tag = tag_with_invalid_date()
-    try:
-        episode = episode_from_tag(tag)
-    except AssertionError:
-        assert True
-
-def test_tag_with_invalid_duration():
-    tag = tag_with_invalid_duration()
-    try:
-        episode = episode_from_tag(tag)
-    except AssertionError:
-        assert True
-
-def test_invalid_tag():
-    tag = invalid_tag()
-    try:
-        episode = episode_from_tag(tag)
-    except AssertionError:
-        assert True
-
-#+end_src
-
-***** Run tests
-
-#+begin_src sh
-pytest franceinter/episodes/tests/test_episode_from_tag.py
-#+end_src
-
-*** html_from_url
-**** 1. Objetivo
-
-Obtener el HTML de un URL
-
-**** 2. Firma
-
-La función recibe un =str= con un URL válido y devuelve otro =str= con el HTML del URL
-
-**** 3. Ejemplos
-
-- Caso exitoso, un URL válido
-- Un URL que no es un =str=
-- Un URL inválido
-- Un URL válido, pero que causa un =ConnectionError= porque el host no existe
-- Un URL válido, pero de una página que no existe
-
-#+begin_src python :tangle franceinter/episodes/tests/examples_html_from_url.py
-
-def valid_url():
-    url = "http://localhost:3000/episode-list.html"
-    return url
-
-def not_str_url():
-    url = 1234
-    return url
-
-def invalid_url():
-    url = "ghu:\\{this]url^is((not?valid.com"
-    return url
-
-def not_found_url():
-    url = "http://localhost:3000/this-page-does-not-exist.html"
-    return url
-
-def connection_error_url():
-    url = "http://host.local:3000/this-page-does-not-exist.html"
-    return url
-
-#+end_src
-
-**** 4. Boceto
-
-#+begin_src python
-
-def html_from_url(url):
-    # validar el URL
-    # ejecutar la petición HTTP
-    # si no hay error de conexión
-    # devolver el texto de la respuesta
-
-#+end_src
-
-**** 5. Definición
-
-#+begin_src python :tangle franceinter/episodes/html_from_url.py
-import requests
-from validators.url import url as is_valid_url
-
-def html_from_url(url):
-    assert isinstance(url, str), invalid_str(url)
-    assert is_valid_url(url), invalid_url(url)
-    try:
-        response = requests.get(url)
-        return response.text
-    except requests.ConnectionError:
-        assert False, connection_error(url)
-        
-def invalid_str(url):
-    return "url parameter must be string, received %s instead" % str(type(url))
-
-def invalid_url(url):
-    return "url parameter must be a valid URL, received %s instead" % url
-
-def connection_error(url):
-    return "request to %s failed with a connection error" % url
-
-#+end_src
-
-**** 6. Casos de prueba
-
-- Caso exitoso, cuando recibe un URL válido devuelve el HTML de la página
-- Cuando recibe un URL que no es un =str=, lanza un =AssertionError=
-- Cuando recibe un URL inválido, lanza un =AssertionError=
-- Cuando recibe un URL válido pero cuyo host no existe, lanza un =AssertionError=
-- Cuando recibe un URL válido pero cuya página, devuelve un =str= vacío
-
-#+begin_src python :tangle franceinter/episodes/tests/test_html_from_url.py
-import re
-import pytest
-import threading
-from franceinter.episodes.html_from_url import html_from_url
-from franceinter.episodes.tests.examples_html_from_url import *
-from utils.http_server import LocalFolderHTTPServer as HTTPServer
-
-def test_url_ok(http_server):
-    url = valid_url()
-    html = html_from_url(url)
-    assert isinstance(html, str)
-    assert (len(html) > 0)
-
-def test_not_str_url(http_server):
-    url = not_str_url()
-    try:
-        html = html_from_url(url)
-    except AssertionError:
-        assert True
-
-def test_invalid_url():
-    url = invalid_url()
-    try:
-        html = html_from_url(url)
-    except AssertionError:
-        assert True
-
-def test_not_found_url(http_server):
-    url = not_found_url()
-    html = html_from_url(url)
-    assert re.search("NOT_FOUND", html)
-
-@pytest.mark.skip(reason="Slow test (~10 sec) waiting for DNS error")
-def test_wrong_site_url(http_server):
-    url = connection_error_url()
-    try:
-        html = html_from_url(url)
-    except AssertionError:
-        assert True
-
-@pytest.fixture(scope="module")
-def http_server():
-    web_dir = './franceinter/html'
-    httpd = HTTPServer(web_dir, ("", 3000))
-    threading.Thread(target=httpd.serve_forever).start()
-    yield httpd
-    httpd.shutdown()
-
-#+end_src
-
-***** Run tests
-
-#+begin_src sh
-pytest franceinter/episodes/tests/test_html_from_url.py
-#+end_src
-
-*** lastpage_from_html
-**** 1. Objetivo
-
-Obtener la cantidad de páginas del HTML del listado de episodios.
-
-En el HTML del listado de episodios de un podcast hay un paginador donde podemos encontrar la cantidad total de páginas, buscando un tag =<li>= que tiene la clase =last=. Dentro de ese =<li>= hay un link a la última página, que se encuentra en el atributo =href=. 
-
-**** 2. Firma
-
-La función recibe un =str= con el HTML y devuelve un =int= con el número de la última página.
-
-**** 3. Ejemplos
-
-- Caso exitoso, un HTML con el tag =<li>= que tiene la clase =last= y el =<a>= con el atributo =href= correcto
-- Un HTML que no es un =str=
-- Un HTML que no tiene el tag =<li>=
-- Un HTML que tiene el tag =<li>=, pero éste no tiene la clase =last=
-- Un HTML que tiene el tag =<li>= con la clase =last=, pero éste no tiene el =<a>=
-
-#+begin_src python :tangle franceinter/episodes/tests/examples_lastpage_from_html.py
-
-def html_ok():
-    html = '''<div>
-<li class="pager-item last">
-    <a href="/emissions/sur-les-epaules-de-darwin?p=22"
-    title="Aller à la denière page"> >>
-    </a>
-</li>
-    </div>'''
-    return html
-
-def invalid_html():
-    return 4321
-
-def html_without_item():
-    html = '''<div>
-<span class="pager-item last">
-    <a href="/emissions/sur-les-epaules-de-darwin?p=22"
-    title="Aller à la denière page"> >>
-    </a>
-</span>
-    </div>'''
-    return html
-
-def html_without_class():
-    html = '''<div>
-<li>
-    <a href="/emissions/sur-les-epaules-de-darwin?p=22"
-    title="Aller à la denière page"> >>
-    </a>
-</li>
-    </div>'''
-    return html
-
-def html_without_link():
-    html = '''<div>
-<li>
-    <a href="/emissions/sur-les-epaules-de-darwin?p=22"
-    title="Aller à la denière page"> >>
-    </a>
-</li>
-    </div>'''
-    return html
-
-#+end_src
-
-**** 4. Boceto
-
-#+begin_src python
-
-def lastpage_from_html(html):
-    # validar que el html sea un str
-    # buscar un <li> con la clase =last=
-    # si existe buscar dentro un <a> y extraer el atributo "href"
-    # extraer al final del href uno o más números [0-9]
-    lastpage = 1
-    return lastpage
-
-#+end_src
-
-**** 5. Definición
-
-#+begin_src python :tangle franceinter/episodes/lastpage_from_html.py
-from bs4 import BeautifulSoup
-import re
-
-def lastpage_from_html(html):
-    assert isinstance(html, str), invalid_html(html)
-    soup = BeautifulSoup(html, "html.parser")
-    lastpage = 1
-    item = soup.find("li", class_="last")
-    if item:
-        href = item.find("a").attrs["href"]
-        match = re.search("([0-9]+)$", href)
-        if match:
-            lastpage = int(match.groups()[0])
-    return lastpage
-     
-def invalid_html(html):
-    return "html parameter must be a string, %s received" % str(type(html))
-
-#+end_src
-
-**** 6. Casos de prueba
-
-- Caso exitoso, cuando recibe un HTML con el tag =<li>= que tiene la clase =last=, devuelve el número de la última página
-- Cuando recibe un HTML que no es un =str=, lanza un =AssertionError=
-- Cuando recibe un HTML que no tiene el tag =<li>=, devuelve la primera página (=1=)
-- Cuando recibe un HTML que tiene el tag =<li>=, pero éste no tiene la clase =last=, devuelve la primera página (=1=)
-- Cuando recibe un HTML que tiene el tag =<li>= con la clase =last=, pero éste no tiene el =<a>=, devuelve la primera página (=1=)
-
-#+begin_src python :tangle franceinter/episodes/tests/test_lastpage_from_html.py
-from franceinter.episodes.lastpage_from_html import lastpage_from_html
-from franceinter.episodes.tests.examples_lastpage_from_html import *
-
-def test_html_ok():
-    html = html_ok()
-    lastpage = lastpage_from_html(html)
-    assert (lastpage == 22)
-
-def test_invalid_html():
-    html = invalid_html()
-    try:
-        lastpage = lastpage_from_html(html)
-    except AssertionError:
-        assert True
-
-def test_html_without_item():
-    html = html_without_item()
-    lastpage = lastpage_from_html(html)
-    assert (lastpage == 1)
-
-def test_html_without_class():
-    html = html_without_class()
-    lastpage = lastpage_from_html(html)
-    assert (lastpage == 1)
-
-def test_html_without_link():
-    html = html_without_link()
-    lastpage = lastpage_from_html(html)
-    assert (lastpage == 1)
-
-#+end_src
-
-***** Run tests
-
-#+begin_src sh
-pytest franceinter/episodes/tests/test_lastpage_from_html.py
-#+end_src
-
-*** pages_from_podcast
-**** 1. Objetivo
-
-Obtener un listado de URLs de las páginas del listado de episodios a partir de los datos de un podcast.
-
-**** 2. Firma
-
-La función recibe un objeto =franceinter.podcasts.Podcast= y devuelve un =GeneratorType= con los URLs de las páginas del historial de episodios.
-
-**** 3. Ejemplos
-
-- Caso exitoso, un podcast válido
-- Un podcast con el URL vacío
-- Un podcast con el URL inválido
-- Un objeto que no es un =franceinter.podcasts.Podcast=
-
-#+begin_src python :tangle franceinter/episodes/tests/examples_pages_from_podcast.py
-from franceinter.podcasts.podcast import Podcast
-
-def valid_podcast():
-    title = "Sur les epaules de Darwin"
-    url = "http://localhost:3000/episode-list.html"
-    author = "Jean-Claude Ameisen"
-    return Podcast(title, url, author)
-
-def podcast_with_empty_url():
-    title = "Sur les epaules de Darwin"
-    url = ""
-    author = "Jean-Claude Ameisen"
-    return Podcast(title, url, author)
-
-def podcast_with_invalid_url():
-    title = "Sur les epaules de Darwin"
-    url = "ghu:\\{this]url^is((not?valid.com"
-    author = "Jean-Claude Ameisen"
-    return Podcast(title, url, author)
-
-def invalid_podcast():
-    return "this is not a podcast object"
-
-#+end_src
-
-**** 4. Boceto
-
-#+begin_src python
-
-def pages_from_podcast(podcast):
-    # validar que el podcast sea una instancia de Podcast
-    # validar el url
-    # obtener el HTML del URL
-    # obtener el número de la última página del HTML
-    # generar los URLs de las páginas agregando ?p=XX al URL del podcast
-    yield page_url
-
-#+end_src
-
-**** 5. Definición
-
-#+begin_src python :tangle franceinter/episodes/pages_from_podcast.py
-from franceinter.podcasts.podcast import Podcast
-from franceinter.episodes.html_from_url import html_from_url
-from franceinter.episodes.lastpage_from_html import lastpage_from_html
-
-def pages_from_podcast(podcast):
-    assert isinstance(podcast, Podcast), invalid_podcast(podcast)
-    html = html_from_url(podcast.url)
-    lastpage = lastpage_from_html(html)
-    for page_number in range(1, lastpage + 1):
-        page_url = podcast.url + "?p=" + str(page_number)
-        yield page_url
-
-def invalid_podcast(podcast):
-    return "podcast parameter must be a Podcast, received %s instead" % str(type(podcast))
-
-#+end_src
-
-**** 6. Casos de prueba
-
-- Caso exitoso, cuando recibe un podcast válido, devuelve un =GeneratorType= con los URLs de las páginas del podcast
-- Cuando recibe un podcast con el URL vacío, lanza un =AssertionError=
-- Cuando recibe un podcast con el URL inválido, lanza un =AssertionError=
-- Cuando recibe un objeto que no es un =franceinter.podcasts.Podcast=, lanza un =AssertionError=
-
-#+begin_src python :tangle franceinter/episodes/tests/test_pages_from_podcast.py
-import types
-import pytest
-import threading
-from validators.url import url as is_valid_url
-from franceinter.episodes.pages_from_podcast import pages_from_podcast
-from franceinter.episodes.tests.examples_pages_from_podcast import *
-from utils.http_server import LocalFolderHTTPServer as HTTPServer
-
-def test_url_ok(http_server):
-    podcast = valid_podcast()
-    pages = pages_from_podcast(podcast)
-    assert isinstance(pages, types.GeneratorType)
-    for page in pages:
-        assert is_valid_url(page)
-
-def test_podcast_with_empty_url():
-    podcast = podcast_with_empty_url()
-    try:
-        pages = list(pages_from_podcast(podcast))
-    except AssertionError:
-        assert True
-
-def test_podcast_with_invalid_url():
-    podcast = podcast_with_invalid_url()
-    try:
-        pages = list(pages_from_podcast(podcast))
-    except AssertionError:
-        assert True
-
-def test_invalid_podcast():
-    podcast = invalid_podcast()
-    try:
-        pages = list(pages_from_podcast(podcast))
-    except AssertionError:
-        assert True
-
-@pytest.fixture(scope="module")
-def http_server():
-    web_dir = './franceinter/html'
-    httpd = HTTPServer(web_dir, ("", 3000))
-    threading.Thread(target=httpd.serve_forever).start()
-    yield httpd
-    httpd.shutdown()
-
-#+end_src
-
-***** Run tests
-
-#+begin_src sh
-pytest ./franceinter/episodes/tests/test_pages_from_podcast.py
-#+end_src
-
-*** tags_from_html
-**** 1. Objetivo
-
-Obtener un array de tags con los fragmentos de html que tienen el detalle del episodio (título, URL, fecha de emisión y duración) a partir del html de la página con el listado de episodios.
-
-Hay que extraer todos los =<button>= que tengan la clase =replay-button= y que estén dentro de un =<div>= que tiene clase =diffusions-list=. Necesitamos extraer solamente los botones que están dentro de este div porque en el HTML de la página hay otros botones que son de otros podcasts.
-
-**** 2. Firma
-
-La función recibe un =str= con el html de la página y devuelve un =GeneratorType= de elementos =bs4.element.Tag=
-
-**** 3. Ejemplos
-
-- Un html que tiene un =<div>= con la clase buscada y que contiene varios =<button>= con la clase =replay-button=
-- Un html que no es un =str=
-- Un html que no tiene ningún =<div>=
-- Un html que tiene varios =<div>= pero que ninguno tiene la clase =diffusions-list=
-- Un html que tiene un =<div>= con la clase buscada y que contiene algunos =<buttons>= con la clase =replay-button= y otros que no la tienen
-
-#+begin_src python :tangle franceinter/episodes/tests/examples_tags_from_html.py
-from bs4 import BeautifulSoup
-import random
-
-def html_with_buttons(how_many):
-    btn_class = "replay-button"
-    buttons = map(lambda x: button("click here", btn_class), range(how_many))
-    cls_name = "diffusions-list"
-    return html(buttons, cls_name)
-
-def html_is_not_string():
-    return 42
-
-def html_without_divs():
-    html = '''<header><h1>dummy title</h1></header>
-<p>bla bla bla</p>
-<ul>
-  <li> item 1 </li>
-  <li> item 2 </li>
-</ul>
-<footer>All rights reserved!</footer>'''
-    return html
-
-def html_divs_without_class(how_many):
-    content = "blablabla"
-    divs = map(lambda x: div(content), range(how_many))
-    return html(divs)
-
-def html_some_buttons_with_class(how_many_with, how_many_without):
-    cls = "replay-button"
-    buttons_with = list(map(lambda x: button("click here", cls), range(how_many_with)))
-    buttons_without = list(map(lambda x: button("click here"), range(how_many_without)))
-    buttons = buttons_with + buttons_without
-    random.shuffle(buttons)
-    class_name = "diffusions-list"
-    return html(buttons, class_name)
-
-def button(content, class_name=""):
-    attr = ""
-    if class_name:
-        attr = 'class="%s"' % class_name
-    html = '''<button %s>%s</button>''' % (attr, content)
-    soup = BeautifulSoup(html, "html.parser")
-    return soup.button
-
-def div(content):
-    html = '''<div>%s</div>''' % content
-    soup = BeautifulSoup(html, "html.parser")
-    return soup.div
-
-def html(elements, class_name=""):
-    attr = ""
-    if class_name:
-        attr = 'class="%s"' % class_name
-    content = "".join(map(lambda e: str(e), elements))
-    html = '''<header><h1>dummy title</h1></header>
-<p>bla bla bla</p>
-<div %s>
-%s
-</div>
-<ul>
-  <li> item 1 </li>
-  <li> item 2 </li>
-</ul>
-<footer>All rights reserved!</footer>
-    ''' % (attr, content)
-    return html
-    
-#+end_src
-
-**** 4. Boceto
-
-#+begin_src python
-from bs4 import BeautifulSoup
-
-def tags_from_html(html):
-    # validar que el html sea un string
-    tags = []
-    # instanciar un objeto BeautifulSoup
-    # buscar el <div> que tiene la clase "diffusions-list"
-    # dentro de ese <div> filtrar todos los <button> 
-    # que tienen la clase =replay-button=
-    yield tag
-
-#+end_src
-
-**** 5. Definición
-
-#+begin_src python :tangle franceinter/episodes/tags_from_html.py
-from bs4 import BeautifulSoup
-
-def tags_from_html(html):
-    assert isinstance(html, str), invalid_html(html)
-    soup = BeautifulSoup(html, "html.parser")
-    div = soup.find("div", class_="diffusions-list")
-    if div:
-        buttons = div.find_all("button", class_="replay-button")
-        for tag in buttons:
-            yield tag
-
-def invalid_html(html):
-    return "html parameter must be a string, received %s instead" % type(html)
-
-#+end_src
-
-**** 6. Casos de prueba
-
-- Caso exitoso, cuando recibe un html que tiene un =<div>= con la clase buscada y que contiene varios =<button>= con la clase =replay-button=, devuelve un =GeneratorType= que tiene tantos elementos como =<button>= haya en el html
-- Cuando recibe un html que no es un string, lanza un =AssertionError=
-- Cuando recibe un html que no tiene ningún =<div>=, devuelve un =GeneratorType= vacío
-- Cuando recibe un html que tiene varios =<div>= pero ninguno tiene la clase =rich-section-list-item-content=, devuelve un =GeneratorType= vacío
-- Cuando recibe un html que tiene algunos =<div>= con la clase buscada y otros que no la tienen, devuelve un =GeneratorType= con solamente los =<div>= que tienen la clase
-
-#+begin_src python :tangle franceinter/episodes/tests/test_tags_from_html.py
-import types
-from franceinter.episodes.tags_from_html import tags_from_html
-from franceinter.episodes.tests.examples_tags_from_html import *
-
-def test_html_with_buttons():
-    html = html_with_buttons(5)
-    tags = tags_from_html(html)
-    assert isinstance(tags, types.GeneratorType)
-    assert (len(list(tags)) == 5)
-
-def test_html_is_not_string():
-    try:
-        html = html_is_not_string()
-        tags = list(tags_from_html(html))
-    except AssertionError:
-        assert True
-
-def test_html_without_divs():
-    html = html_without_divs()
-    tags = tags_from_html(html)
-    assert isinstance(tags, types.GeneratorType)
-    assert (len(list(tags)) == 0)
-
-def test_divs_without_class():
-    html = html_divs_without_class(4)
-    tags = tags_from_html(html)
-    assert isinstance(tags, types.GeneratorType)
-    assert (len(list(tags)) == 0)
-
-def test_some_buttons_with_class():
-    html = html_some_buttons_with_class(2,3)
-    tags = tags_from_html(html)
-    assert isinstance(tags, types.GeneratorType)
-    assert (len(list(tags)) == 2)
-
-#+end_src
-
-***** Run tests
-
-#+begin_src sh
-pytest franceinter/episodes/tests/test_tags_from_html.py
-#+end_src
-
-*** episodes_from_tags
-**** 1. Objetivo
-
-Generar un listado de episodios a partir de un listado de fragmentos de HTML tomados de la página
-
-**** 2. Firma
-
-La función recibe un listado de objetos =bs4.element.Tag= y devuelve un =GeneratorType= de objetos =franceinter.episodes.Episode=
-
-Vamos a aceptar tanto un =list= como un =GeneratorType=
-
-**** 3. Ejemplos
-
-- Un objeto que no es iterable
-- Una lista vacía
-- Una lista con tags válidos
-- Una lista con objetos que no son del tipo =bs4.element.Tag=
-- Una lista con tags válidos y un tag inválido (sin el título o el URL)
-
-#+begin_src python :tangle franceinter/episodes/tests/examples_episodes_from_tags.py
-import random
-from franceinter.episodes.tags_from_html import tags_from_html
-from franceinter.episodes.tests.examples_episode_from_tag import (
-    tag_ok,
-    tag_without_title
-)
-
-def invalid_list():
-    return 123
-
-def empty_list():
-    return []
-
-def list_without_tags():
-    return [1, 2, 3, 4, 5]
-
-def list_with_valid_tags(how_many):
-    html = "<div class='diffusions-list'>"
-    for i in range(1, how_many):
-        html+= str(tag_ok())
-    html+= "</div>"
-    tags = tags_from_html(html)
-    return tags
-
-def list_with_invalid_tag(how_many):
-    tags = list(list_with_valid_tags(how_many - 1))
-    tags.append(tag_without_title())
-    random.shuffle(tags)
-    return tags
-
-#+end_src
-
-**** 4. Boceto
-
-#+begin_src python
-from franceinter.episodes.tags_from_html import tags_from_html
-
-def podcasts_from_tags(tags):
-    # validar que tags sea un GeneratorType
-    # para cada tag de la lista
-    # usar episode_from_tag() para obtener un podcast
-    # yield posdcast
-
-#+end_src
-
-**** 5. Definición
-
-#+begin_src python :tangle franceinter/episodes/episodes_from_tags.py
-from franceinter.episodes.episode_from_tag import episode_from_tag
-
-def episodes_from_tags(tags):
-    try:
-        it = iter(tags)
-    except TypeError:
-        assert False, invalid_tags(tags)
-    for tag in tags:
-        yield episode_from_tag(tag)
-
-def invalid_tags(tags):
-    return "tags parameter must be iterable, received %s instead" % type(tags)
-#+end_src
-
-**** 6. Casos de prueba
-
-- Si recibe un objeto que no es iterable, lanza un =AssertionError=
-- Si recibe una lista vacía, devuelve un =GeneratorType= vacío
-- Si recibe una lista de tags válidos, devuelve un =GeneratorType= de objetos =franceinter.episodes.Episode=
-- Si recibe una lista con objetos que no son del tipo =bs4.element.Tag=, lanza un =AssertionError=
-- Si recibe una lista con algún tag inválido (que no tenga el título o el URL), lanza un =AssertionError=
-
-#+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_tags.py
-import types
-from franceinter.episodes.episodes_from_tags import episodes_from_tags
-from franceinter.episodes.tests.examples_episodes_from_tags import *
-from franceinter.episodes.episode import Episode
-
-def test_invalid_list():
-    tags = invalid_list()
-    try:
-        episodes = list(episodes_from_tags(tags))
-    except AssertionError:
-        assert True
-
-def test_empty_list():
-    tags = empty_list()
-    episodes = episodes_from_tags(tags)
-    assert isinstance(episodes, types.GeneratorType)
-    assert (len(list(episodes))==0)
-
-def test_list_with_valid_tags():
-    tags = list_with_valid_tags(6)
-    episodes = episodes_from_tags(tags)
-    assert isinstance(episodes, types.GeneratorType)
-    for e in episodes:
-        assert (isinstance(e, Episode))
-
-def test_list_without_tags():
-    tags = list_without_tags()
-    try:
-        episodes = list(episodes_from_tags(tags))
-    except AssertionError:
-        assert True
-
-def test_list_with_invalid_tag():
-    tags = list_with_invalid_tag(6)
-    episodes = episodes_from_tags(tags)
-    try:
-        for e in episodes:
-            assert (isinstance(e, Episode))
-    except AssertionError:
-        assert True
-
-#+end_src
-
-***** Run tests
-
-#+begin_src sh
-pytest franceinter/episodes/tests/test_episodes_from_tags.py
-#+end_src
-
-*** episodes_from_response
-**** 1. Objetivo
-
-Extraer el listado de episodios de la respuesta de una petición HTTP
-
-**** 2. Firma
-
-La función recibe una =requests.model.Response= y devuelve un =GeneratorType= de objetos =franceinter.episodes.Episode=
-
-**** 3. Ejemplos
-
-- Una respuesta válida, con el HTML de una página del listado de episodios
-- Una respuesta inválida, que no es de la clase =requests.model.Response=
-- Una respuesta válida, pero que tiene el HTML de otra página
-
-#+begin_src python :tangle franceinter/episodes/tests/examples_episodes_from_response.py
-from requests.models import Response
-
-def response_ok():
-    resp = Response()
-    resp.status_code = 200
-    filename = "./franceinter/html/episode-list.html" 
-    with open(filename, "rb") as f:
-        resp._content = f.read()
-    return resp
-
-def invalid_response():
-    return "i am not a Response"
-
-def wrong_page_response():
-    resp = Response()
-    resp.status_code = 200
-    filename = "./franceinter/html/wrong-page.html" 
-    with open(filename, "rb") as f:
-        resp._content = f.read()
-    return resp
-
-#+end_src
-
-**** 4. Boceto
-
-#+begin_src python
-import requests
-
-def episodes_from_response(resp):
-    # validar la respuesta
-    # obtener el HTML de resp.text
-    # extraer los tags usando tags_from_html
-    # obtener los podcasts usando episodes_from_tags
-
-#+end_src
-
-**** 5. Definición
-
-#+begin_src python :tangle franceinter/episodes/episodes_from_response.py
-import requests
-from franceinter.episodes.tags_from_html import tags_from_html
-from franceinter.episodes.episodes_from_tags import episodes_from_tags
-
-def episodes_from_response(resp):
-    assert isinstance(resp, requests.models.Response), invalid_type(resp)
-    html = resp.text
-    tags = tags_from_html(html)
-    episodes = episodes_from_tags(tags)
-    return episodes
-    
-def invalid_type(resp):
-    return "resp parameter must be a requests.models.Response, received %s instead" % type(resp)
-
-#+end_src
-
-**** 6. Casos de prueba
-
-- Cuando recibe una respuesta válida, devuelve un =GeneratorType= de objetos =franceinter.episodes.Episode=
-- Cuando recibe una respuesta que no es de la clase =requests.model.Response=, lanza un =AssertionError=
-- Cuando recibe una respuesta válida que tiene el HTML de otra página, devuelve un =GeneratorType= vacío
-
-#+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_response.py
-import types
-from franceinter.episodes.episode import Episode
-from franceinter.episodes.episodes_from_response import episodes_from_response
-from franceinter.episodes.tests.examples_episodes_from_response import *
-
-def test_response_ok():
-    resp = response_ok()
-    episodes = episodes_from_response(resp)
-    assert isinstance(episodes, types.GeneratorType)
-    for e in episodes:
-        assert isinstance(e, Episode)
-
-def test_invalid_response():
-    resp = invalid_response()
-    try:
-        episodes = episodes_from_response(resp)
-    except AssertionError:
-        assert True
-    
-def test_wrong_page_response():
-    resp = wrong_page_response()
-    episodes = episodes_from_response(resp)
-    assert isinstance(episodes, types.GeneratorType)
-    assert (len(list(episodes)) == 0)
-
-#+end_src
-
-***** Run tests
-
-#+begin_src sh
-pytest franceinter/episodes/tests/test_episodes_from_response.py
-#+end_src
-
-*** episodes_from_url
-**** 1. Objetivo
-
-Extraer el listado de episodios desde un URL
-
-**** 2. Firma
-
-La función recibe un URL y devuelve un =GeneratorType= de objetos =franceinter.episodes.Episode=
-
-**** 3. Ejemplos
-
-- Un URL con el listado de episodios
-- Un URL de otra página, que no tiene episodios
-- Un URL de una página inexistente, que dispare un error 404 (not found)
-- Un URL de un sitio inexistente, que dispare un error de DNS
-- Un URL inválido
-
-#+begin_src python :tangle franceinter/episodes/tests/examples_episodes_from_url.py
-
-def url_ok():
-    url = "http://localhost:3000/episode-list.html"
-    return url
-
-def wrong_page_url():
-    url = "http://localhost:3000/wrong-page.html"
-    return url
-
-def not_found_url():
-    url = "http://localhost:3000/this-page-does-not-exist.html"
-    return url
-
-def wrong_site_url():
-    url = "http://host.local:3000/this-page-does-not-exist.html"
-    return url
-
-def invalid_url():
-    url = "ht pt:\\hostlocal:3000/this-url-is-not-valid.html"
-    return url
-
-#+end_src
-
-**** 4. Boceto
-
-#+begin_src python
-
-def episodes_from_url(url):
-    # validar el url
-    # realizar una petición al url
-    # obtener la respuesta del url
-    # obtener los episodes llamando a episodes_from_response
-    # revisar si da un error de conexión
-    return episodes
-
-#+end_src
-
-**** 5. Definición
-
-#+begin_src python :tangle franceinter/episodes/episodes_from_url.py
-import requests
-from validators.url import url as is_valid_url
-from franceinter.episodes.episodes_from_response import episodes_from_response
-
-def episodes_from_url(url):
-    assert is_valid_url(url), invalid_url(url)
-    try:
-        response = requests.get(url)
-        episodes = episodes_from_response(response)
-        return episodes
-    except requests.ConnectionError:
-        assert False, connection_error(url)
-
-def invalid_url(url):
-    return "url parameter must be a valid URL, received %s instead" % url
-
-def connection_error(url):
-    return "request to %s failed with a connection error" % url
-#+end_src
-
-**** 6. Casos de prueba
-
-- Cuando recibe un URL con el listado de episodios, devuelve un =GeneratorType= de objetos =Episode=
-- Cuando recibe un URL de otra página, que no tiene episodios, devuelve un =GeneratorType= vacío
-- Cuando recibe un URL de una página inexistente, devuelve un =GeneratorType= vacío
-- Cuando recibe un URL de un sitio inexistente (error de DNS), lanza un =AssertionError=
-- Cuando recibe un URL inválido, lanza un =AssertionError=
-
-#+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_url.py
-import pytest
-import threading
-import types
-from franceinter.episodes.episode import Episode
-from franceinter.episodes.episodes_from_url import episodes_from_url
-from franceinter.episodes.tests.examples_episodes_from_url import *
-from utils.http_server import LocalFolderHTTPServer as HTTPServer
-
-def test_url_ok(http_server):
-    url = url_ok()
-    gen = episodes_from_url(url)
-    assert isinstance(gen, types.GeneratorType)
-    episodes = list(gen)
-    assert (len(episodes) > 0)
-    for e in episodes:
-        assert isinstance(e, Episode)
-
-def test_wrong_page_url(http_server):
-    url = wrong_page_url()
-    episodes = list(episodes_from_url(url))
-    assert (len(episodes) == 0)
-
-def test_not_found_url(http_server):
-    url = not_found_url()
-    episodes = list(episodes_from_url(url))
-    assert (len(episodes) == 0)
-
-@pytest.mark.skip(reason="Slow test (~10 sec) waiting for DNS error")
-def test_wrong_site_url(http_server):
-    url = wrong_site_url()
-    try:
-        episodes = list(episodes_from_url(url))
-    except AssertionError:
-        assert True
-
-def test_invalid_url():
-    url = invalid_url()
-    try:
-        episodes = episodes_from_url(url)
-    except AssertionError:
-        assert True
-
-@pytest.fixture(scope="module")
-def http_server():
-    web_dir = './franceinter/html'
-    httpd = HTTPServer(web_dir, ("", 3000))
-    threading.Thread(target=httpd.serve_forever).start()
-    yield httpd
-    httpd.shutdown()
-
-#+end_src
-
-***** Run tests
-
-#+begin_src sh
-pytest franceinter/episodes/tests/test_episodes_from_url.py
-#+end_src
-
-*** episodes_from_filename
-**** 1. Objetivo
-
-Extraer un listado de episodios desde un archivo
-
-**** 2. Firma
-
-La función recibe un =str= con el nombre del archivo y devuelve un =GeneratorType= de objetos =franceinter.episodes.Episode=
-
-**** 3. Ejemplos
-
-- Un archivo HTML que tiene un listado de episodios
-- Un archivo HTML de otra página, que no tiene episodios
-- Un archivo que no existe
-- Un nombre de archivo que no es un =str=
-
-#+begin_src python :tangle franceinter/episodes/tests/examples_episodes_from_filename.py
-
-def ok_filename():
-    return "./franceinter/html/episode-list.html"
-
-def wrong_filename():
-    return "./franceinter/html/wrong-page.html"
-
-def not_found_filename():
-    return "./franceinter/html/this-file-does-not-exist.html"
-
-def invalid_filename():
-    return [1, 2, 3]
-
-#+end_src
-
-**** 4. Boceto
-
-#+begin_src python
-
-def episodes_from_filename(filename):
-    # validar que filename sea un str
-    # validar que el archivo exista
-    episodes = []
-    # crear un requests.models.Response con el contenido del archivo
-    # obtener los episodios llamando a episodes_from_response
-    return episodes
-     
-#+end_src
-
-**** 5. Definición
-
-#+begin_src python :tangle franceinter/episodes/episodes_from_filename.py
-from requests.models import Response
-from franceinter.episodes.episodes_from_response import episodes_from_response
-
-def episodes_from_filename(filename):
-    assert isinstance(filename, str), invalid_filename(filename)
-    resp = Response()
-    episodes = []
-    try:
-        with open(filename, "rb") as f:
-            resp._content = f.read()
-            episodes = episodes_from_response(resp)
-    except (OSError, IOError) as error:
-        assert False, not_found(filename, error)
-    return episodes
-
-def invalid_filename(filename):
-    return "filename parameter must be a str, %s received instead" % filename
-
-def not_found(filename, error):
-    return "filename %s cannot be read, thrown error :\n%s" % (filename, error)
-#+end_src
-
-**** 6. Casos de prueba
-
-- Caso exitoso, cuando recibe un archivo HTML que tiene un listado de podcasts, devuelve un =GeneratorType= de objetos =franceinter.episodes.Episode=
-- Cuando recibe un archivo HTML de otra página, que no tiene podcasts, devuelve un =GeneratorType= vacío
-- Cuando recibe un archivo que no existe, lanza un =AssertionError=
-- Cuando recibe un nombre de archivo que no es un =str=, lanza un =AssertionError=
-
-#+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_filename.py
-import types
-from franceinter.episodes.episode import Episode
-from franceinter.episodes.episodes_from_filename import episodes_from_filename
-from franceinter.episodes.tests.examples_episodes_from_filename import *
-
-def test_ok_filename():
-    filename = ok_filename()
-    episodes = episodes_from_filename(filename)
-    assert isinstance(episodes, types.GeneratorType)
-    episodes = list(episodes)
-    assert (len(episodes) > 0)
-    for e in episodes:
-        assert isinstance(e, Episode)
-
-def test_wrong_filename():
-    filename = wrong_filename()
-    episodes = episodes_from_filename(filename)
-    assert isinstance(episodes, types.GeneratorType)
-    episodes = list(episodes)
-    assert (len(episodes) == 0)
-
-def test_not_found_filename():
-    filename = not_found_filename()
-    try:
-        episodes = episodes_from_filename(filename)
-    except AssertionError:
-        assert True
-
-def test_invalid_filename():
-    filename = invalid_filename()
-    try:
-        episodes = episodes_from_filename(filename)
-    except AssertionError:
-        assert True
-
-#+end_src
-
-***** Run tests
-
-#+begin_src sh
-pytest ./franceinter/episodes/tests/test_episodes_from_filename.py
-#+end_src
-
-#+RESULTS:
-:results:
-:end:
-
-*** episodes_from_podcast
-**** 1. Objetivo
-
-Obtener el listado de episodios de un podcast.
-
-Con el podcast obtiene el listado de páginas y de cada página extrae el listado de episodios.
-
-**** 2. Firma
-
-La función recibe un =franceinter.podcast.Podcast= y devuelve un =GeneratorType= de =franceinter.episodes.Episode=
-
-**** 3. Ejemplos
-
-- Caso exitoso, un podcast válido
-- Un podcast con el URL vacío
-- Un podcast con el URL inválido
-- Un objeto que no es un =franceinter.podcasts.Podcast=
-
-#+begin_src python :tangle franceinter/episodes/tests/examples_episodes_from_podcast.py
-from franceinter.podcasts.podcast import Podcast
-
-def valid_podcast():
-    title = "Sur les epaules de Darwin"
-    url = "http://localhost:3000/episode-list.html"
-    author = "Jean-Claude Ameisen"
-    return Podcast(title, url, author)
-
-def podcast_with_empty_url():
-    title = "Sur les epaules de Darwin"
-    url = ""
-    author = "Jean-Claude Ameisen"
-    return Podcast(title, url, author)
-
-def podcast_with_invalid_url():
-    title = "Sur les epaules de Darwin"
-    url = "ghu:\\{this]url^is((not?valid.com"
-    author = "Jean-Claude Ameisen"
-    return Podcast(title, url, author)
-
-def invalid_podcast():
-    return "this is not a podcast object"
-
-#+end_src
-
-**** 4. Boceto
-
-#+begin_src python
-
-def episodes_from_podcast(podcast):
-    # validar el podcast
-    # obtener el listado de URLs usando pages_from_podcast
-    # para cada URL obtener los episodios usando episodes_from_url
-    yield episode
-
-#+end_src
-
-**** 5. Definición
-
-#+begin_src python :tangle franceinter/episodes/episodes_from_podcast.py
-from franceinter.podcasts.podcast import Podcast
-from franceinter.episodes.pages_from_podcast import pages_from_podcast
-from franceinter.episodes.episodes_from_url import episodes_from_url
-
-def episodes_from_podcast(podcast):
-    assert isinstance(podcast, Podcast), invalid_podcast(podcast)
-    pages = pages_from_podcast(podcast)
-    for url in pages:
-        episodes = episodes_from_url(url)
-        for episode in episodes:
-            yield episode
-
-def invalid_podcast(podcast):
-    return "podcast parameter must be a Podcast, received %s instead" % str(type(podcast))
-
-#+end_src
-
-**** 6. Casos de prueba
-
-- Caso exitoso, cuando recibe un podcast válido, devuelve un =GeneratorType= con los episodios del podcast
-- Cuando recibe un podcast con el URL vacío, lanza un =AssertionError=
-- Cuando recibe un podcast con el URL inválido, lanza un =AssertionError=
-- Cuando recibe un objeto que no es un =franceinter.podcasts.Podcast=, lanza un =AssertionError=
-
-#+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_podcast.py
-import types
-import pytest
-import threading
-from franceinter.episodes.episode import Episode
-from franceinter.episodes.episodes_from_podcast import episodes_from_podcast
-from franceinter.episodes.tests.examples_episodes_from_podcast import *
-from utils.http_server import LocalFolderHTTPServer as HTTPServer
-
-def test_url_ok(http_server):
-    podcast = valid_podcast()
-    episodes = episodes_from_podcast(podcast)
-    assert isinstance(episodes, types.GeneratorType)
-    for episode in episodes:
-        assert isinstance(episode, Episode)
-
-def test_podcast_with_empty_url():
-    podcast = podcast_with_empty_url()
-    try:
-        episodes = list(episodes_from_podcast(podcast))
-    except AssertionError:
-        assert True
-
-def test_podcast_with_invalid_url():
-    podcast = podcast_with_invalid_url()
-    try:
-        episodes = list(episodes_from_podcast(podcast))
-    except AssertionError:
-        assert True
-
-def test_invalid_podcast():
-    podcast = invalid_podcast()
-    try:
-        episodes = list(episodes_from_podcast(podcast))
-    except AssertionError:
-        assert True
-
-@pytest.fixture(scope="module")
-def http_server():
-    web_dir = './franceinter/html'
-    httpd = HTTPServer(web_dir, ("", 3000))
-    threading.Thread(target=httpd.serve_forever).start()
-    yield httpd
-    httpd.shutdown()
-
-#+end_src
-
-***** Run tests
-
-#+begin_src sh
-pytest ./franceinter/episodes/tests/test_episodes_from_podcast.py
-#+end_src
-
-*** episodes_from_query
-**** 1. Objetivo
-
-Filtrar un listado de episodios y obtener solamente los que contienen una palabra clave en el título
-
-Se debe buscar la palabra clave sin tener encuenta las mayúsculas o minúsculas (case insensitive match)
-
-**** 2. Firma
-
-La función recibe un listado de objetos =franceinter.episodes.Episode= y un =str=, y devuelve un =filter= de objetos =franceinter.episodes.Episode=
-
-Para el listado de episodios vamos a recibir cualquier objeto que sea iterable, como por ejemplo un =list= o un =GeneratorType=
-
-**** 3. Ejemplos
-
-- Un listado de 5 episodios en el que hay 2 que tienen la palabra clave el título 
-- Un listado de 5 episodios en el que ninguno tiene la palabra clave en el título
-- Un listado de episodios que no es iterable
-- Un listado de episodios que no tiene objetos =franceinter.episodes.Episode=
-- Una query que no es un =str=
-
-#+begin_src python :tangle franceinter/episodes/tests/examples_episodes_from_query.py
-import random
-from franceinter.episodes.episode import Episode
-
-def episodes_with_word_in_title(word):
-    episodes = list(some_episodes(3))
-    ep = new_episode()
-    ep.title+= " " + word
-    episodes.append(ep)
-    episodes.append(ep)
-    random.shuffle(episodes)
-    return episodes
-
-def some_episodes(how_many):
-    for i in range(0, how_many):
-        yield new_episode()
-
-def episodes_not_iterable():
-    return 42
-        
-def invalid_episodes():
-    return range(0,10)
-
-def invalid_query():
-    return 42
-
-def new_episode():
-    title = "Este es un episodio de ejemplo"
-    url = "http://podcastplace.com/shows/my-podcast/season-01-episode-01.mp3"
-    date = "2018-09-12"
-    duration = 3265
-    return Episode(title, url, date, duration)
-
-#+end_src
-
-**** 4. Boceto
-
-#+begin_src python
-
-def episodes_from_query(episodes, query):
-    # validar que los episodios sean iterables
-    # validar que la query sea un str
-    # validar que cada episodio sea un Episode
-    # filtrar los episodios con una función que devuelva true 
-    # si el título contiene la query
-
-#+end_src
-
-**** 5. Definición
-
-#+begin_src python :tangle franceinter/episodes/episodes_from_query.py
-import re
-from franceinter.episodes.episode import Episode
-
-def episodes_from_query(episodes, query):
-    try:
-        it = iter(episodes)
-    except TypeError:
-        assert False, invalid_episodes(episodes)
-    assert isinstance(query, str), invalid_query(query)
-    valid_episodes = filter(is_episode, episodes)
-    contains_query = query_matcher(query)
-    return filter(contains_query, valid_episodes)
-
-def is_episode(episode):
-    assert isinstance(episode, Episode), invalid_episode(episode)
-    return True
-    
-def query_matcher(query):
-    def matcher(episode):
-        return re.search(query, episode.title, re.IGNORECASE)
-    return matcher
-    
-def invalid_episodes(episodes):
-    return "episodes parameter must be iterable, received %s instead" % type(episodes)
-
-def invalid_query(query):
-    return "query parameter must be a string, received %s instead" % type(query)
-
-def invalid_episode(episode):
-    return "episode parameter must be an Episode, received %s instead" % type(episode)
-
-#+end_src
-
-**** 6. Casos de prueba
-
-- Caso exitoso, cuando recibe un listado de 5 episodios en el que hay 2 que tienen la palabra clave el título, devuelve un =filter= con los 2 episodios que cumplen la condición
-- Cuando recibe un listado de 5 episodios en el que ninguno tiene la palabra clave en el título, devuelve un =filter= vacío
-- Cuando recibe un listado de podcasts que no es iterable, lanza un =AssertionError=
-- Un listado de episodios que no tiene objetos =franceinter.episodes.Episode=, lanza un =AssertionError=
-- Una query que no es un =str=, lanza un =AssertionError=
-
-#+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_query.py
-import types
-from franceinter.episodes.episodes_from_query import episodes_from_query
-from franceinter.episodes.tests.examples_episodes_from_query import *
-
-def test_episodes_with_word_in_title():
-    episodes = episodes_with_word_in_title("radio")
-    result = episodes_from_query(episodes, "radio")
-    assert isinstance(result, filter)
-    assert (len(list(result)) == 2)
-
-def test_episodes_without_word():
-    episodes = some_episodes(5)
-    result = episodes_from_query(episodes, "radio")
-    assert isinstance(result, filter)
-    assert (len(list(result)) == 0)
-
-def test_episodes_not_iterable():
-    episodes = episodes_not_iterable()
-    try:
-        result = episodes_from_query(episodes, "radio")
-    except AssertionError:
-        assert True
-
-def test_invalid_episodes():
-    episodes = invalid_episodes()
-    try:
-        result = episodes_from_query(episodes, "radio")
-        assert (len(list(result)) == 0)
-    except AssertionError:
-        assert True
-
-def test_invalid_query():
-    episodes = some_episodes(10)
-    query = invalid_query()
-    try:
-        result = episodes_from_query(episodes, query)
-    except AssertionError:
-        assert True
-
-#+end_src
-
-***** Run tests
-
-#+begin_src sh
-pytest franceinter/episodes/tests/test_episodes_from_query.py
-#+end_src
-
-*** episodes_between_dates
-**** 1. Objetivo
-
-Filtrar un listado de episodios y obtener solamente los que fueron publicados entre dos fechas
-
-**** 2. Firma
-
-La función recibe un listado de objetos =franceinter.episodes.Episode= y dos objetos =datetime.date= (de inicio y fin del intervalo), y devuelve un =filter= de objetos =franceinter.episodes.Episode=
-
-Para el listado de episodios vamos a recibir cualquier objeto que sea iterable, como por ejemplo un =list= o un =GeneratorType=
-
-**** 3. Ejemplos
-
-- Un listado de 5 episodios en el que hay 2 que fueron publicados entre las fechas dadas
-- Un listado de 5 episodios en el que ninguno fue publicado entre las fechas dadas
-- Un listado de episodios que no es iterable
-- Un listado de episodios que no tiene objetos =franceinter.episodes.Episode=
-- Una fecha de inicio que no es un =datetime.date=
-- Una fecha de fin que no es un =datetime.date=
-- Una fecha de inicio que es posterior a la fecha de fin
-
-#+begin_src python :tangle franceinter/episodes/tests/examples_episodes_between_dates.py
-import random
-from datetime import date as Date, timedelta as TimeDelta
-from franceinter.episodes.episode import Episode
-
-def some_episodes_between_dates(starting_at, ending_at):
-    date_outside = ending_at + TimeDelta(days=5)
-    episodes = list(some_episodes_with_date(3, date_outside))
-    date_between = random_date_between(starting_at, ending_at)
-    ep = new_episode(date_between)
-    episodes.append(ep)
-    episodes.append(ep)
-    random.shuffle(episodes)
-    return episodes
-
-def random_date_between(date1, date2):
-    days = (date2 - date1).days
-    random_days = random.randint(0, days)
-    random_date = date1 + TimeDelta(days=random_days)
-    return random_date
-
-def some_episodes_with_date(how_many, episode_date):
-    for i in range(0, how_many):
-        yield new_episode(episode_date)
-
-def episodes_not_iterable():
-    return 42
-        
-def invalid_episodes():
-    return range(0,10)
-
-def invalid_date():
-    return 42
-
-def new_episode(episode_date):
-    title = "Este es un episodio de ejemplo"
-    url = "http://podcastplace.com/shows/my-podcast/season-01-episode-01.mp3"
-    date = str(episode_date)
-    duration = 3265
-    return Episode(title, url, date, duration)
-
-#+end_src
-
-**** 4. Boceto
-
-#+begin_src python
-
-def episodes_between_dates(episodes, starting_at, ending_at):
-    # validar que los episodios sean iterables
-    # validar que las fechas sean datetime.date
-    # validar que cada episodio sea un Episode
-    # filtrar los episodios con una función que devuelva true 
-    # si la fecha está entre starting_at y ending_at
-
-#+end_src
-
-**** 5. Definición
-
-#+begin_src python :tangle franceinter/episodes/episodes_between_dates.py
-from datetime import date as Date, datetime as DateTime
-from franceinter.episodes.episode import Episode
-
-def episodes_between_dates(episodes, starting_at, ending_at):
-    try:
-        it = iter(episodes)
-    except TypeError:
-        assert False, invalid_episodes(episodes)
-    assert isinstance(starting_at, Date), invalid_date(starting_at)
-    assert isinstance(ending_at, Date), invalid_date(ending_at)
-    valid_episodes = filter(is_episode, episodes)
-    is_between_dates = date_filter(starting_at, ending_at)
-    return filter(is_between_dates, valid_episodes)
-
-def is_episode(episode):
-    assert isinstance(episode, Episode), invalid_episode(episode)
-    return True
-    
-def date_filter(starting_at, ending_at):
-    def matcher(episode):
-        episode_date = DateTime.strptime(episode.date, "%Y-%m-%d").date()
-        return ((starting_at <= episode_date) 
-                and (episode_date <= ending_at))
-    return matcher
-    
-def invalid_episodes(episodes):
-    return "episodes parameter must be iterable, received %s instead" % type(episodes)
-
-def invalid_date(date):
-    return "starting_at and ending_at parameters must be a date, received %s instead" % type(date)
-
-def invalid_episode(episode):
-    return "episode parameter must be an Episode, received %s instead" % type(episode)
-
-#+end_src
-
-**** 6. Casos de prueba
-
-- Caso exitoso, cuando recibe un listado de 5 episodios en el que hay 2 que fueron publicados entre las fechas dadas, devuelve un =filter= con los 2 episodios que cumplen la condición
-- Cuando recibe un listado de 5 episodios en el que ninguno fue publicado entre las fechas dadas, devuelve un =filter= vacío
-- Cuando recibe un listado de episodios que no es iterable, lanza un =AssertionError=
-- Cuando recibe un listado de episodios que no tiene objetos =franceinter.episodes.Episode=, lanza un =AssertionError=
-- Cuando recibe una fecha de inicio que no es un =datetime.date=, lanza un =AssertionError=
-- Cuando recibe una fecha de fin que no es un =datetime.date=, lanza un =AssertionError=
-- Cuando recibe una fecha de inicio que es posterior a la fecha de fin, devuelve un =filter= vacío
-
-#+begin_src python :tangle franceinter/episodes/tests/test_episodes_between_dates.py
-import types
-from datetime import date as Date, timedelta as TimeDelta
-from franceinter.episodes.episodes_between_dates import episodes_between_dates
-from franceinter.episodes.tests.examples_episodes_between_dates import *
-
-def test_episodes_between_dates():
-    starting_at = Date.today()
-    ending_at = Date.today() + TimeDelta(days=5)
-    episodes = some_episodes_between_dates(starting_at, ending_at)
-    result = episodes_between_dates(episodes, starting_at, ending_at)
-    assert isinstance(result, filter)
-    assert (len(list(result)) == 2)
-
-def test_episodes_outside_interval():
-    date_outside = Date.today() - TimeDelta(days=30)
-    episodes = some_episodes_with_date(5, date_outside)
-    starting_at = Date.today()
-    ending_at = Date.today() + TimeDelta(days=5)
-    result = episodes_between_dates(episodes, starting_at, ending_at)
-    assert isinstance(result, filter)
-    assert (len(list(result)) == 0)
-
-def test_episodes_not_iterable():
-    episodes = episodes_not_iterable()
-    try:
-        starting_at = Date.today()
-        ending_at = Date.today() + TimeDelta(days=5)
-        result = episodes_between_dates(episodes, starting_at, ending_at)
-    except AssertionError:
-        assert True
-
-def test_invalid_episodes():
-    episodes = invalid_episodes()
-    try:
-        starting_at = Date.today()
-        ending_at = Date.today() + TimeDelta(days=5)
-        result = episodes_between_dates(episodes, starting_at, ending_at)
-        assert (len(list(result)) == 0)
-    except AssertionError:
-        assert True
-
-def test_invalid_starting_date():
-    episode_date = Date.today() + TimeDelta(days=2)
-    episodes = some_episodes_with_date(5, episode_date)
-    starting_at = invalid_date()
-    ending_at = Date.today() + TimeDelta(days=5)
-    try:
-        result = episodes_between_dates(episodes, starting_at, ending_at)
-    except AssertionError:
-        assert True
-
-def test_invalid_ending_date():
-    episode_date = Date.today() + TimeDelta(days=2)
-    episodes = some_episodes_with_date(5, episode_date)
-    starting_at = Date.today()
-    ending_at = invalid_date()
-    try:
-        result = episodes_between_dates(episodes, starting_at, ending_at)
-    except AssertionError:
-        assert True
-
-def test_invalid_interval():
-    episode_date = Date.today() - TimeDelta(days=2)
-    episodes = some_episodes_with_date(5, episode_date)
-    starting_at = Date.today()
-    ending_at = Date.today() - TimeDelta(days=5)
-    result = episodes_between_dates(episodes, starting_at, ending_at)
-    assert isinstance(result, filter)
-    assert (len(list(result)) == 0)
-
-#+end_src
-
-***** Run tests
-
-#+begin_src sh
-pytest franceinter/episodes/tests/test_episodes_between_dates.py
 #+end_src
 
 ** HTML
