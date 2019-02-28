@@ -442,6 +442,1174 @@ __all__ = [
 ]
 #+end_src
 
+*** podcasts_from_url
+**** 1. Objetivo
+
+Extraer el listado de podcasts desde un URL
+
+**** 2. Firma
+
+La función recibe un URL y devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
+
+**** 3. Ejemplos
+
+- Un URL con el listado de podcasts
+- Un URL de otra página, que no tiene podcasts
+- Un URL de una página inexistente, que dispare un error 404 (not found)
+- Un URL de un sitio inexistente, que dispare un error de DNS
+- Un URL inválido
+
+#+begin_src python :tangle franceinter/podcasts/tests/examples_podcasts_from_url.py
+
+def url_ok():
+    url = "http://localhost:3000/podcast-list-short.html"
+    return url
+
+def wrong_page_url():
+    url = "http://localhost:3000/wrong-page.html"
+    return url
+
+def not_found_url():
+    url = "http://localhost:3000/this-page-does-not-exist.html"
+    return url
+
+def wrong_site_url():
+    url = "http://host.local:3000/this-page-does-not-exist.html"
+    return url
+
+def invalid_url():
+    url = "ht pt:\\hostlocal:3000/this-url-is-not-valid.html"
+    return url
+
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+
+def podcasts_from_url(url):
+    # validar el url
+    # realizar una petición al url
+    # obtener la respuesta del url
+    # obtener los podcasts llamando a podcasts_from_url
+    # revisar si da un error de conexión
+    return podcasts
+
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle franceinter/podcasts/podcasts_from_url.py
+import requests
+from validators.url import url as is_valid_url
+from franceinter.podcasts.podcasts_from_response import podcasts_from_response
+
+def podcasts_from_url(url):
+    assert is_valid_url(url), invalid_url(url)
+    try:
+        response = requests.get(url)
+        podcasts = podcasts_from_response(response)
+        return podcasts
+    except requests.ConnectionError:
+        assert False, connection_error(url)
+
+def invalid_url(url):
+    return "url parameter must be a valid URL, received %s instead" % url
+
+def connection_error(url):
+    return "request to %s failed with a connection error" % url
+#+end_src
+
+**** 6. Casos de prueba
+
+Bueno, aquí tenemos un caso de prueba un poco más complejo que lo normal. Para poder testear nuestra función necesitamos realizar una petición HTTP. El problema es que no queremos depender de un sitio web externo, o de que haya conectividad a Internet cuando se ejecuten los casos de prueba. La solución es levantar un servidor HTTP desde una carpeta local y en nuestro caso vamos a usar los archivos HTML de ejemplo que tenemos en =franceinter/html=.
+
+Ahora bien, necesitamos que el servidor HTTP esté levantado antes de correr nuestros casos de prueba y sería ideal poder bajarlo luego de ejecutar todos los tests que lo necesiten. Para ello vamos a usar un [[https://docs.pytest.org/en/latest/fixture.html][fixture]] (=@pytest.fixture=), que es una funcionalidad de pytest que permite que los casos de prueba reciban un argumento con algún recurso, en este caso, el servidor HTTP ya levantado y sirviendo los archivos desde la carpeta local.
+
+El atributo ~scope="module"~ indica que el fixture =http_server= será invocado una sola vez por módulo, que es lo que queremos para que todos los tests de nuestra función compartan el mismo servidor HTTP y no tener que levantarlo y bajarlo para cada test. Cuando no se indica un =scope=, pytest invoca el fixture para cada caso de prueba.
+
+Un fixture es una función común y corriente como cualquier otra, a la que pytest llama cuando comienza a procesar el módulo, se guarda el valor retornado, y se lo inyecta a los casos de prueba que declaren ese fixture como parámetro.
+
+Nótese en el código del fixture =http_server= que se levanta el servidor HTTP en otro thread para no bloquear la ejecución de los tests y que se utiliza =yield= para poder bajar el servidor luego de su uso.
+
+- Cuando recibe un URL con el listado de podcasts, devuelve un =GeneratorType= de objetos =Podcast=
+- Cuando recibe un URL de otra página, que no tiene podcasts, devuelve un =GeneratorType= vacío
+- Cuando recibe un URL de una página inexistente, devuelve un =GeneratorType= vacío
+- Cuando recibe un URL de un sitio inexistente (error de DNS), lanza un =AssertionError=
+- Cuando recibe un URL inválido, lanza un =AssertionError=
+
+#+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_url.py
+import pytest
+import threading
+import types
+from franceinter.podcasts.podcast import Podcast
+from franceinter.podcasts.podcasts_from_url import podcasts_from_url
+from franceinter.podcasts.tests.examples_podcasts_from_url import *
+from utils.http_server import LocalFolderHTTPServer as HTTPServer
+
+def test_url_ok(http_server):
+    url = url_ok()
+    gen = podcasts_from_url(url)
+    assert isinstance(gen, types.GeneratorType)
+    podcasts = list(gen)
+    assert (len(podcasts) > 0)
+    for p in podcasts:
+        assert isinstance(p, Podcast)
+
+def test_wrong_page_url(http_server):
+    url = wrong_page_url()
+    podcasts = list(podcasts_from_url(url))
+    assert (len(podcasts) == 0)
+
+def test_not_found_url(http_server):
+    url = not_found_url()
+    podcasts = list(podcasts_from_url(url))
+    assert (len(podcasts) == 0)
+
+@pytest.mark.skip(reason="Slow test (~10 sec) waiting for DNS error")
+def test_wrong_site_url(http_server):
+    url = wrong_site_url()
+    try:
+        podcasts = list(podcasts_from_url(url))
+    except AssertionError:
+        assert True
+
+def test_invalid_url():
+    url = invalid_url()
+    try:
+        podcasts = podcasts_from_url(url)
+    except AssertionError:
+        assert True
+
+@pytest.fixture(scope="module")
+def http_server():
+    web_dir = './franceinter/html'
+    httpd = HTTPServer(web_dir, ("", 3000))
+    threading.Thread(target=httpd.serve_forever).start()
+    yield httpd
+    httpd.shutdown()
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/podcasts/tests/test_podcasts_from_url.py
+#+end_src
+
+*** podcasts_from_query
+**** 1. Objetivo
+
+Filtrar un listado de podcasts y obtener solamente los que contienen una palabra clave en el título o en el autor
+
+Se debe buscar la palabra clave sin tener encuenta las mayúsculas o minúsculas (case insensitive match)
+
+**** 2. Firma
+
+La función recibe un listado de objetos =franceinter.podcasts.Podcast= y un =str=, y devuelve un =filter= de objetos =franceinter.podcasts.Podcast=
+
+Para el listado de podcasts vamos a recibir cualquier objeto que sea iterable, como por ejemplo un =list= o un =GeneratorType=
+
+**** 3. Ejemplos
+
+- Un listado de 5 podcasts en el que hay 2 que tienen la palabra "radio" en el título 
+- Un listado de 5 podcasts en el que hay 3 que tienen la palabra "radio" en el autor
+- Un listado de 5 podcasts en el que ninguno tiene la palabra "radio" en el título y/o autor
+- Un listado de podcasts que no es iterable
+- Un listado de podcasts que no tiene objetos =franceinter.podcasts.Podcast=
+- Una query que no es un =str=
+
+#+begin_src python :tangle franceinter/podcasts/tests/examples_podcasts_from_query.py
+import random
+from franceinter.podcasts.podcast import Podcast
+
+def podcasts_with_word_in_title(word):
+    podcasts = []
+    for i in range(0, 3):
+        podcasts.append(new_podcast())
+    p = new_podcast()
+    p.title+= " " + word
+    podcasts.append(p)
+    podcasts.append(p)
+    random.shuffle(podcasts)
+    return podcasts
+
+def podcasts_with_word_in_author(word):
+    podcasts = []
+    for i in range(0, 2):
+        podcasts.append(new_podcast())
+    p = new_podcast()
+    p.author+= " " + word
+    podcasts.append(p)
+    podcasts.append(p)
+    podcasts.append(p)
+    random.shuffle(podcasts)
+    return podcasts
+
+def some_podcasts(how_many):
+    for i in range(0, how_many):
+        yield new_podcast()
+
+def podcasts_not_iterable():
+    return 42
+        
+def invalid_podcasts():
+    return range(0,10)
+
+def invalid_query():
+    return 42
+
+def new_podcast():
+    title = "Este es un podcast de ejemplo"
+    url = "http://podcastplace.com/shows"
+    author = "Juan Perez"
+    return Podcast(title, url, author)
+
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+
+def podcasts_from_query(podcasts, query):
+    # validar que los podcasts sean iterables
+    # validar que la query sea un str
+    # validar que cada podcast sea un Podcast
+    # filtrar los podcasts con una función que devuelva true 
+    # si el título o el autor contienen la query
+
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle franceinter/podcasts/podcasts_from_query.py
+import re
+from franceinter.podcasts.podcast import Podcast
+
+def podcasts_from_query(podcasts, query):
+    # validar que los podcasts sean iterables
+    try:
+        it = iter(podcasts)
+    except TypeError:
+        assert False, invalid_podcasts(podcasts)
+    # validar que la query sea un str
+    assert isinstance(query, str), invalid_query(query)
+    # validar que cada podcast sea un Podcast
+    valid_podcasts = filter(is_podcast, podcasts)
+    # filtrar los podcasts que contienen la query
+    contains_query = query_matcher(query)
+    return filter(contains_query, valid_podcasts)
+
+def is_podcast(podcast):
+    assert isinstance(podcast, Podcast), invalid_podcast(podcast)
+    return True
+    
+def query_matcher(query):
+    def matcher(podcast):
+        return (re.search(query, podcast.title, re.IGNORECASE) 
+                or re.search(query, podcast.author, re.IGNORECASE))
+    return matcher
+    
+def invalid_podcasts(podcasts):
+    return "podcasts parameter must be iterable, received %s instead" % type(podcasts)
+
+def invalid_query(query):
+    return "query parameter must be a string, received %s instead" % type(query)
+
+def invalid_podcast(podcast):
+    return "podcast parameter must be a Podcast, received %s instead" % type(podcast)
+
+#+end_src
+
+**** 6. Casos de prueba
+
+- Cuando recibe un listado de 5 podcasts en el que hay 2 que tienen la palabra "radio" en el título, devuelve un =filter= con los 2 podcasts que cumplen la condición
+- Cuando recibe un listado de 5 podcasts en el que hay 3 que tienen la palabra "radio" en el autor, devuelve un =filter= con los 3 podcasts que cumplen la condición
+- Cuando recibe un listado de 5 podcasts en el que ninguno tiene la palabra "radio" en el título y/o autor, devuelve un =filter= vacío
+- Cuando recibe un listado de podcasts que no es iterable, lanza un =AssertionError=
+- Cuando recibe un listado de podcasts que no tiene objetos =franceinter.podcasts.Podcast=, lanza un =AssertionError=
+- Cuando recibe una query que no es un =str=, lanza un =AssertionError=
+
+#+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_query.py
+import types
+from franceinter.podcasts.podcasts_from_query import podcasts_from_query
+from franceinter.podcasts.tests.examples_podcasts_from_query import *
+
+def test_podcasts_with_word_in_title():
+    podcasts = podcasts_with_word_in_title("radio")
+    result = podcasts_from_query(podcasts, "radio")
+    assert isinstance(result, filter)
+    assert (len(list(result)) == 2)
+
+def test_podcasts_with_word_in_author():
+    podcasts = podcasts_with_word_in_author("radio")
+    result = podcasts_from_query(podcasts, "radio")
+    assert isinstance(result, filter)
+    assert (len(list(result)) == 3)
+
+def test_podcasts_without_word():
+    podcasts = some_podcasts(8)
+    result = podcasts_from_query(podcasts, "radio")
+    assert isinstance(result, filter)
+    assert (len(list(result)) == 0)
+
+def test_podcasts_not_iterable():
+    podcasts = podcasts_not_iterable()
+    try:
+        result = podcasts_from_query(podcasts, "radio")
+    except AssertionError:
+        assert True
+
+def test_invalid_podcasts():
+    podcasts = invalid_podcasts()
+    try:
+        result = podcasts_from_query(podcasts, "radio")
+        assert (len(list(result)) == 0)
+    except AssertionError:
+        assert True
+
+def test_invalid_query():
+    podcasts = some_podcasts(10)
+    query = invalid_query()
+    try:
+        result = podcasts_from_query(podcasts, query)
+    except AssertionError:
+        assert True
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/podcasts/tests/test_podcasts_from_query.py
+#+end_src
+
+*** podcasts_from_response
+**** 1. Objetivo
+
+Extraer el listado de podcasts de la respuesta de una petición HTTP
+
+**** 2. Firma
+
+La función recibe una =requests.model.Response= y devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
+
+**** 3. Ejemplos
+
+- Una respuesta válida, con el HTML de la página del listado de podcasts
+- Una respuesta inválida, que no es de la clase =requests.model.Response=
+- Una respuesta válida, pero que tiene el HTML de otra página
+
+#+begin_src python :tangle franceinter/podcasts/tests/examples_podcasts_from_response.py
+from requests.models import Response
+
+def response_ok():
+    resp = Response()
+    resp.status_code = 200
+    filename = "./franceinter/html/podcast-list-short.html" 
+    with open(filename, "rb") as f:
+        resp._content = f.read()
+    return resp
+
+def invalid_response():
+    return "i am not a Response"
+
+def wrong_page_response():
+    resp = Response()
+    resp.status_code = 200
+    filename = "./franceinter/html/wrong-page.html" 
+    with open(filename, "rb") as f:
+        resp._content = f.read()
+    return resp
+
+#+end_src
+
+#+RESULTS:
+:results:
+:end:
+
+**** 4. Boceto
+
+#+begin_src python
+import requests
+
+def podcasts_from_response(resp):
+    # validar la respuesta
+    # obtener el HTML de resp.text
+    # extraer los tags usando tags_from_html
+    # obtener los podcasts usando podcasts_from_html
+
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle franceinter/podcasts/podcasts_from_response.py
+import requests
+from franceinter.podcasts.tags_from_html import tags_from_html
+from franceinter.podcasts.podcasts_from_tags import podcasts_from_tags
+
+def podcasts_from_response(resp):
+    assert isinstance(resp, requests.models.Response), invalid_type(resp)
+    html = resp.text
+    tags = tags_from_html(html)
+    podcasts = podcasts_from_tags(tags)
+    return podcasts
+    
+def invalid_type(resp):
+    return "resp parameter must be a requests.models.Response, received %s instead" % type(resp)
+
+#+end_src
+
+**** 6. Casos de prueba
+
+- Cuando recibe una respuesta válida, devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
+- Cuando recibe una respuesta que no es de la clase =requests.model.Response=, lanza un =AssertionError=
+- Cuando recibe una respuesta válida que tiene el HTML de otra página, devuelve un =GeneratorType= vacío
+
+#+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_response.py
+import types
+from franceinter.podcasts.podcast import Podcast
+from franceinter.podcasts.podcasts_from_response import podcasts_from_response
+from franceinter.podcasts.tests.examples_podcasts_from_response import *
+
+def test_response_ok():
+    resp = response_ok()
+    podcasts = podcasts_from_response(resp)
+    assert isinstance(podcasts, types.GeneratorType)
+    for p in podcasts:
+        assert isinstance(p, Podcast)
+
+def test_invalid_response():
+    resp = invalid_response()
+    try:
+        podcasts = podcasts_from_response(resp)
+    except AssertionError:
+        assert True
+    
+def test_wrong_page_response():
+    resp = wrong_page_response()
+    podcasts = podcasts_from_response(resp)
+    assert isinstance(podcasts, types.GeneratorType)
+    assert (len(list(podcasts)) == 0)
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/podcasts/tests/test_podcasts_from_response.py
+#+end_src
+
+*** podcasts_from_tags
+**** 1. Objetivo
+
+Generar un listado de podcasts a partir de un listado de fragmentos de HTML tomados de la página
+
+**** 2. Firma
+
+La función recibe un listado de objetos =bs4.element.Tag= y devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
+
+Vamos a aceptar tanto un =list= como un =GeneratorType=
+
+**** 3. Ejemplos
+
+- Un objeto que no es iterable
+- Una lista vacía
+- Una lista con tags válidos
+- Una lista con objetos que no son del tipo =bs4.element.Tag=
+- Una lista con tags válidos y un tag inválido (sin el título o el URL)
+
+#+begin_src python :tangle franceinter/podcasts/tests/examples_podcasts_from_tags.py
+from franceinter.podcasts.tags_from_html import tags_from_html
+from franceinter.podcasts.tests.examples_tags_from_html import *
+from franceinter.podcasts.tests.examples_podcast_from_tag import (
+    tag_ok, 
+    tag_without_url
+)
+
+def invalid_list():
+    return 123
+
+def empty_list():
+    return []
+
+def list_without_tags():
+    return [1, 2, 3, 4, 5]
+
+def list_with_valid_tags(how_many):
+    html = ""
+    for item in range(1, how_many):
+        html+= str(tag_ok())
+    tags = tags_from_html(html)
+    return tags
+
+def list_with_invalid_tag(how_many):
+    tags = list(list_with_valid_tags(how_many - 1))
+    tags+= tag_without_url()
+    return tags
+
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+from franceinter.podcasts.tags_from_html import tags_from_html
+
+def podcasts_from_tags(tags):
+    # validar que tags sea un GeneratorType
+    # para cada tag de la lista
+    # usar podcast_from_tag() para obtener un podcast
+    # yield posdcast
+
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle franceinter/podcasts/podcasts_from_tags.py
+from franceinter.podcasts.podcast_from_tag import podcast_from_tag
+
+def podcasts_from_tags(tags):
+    try:
+        it = iter(tags)
+    except TypeError:
+        assert False, invalid_tags(tags)
+    for tag in tags:
+        yield podcast_from_tag(tag)
+
+def invalid_tags(tags):
+    return "tags parameter must be iterable, received %s instead" % type(tags)
+#+end_src
+
+**** 6. Casos de prueba
+
+- Si recibe un objeto que no es iterable, lanza un =AssertionError=
+- Si recibe una lista vacía, devuelve un =GeneratorType= vacío
+- Si recibe una lista de tags válidos, devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
+- Si recibe una lista con objetos que no son del tipo =bs4.element.Tag=, lanza un =AssertionError=
+- Si recibe una lista con algún tag inválido (que no tenga el título o el URL), lanza un =AssertionError=
+
+#+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_tags.py
+import types
+from franceinter.podcasts.podcasts_from_tags import podcasts_from_tags
+from franceinter.podcasts.tests.examples_podcasts_from_tags import *
+from franceinter.podcasts.podcast import Podcast
+
+def test_invalid_list():
+    tags = invalid_list()
+    try:
+        podcasts = list(podcasts_from_tags(tags))
+    except AssertionError:
+        assert True
+
+def test_empty_list():
+    tags = empty_list()
+    podcasts = podcasts_from_tags(tags)
+    assert isinstance(podcasts, types.GeneratorType)
+    assert (len(list(podcasts))==0)
+
+def test_list_with_valid_tags():
+    tags = list_with_valid_tags(6)
+    podcasts = podcasts_from_tags(tags)
+    assert isinstance(podcasts, types.GeneratorType)
+    for p in podcasts:
+        assert (isinstance(p, Podcast))
+
+def test_list_without_tags():
+    tags = list_without_tags()
+    try:
+        podcasts = list(podcasts_from_tags(tags))
+    except AssertionError:
+        assert True
+
+def test_list_with_invalid_tag():
+    tags = list_with_invalid_tag(6)
+    podcasts = podcasts_from_tags(tags)
+    try:
+        for p in podcasts:
+            assert (isinstance(p, Podcast))
+    except AssertionError:
+        assert True
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/podcasts/tests/test_podcasts_from_tags.py
+#+end_src
+
+*** podcasts_from_filename
+**** 1. Objetivo
+
+Extraer un listado de podcasts desde un archivo
+
+**** 2. Firma
+
+La función recibe un =str= con el nombre del archivo y devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
+
+**** 3. Ejemplos
+
+- Un archivo HTML que tiene un listado de podcasts
+- Un archivo HTML de otra página, que no tiene podcasts
+- Un archivo que no existe
+- Un nombre de archivo que no es un =str=
+
+#+begin_src python :tangle franceinter/podcasts/tests/examples_podcasts_from_filename.py
+
+def ok_filename():
+    return "./franceinter/html/podcast-list-short.html"
+
+def wrong_filename():
+    return "./franceinter/html/wrong-page.html"
+
+def not_found_filename():
+    return "./franceinter/html/this-file-does-not-exist.html"
+
+def invalid_filename():
+    return [1, 2, 3]
+
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+
+def podcasts_from_filename(filename):
+    # validar que filename sea un str
+    # validar que el archivo exista
+    podcasts = []
+    # crear un requests.models.Response con el contenido del archivo
+    # obtener los podcasts llamando a podcasts_from_response
+    return podcasts
+     
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle franceinter/podcasts/podcasts_from_filename.py
+from requests.models import Response
+from franceinter.podcasts.podcasts_from_response import podcasts_from_response
+
+def podcasts_from_filename(filename):
+    assert isinstance(filename, str), invalid_filename(filename)
+    resp = Response()
+    podcasts = []
+    try:
+        with open(filename, "rb") as f:
+            resp._content = f.read()
+            podcasts = podcasts_from_response(resp)
+    except (OSError, IOError) as error:
+        assert False, not_found(filename, error)
+    return podcasts
+
+def invalid_filename(filename):
+    return "filename parameter must be a str, %s received instead" % filename
+
+def not_found(filename, error):
+    return "filename %s cannot be read, thrown error :\n%s" % (filename, error)
+#+end_src
+
+**** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un archivo HTML que tiene un listado de podcasts, devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
+- Cuando recibe un archivo HTML de otra página, que no tiene podcasts, devuelve un =GeneratorType= vacío
+- Cuando recibe un archivo que no existe, lanza un =AssertionError=
+- Cuando recibe un nombre de archivo que no es un =str=, lanza un =AssertionError=
+
+#+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_filename.py
+import types
+from franceinter.podcasts.podcast import Podcast
+from franceinter.podcasts.podcasts_from_filename import podcasts_from_filename
+from franceinter.podcasts.tests.examples_podcasts_from_filename import *
+
+def test_ok_filename():
+    filename = ok_filename()
+    podcasts = podcasts_from_filename(filename)
+    assert isinstance(podcasts, types.GeneratorType)
+    podcasts = list(podcasts)
+    assert (len(podcasts) > 0)
+    for p in podcasts:
+        assert isinstance(p, Podcast)
+
+def test_wrong_filename():
+    filename = wrong_filename()
+    podcasts = podcasts_from_filename(filename)
+    assert isinstance(podcasts, types.GeneratorType)
+    podcasts = list(podcasts)
+    assert (len(podcasts) == 0)
+
+def test_not_found_filename():
+    filename = not_found_filename()
+    try:
+        podcasts = podcasts_from_filename(filename)
+    except AssertionError:
+        assert True
+
+def test_invalid_filename():
+    filename = invalid_filename()
+    try:
+        podcasts = podcasts_from_filename(filename)
+    except AssertionError:
+        assert True
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest ./franceinter/podcasts/tests/test_podcasts_from_filename.py
+#+end_src
+
+*** tags_from_html
+**** 1. Objetivo
+
+Obtener un array de tags con el fragmento de html que tiene el detalle del podcast (título, URL y autor) a partir del html de la página con el listado de podcasts
+
+Hay que extraer todos los =<div>= que tengan la clase =rich-section-list-item-content=
+
+**** 2. Firma
+
+La función recibe un =str= con el html de la página y devuelve un =GeneratorType= de elementos =bs4.element.Tag=
+
+**** 3. Ejemplos
+
+- Un html que tiene varios =<div>= con la clase buscada
+- Un html que no es un =str=
+- Un html que no tiene ningún =<div>=
+- Un html que tiene varios =<div>= pero que ninguno tenga la clase =rich-section-list-item-content=
+- Un html que tiene algunos =<div>= con la clase buscada y otros que no la tienen
+
+#+begin_src python :tangle franceinter/podcasts/tests/examples_tags_from_html.py
+from bs4 import BeautifulSoup
+import random
+
+def html_with_divs(how_many):
+    class_name = "rich-section-list-item-content"
+    divs = map(lambda x: div(class_name), range(how_many))
+    return html(divs)
+
+def html_is_not_string():
+    return 42
+
+def html_without_divs():
+    html = '''<header><h1>dummy title</h1></header>
+<p>bla bla bla</p>
+<ul>
+  <li> item 1 </li>
+  <li> item 2 </li>
+</ul>
+<footer>All rights reserved!</footer>'''
+    return html
+
+def html_divs_without_class(how_many):
+    divs = map(lambda x: div(), range(how_many))
+    return html(divs)
+
+def html_some_divs_with_class(how_many_with, how_many_without):
+    class_name = "rich-section-list-item-content"
+    divs_with = list(map(lambda x: div(class_name), range(how_many_with)))
+    divs_without = list(map(lambda x: div(), range(how_many_without)))
+    divs = divs_with + divs_without
+    random.shuffle(divs)
+    return html(divs)
+
+def div(class_name=""):
+    attr = ""
+    if class_name:
+        attr = "class=%s" % class_name
+    html = '''<div %s>
+    here goes the div body
+</div>''' % attr
+    soup = BeautifulSoup(html, "html.parser")
+    return soup.div
+
+def html(divs):
+    div_str = "".join(map(lambda div: str(div), divs))
+    html = '''<header><h1>dummy title</h1></header>
+<p>bla bla bla</p>
+%s
+<ul>
+  <li> item 1 </li>
+  <li> item 2 </li>
+</ul>
+<footer>All rights reserved!</footer>
+    ''' % div_str
+    return html
+    
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+from bs4 import BeautifulSoup
+
+def tags_from_html(html):
+    # validar que el html sea un string
+    tags = []
+    # instanciar un objeto BeautifulSoup
+    # filtrar los tag <div> que tienen la clase "rich-section-list-item-content"
+    return tags
+
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle franceinter/podcasts/tags_from_html.py
+from bs4 import BeautifulSoup
+
+def tags_from_html(html):
+    assert isinstance(html, str), invalid_html(html)
+    soup = BeautifulSoup(html, "html.parser")
+    cls = "rich-section-list-item-content"
+    tags = soup.find_all("div", class_=cls)
+    for tag in tags:
+        yield tag
+
+def invalid_html(html):
+    return "html parameter must be a string, received %s instead" % type(html)
+
+#+end_src
+
+**** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un html que tiene varios =<div>= con la clase buscada, devuelve un =GeneratorType= de tantos elementos como =<div>= hay en el html
+- Cuando recibe un html que no es un string, lanza un =AssertionError=
+- Cuando recibe un html que no tiene ningún =<div>=, devuelve un =GeneratorType= vacío
+- Cuando recibe un html que tiene varios =<div>= pero ninguno tiene la clase =rich-section-list-item-content=, devuelve un =GeneratorType= vacío
+- Cuando recibe un html que tiene algunos =<div>= con la clase buscada y otros que no la tienen, devuelve un =GeneratorType= con solamente los =<div>= que tienen la clase
+
+#+begin_src python :tangle franceinter/podcasts/tests/test_tags_from_html.py
+import types
+from franceinter.podcasts.tags_from_html import tags_from_html
+from franceinter.podcasts.tests.examples_tags_from_html import *
+
+def test_html_with_divs():
+    html = html_with_divs(5)
+    tags = tags_from_html(html)
+    assert isinstance(tags, types.GeneratorType)
+    assert (len(list(tags)) == 5)
+
+def test_html_is_not_string():
+    try:
+        html = html_is_not_string()
+        tags = list(tags_from_html(html))
+    except AssertionError:
+        assert True
+
+def test_html_without_divs():
+    html = html_without_divs()
+    tags = tags_from_html(html)
+    assert isinstance(tags, types.GeneratorType)
+    assert (len(list(tags)) == 0)
+
+def test_divs_without_class():
+    html = html_divs_without_class(4)
+    tags = tags_from_html(html)
+    assert isinstance(tags, types.GeneratorType)
+    assert (len(list(tags)) == 0)
+
+def test_some_divs_with_class():
+    html = html_some_divs_with_class(2,3)
+    tags = tags_from_html(html)
+    assert isinstance(tags, types.GeneratorType)
+    assert (len(list(tags)) == 2)
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/podcasts/tests/test_tags_from_html.py
+#+end_src
+
+*** podcast_from_tag
+**** 1. Objetivo
+
+Obtener un podcast de un fragmento de html.
+
+Un podcast tiene tres propiedades, a saber:
+
+- título :: es un =str= y es obligatorio
+- url :: es un =str=, es obligatorio y debe ser un URL válido
+- autor :: es un =str=, pero puede estar vacío
+
+**** 2. Firma
+
+La función recibe un objeto =bs4.element.Tag= y devuelve un objeto =franceinter.podcasts.podcast=
+
+Necesitamos entonces definir la clase =podcast=
+
+#+begin_src python :tangle franceinter/podcasts/podcast.py
+
+class Podcast:
+    def __init__(self, title, url, author=""):
+        self.title = title
+        self.url = url
+        self.author = author
+
+    def __repr__(self):
+        return "Podcast(title='%s', url='%s')" % (self.title, self.url)
+
+#+end_src
+
+**** 3. Ejemplos
+
+- Un tag que tiene todos los elementos para generar un podcast válido (título, URL y autor)
+- Un tag que no es un =bs4.element.Tag=
+- Un tag que no tiene el elemento del título
+- Un tag que no tiene el elemento del URL
+- Un tag que tiene el elemento del URL, pero el URL no es válido
+- Un tag que no tiene el elemento del autor
+
+#+begin_src python :tangle franceinter/podcasts/tests/examples_podcast_from_tag.py
+from bs4 import BeautifulSoup
+
+def tag_ok():
+    html = '''<div class="rich-section-list-item-content">
+  <div class="rich-section-list-item-content-show">
+    <header>
+      <div>
+        <a href="emissions/au-fil-de-l-histoire"
+           itemprop="name"
+           title="Au fil de l&#039;histoire"
+           class="rich-section-list-item-content-title">
+          Au fil de l&#039;histoire
+        </a>
+      </div>
+    </header>
+    <div class="rich-section-list-item-content-infos">
+      <span class="rich-section-list-item-content-infos-author">
+        Par <a href="personnes/patrick-liegibel" title="Patrick Liegibel">Patrick Liegibel</a>
+      </span>
+    </div>
+  </div>
+</div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def invalid_tag():
+    return "I am not a tag"
+
+def tag_without_title():
+    html = '''<div class="rich-section-list-item-content">
+  <div class="rich-section-list-item-content-show">
+    <header>
+      <div>
+        <a href="emissions/au-fil-de-l-histoire"
+           itemprop="name"
+           class="rich-section-list-item-content-title">
+          Au fil de l&#039;histoire
+        </a>
+      </div>
+    </header>
+    <div class="rich-section-list-item-content-infos">
+      <span class="rich-section-list-item-content-infos-author">
+        Par <a href="personnes/patrick-liegibel" title="Patrick Liegibel">Patrick Liegibel</a>
+      </span>
+    </div>
+  </div>
+</div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def tag_without_url():
+    html = '''<div class="rich-section-list-item-content">
+  <div class="rich-section-list-item-content-show">
+    <header>
+      <div>
+        <a itemprop="name"
+           title="Au fil de l&#039;histoire"
+           class="rich-section-list-item-content-title">
+          Au fil de l&#039;histoire
+        </a>
+      </div>
+    </header>
+    <div class="rich-section-list-item-content-infos">
+      <span class="rich-section-list-item-content-infos-author">
+        Par <a href="personnes/patrick-liegibel" title="Patrick Liegibel">Patrick Liegibel</a>
+      </span>
+    </div>
+  </div>
+</div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def tag_with_invalid_url():
+    html = '''<div class="rich-section-list-item-content">
+  <div class="rich-section-list-item-content-show">
+    <header>
+      <div>
+        <a href="this://isnot[?=>avalid[[/\\url"
+           itemprop="name"
+           title="Au fil de l&#039;histoire"
+           class="rich-section-list-item-content-title">
+          Au fil de l&#039;histoire
+        </a>
+      </div>
+    </header>
+    <div class="rich-section-list-item-content-infos">
+      <span class="rich-section-list-item-content-infos-author">
+        Par <a href="personnes/patrick-liegibel" title="Patrick Liegibel">Patrick Liegibel</a>
+      </span>
+    </div>
+  </div>
+</div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+def tag_without_author():
+    html = '''<div class="rich-section-list-item-content">
+  <div class="rich-section-list-item-content-show">
+    <header>
+      <div>
+        <a href="emissions/au-fil-de-l-histoire"
+           itemprop="name"
+           title="Au fil de l&#039;histoire"
+           class="rich-section-list-item-content-title">
+          Au fil de l&#039;histoire
+        </a>
+      </div>
+    </header>
+    <div class="rich-section-list-item-content-infos">
+      <span class="rich-section-list-item-content-infos-author">
+      </span>
+    </div>
+  </div>
+</div>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.div
+    return tag
+
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+
+def podcast_from_tag(tag):
+    # validar que el tag sea un bs4.element.Tag
+
+    # extraer el título con title_from_tag
+    # validar que el título no sea un string vacío
+
+    # extraer el url con url_from_tag
+    # validar que el url no sea un string vacío
+    # validar el url
+
+    # extraer el autor usando author_from_tag
+
+    # crear una instancia de franceinter.podcasts.podcast
+    # con el título, el url y el autor
+    return podcast
+
+#+end_src
+
+**** 5. Definición
+
+Usamos la biblioteca [[https://validators.readthedocs.io/][validators]] para validar el URL del podcast
+
+#+begin_src python :tangle franceinter/podcasts/podcast_from_tag.py
+from franceinter.podcasts.title_from_tag import title_from_tag
+from franceinter.podcasts.url_from_tag import url_from_tag
+from franceinter.podcasts.author_from_tag import author_from_tag
+from franceinter.podcasts.podcast import Podcast
+from validators.url import url as is_valid_url
+import bs4
+
+def podcast_from_tag(tag):
+    assert isinstance(tag, bs4.element.Tag), invalid_tag(tag)
+    title = title_from_tag(tag)
+    assert (title != ""), no_title(tag)
+
+    url = url_from_tag(tag)
+    assert (url != ""), no_url(tag)
+    assert is_valid_url(url), invalid_url(tag)
+
+    author = author_from_tag(tag)
+
+    return Podcast(title, url, author)
+
+def no_url(tag):
+    return "received tag does not have a podcast URL\n %s" % str(tag)
+
+def invalid_url(tag):
+    return "received tag has an invalid podcast URL\n %s" % str(tag)
+
+def no_title(tag):
+    return "received tag does not have a podcast title\n %s" % str(tag)
+
+def invalid_tag(tag):
+    return "tag parameter must be an instance of bs4.element.Tag, received %s instead" % str(type(tag))
+#+end_src
+
+**** 6. Casos de prueba
+
+- Caso exitoso, devuelve un podcast
+- Cuando recibe un tag que no es un =bs4.element.Tag=, lanza un =AssertionError=
+- Cuando recibe un tag que no tiene título, lanza un =AssertionError=
+- Cuando recibe un tag que no tiene url, lanza un =AssertionError=
+- Cuando recibe un tag que tiene un url pero es inválido, lanza un =AssertionError=
+- Cuando recibe un tag que no tiene autor, devuelve un podcast con un =str= vacío en la propiedad author
+
+#+begin_src python :tangle franceinter/podcasts/tests/test_podcast_from_tag.py
+from franceinter.podcasts import podcast
+from franceinter.podcasts.podcast_from_tag import podcast_from_tag
+from franceinter.podcasts.tests.examples_podcast_from_tag import *
+
+def test_podcast_ok():
+    tag = tag_ok()
+    podcast = podcast_from_tag(tag)
+    assert (len(podcast.title) > 0)
+    assert (len(podcast.url) > 0)
+    assert (len(podcast.author) >0)
+    assert (len(str(podcast)) > 0)
+
+def test_podcast_without_title():
+    tag = tag_without_title()
+    try:
+        podcast = podcast_from_tag(tag)
+    except AssertionError:
+        assert True
+
+def test_podcast_without_url():
+    tag = tag_without_url()
+    try:
+        podcast = podcast_from_tag(tag)
+    except AssertionError:
+        assert True
+
+def test_podcast_with_invalid_url():
+    tag = tag_with_invalid_url()
+    try:
+        podcast = podcast_from_tag(tag)
+    except AssertionError:
+        assert True
+
+def test_podcast_without_author():
+    tag = tag_without_author()
+    podcast = podcast_from_tag(tag)
+    assert len(podcast.title) > 0
+    assert len(podcast.url) > 0
+    assert len(podcast.author) == 0
+
+def test_invalid_tag():
+    tag = invalid_tag()
+    try:
+        podcast_from_tag(tag)
+    except AssertionError:
+        assert True
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/podcasts/tests/test_podcast_from_tag.py
+#+end_src
+
 *** title_from_tag
 **** 1. Objetivo
 
@@ -894,1174 +2062,6 @@ None
 
 #+begin_src sh
 pytest franceinter/podcasts/tests/test_author_from_tag.py
-#+end_src
-
-*** podcast_from_tag
-**** 1. Objetivo
-
-Obtener un podcast de un fragmento de html.
-
-Un podcast tiene tres propiedades, a saber:
-
-- título :: es un =str= y es obligatorio
-- url :: es un =str=, es obligatorio y debe ser un URL válido
-- autor :: es un =str=, pero puede estar vacío
-
-**** 2. Firma
-
-La función recibe un objeto =bs4.element.Tag= y devuelve un objeto =franceinter.podcasts.podcast=
-
-Necesitamos entonces definir la clase =podcast=
-
-#+begin_src python :tangle franceinter/podcasts/podcast.py
-
-class Podcast:
-    def __init__(self, title, url, author=""):
-        self.title = title
-        self.url = url
-        self.author = author
-
-    def __repr__(self):
-        return "Podcast(title='%s', url='%s')" % (self.title, self.url)
-
-#+end_src
-
-**** 3. Ejemplos
-
-- Un tag que tiene todos los elementos para generar un podcast válido (título, URL y autor)
-- Un tag que no es un =bs4.element.Tag=
-- Un tag que no tiene el elemento del título
-- Un tag que no tiene el elemento del URL
-- Un tag que tiene el elemento del URL, pero el URL no es válido
-- Un tag que no tiene el elemento del autor
-
-#+begin_src python :tangle franceinter/podcasts/tests/examples_podcast_from_tag.py
-from bs4 import BeautifulSoup
-
-def tag_ok():
-    html = '''<div class="rich-section-list-item-content">
-  <div class="rich-section-list-item-content-show">
-    <header>
-      <div>
-        <a href="emissions/au-fil-de-l-histoire"
-           itemprop="name"
-           title="Au fil de l&#039;histoire"
-           class="rich-section-list-item-content-title">
-          Au fil de l&#039;histoire
-        </a>
-      </div>
-    </header>
-    <div class="rich-section-list-item-content-infos">
-      <span class="rich-section-list-item-content-infos-author">
-        Par <a href="personnes/patrick-liegibel" title="Patrick Liegibel">Patrick Liegibel</a>
-      </span>
-    </div>
-  </div>
-</div>'''
-    soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
-    return tag
-
-def invalid_tag():
-    return "I am not a tag"
-
-def tag_without_title():
-    html = '''<div class="rich-section-list-item-content">
-  <div class="rich-section-list-item-content-show">
-    <header>
-      <div>
-        <a href="emissions/au-fil-de-l-histoire"
-           itemprop="name"
-           class="rich-section-list-item-content-title">
-          Au fil de l&#039;histoire
-        </a>
-      </div>
-    </header>
-    <div class="rich-section-list-item-content-infos">
-      <span class="rich-section-list-item-content-infos-author">
-        Par <a href="personnes/patrick-liegibel" title="Patrick Liegibel">Patrick Liegibel</a>
-      </span>
-    </div>
-  </div>
-</div>'''
-    soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
-    return tag
-
-def tag_without_url():
-    html = '''<div class="rich-section-list-item-content">
-  <div class="rich-section-list-item-content-show">
-    <header>
-      <div>
-        <a itemprop="name"
-           title="Au fil de l&#039;histoire"
-           class="rich-section-list-item-content-title">
-          Au fil de l&#039;histoire
-        </a>
-      </div>
-    </header>
-    <div class="rich-section-list-item-content-infos">
-      <span class="rich-section-list-item-content-infos-author">
-        Par <a href="personnes/patrick-liegibel" title="Patrick Liegibel">Patrick Liegibel</a>
-      </span>
-    </div>
-  </div>
-</div>'''
-    soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
-    return tag
-
-def tag_with_invalid_url():
-    html = '''<div class="rich-section-list-item-content">
-  <div class="rich-section-list-item-content-show">
-    <header>
-      <div>
-        <a href="this://isnot[?=>avalid[[/\\url"
-           itemprop="name"
-           title="Au fil de l&#039;histoire"
-           class="rich-section-list-item-content-title">
-          Au fil de l&#039;histoire
-        </a>
-      </div>
-    </header>
-    <div class="rich-section-list-item-content-infos">
-      <span class="rich-section-list-item-content-infos-author">
-        Par <a href="personnes/patrick-liegibel" title="Patrick Liegibel">Patrick Liegibel</a>
-      </span>
-    </div>
-  </div>
-</div>'''
-    soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
-    return tag
-
-def tag_without_author():
-    html = '''<div class="rich-section-list-item-content">
-  <div class="rich-section-list-item-content-show">
-    <header>
-      <div>
-        <a href="emissions/au-fil-de-l-histoire"
-           itemprop="name"
-           title="Au fil de l&#039;histoire"
-           class="rich-section-list-item-content-title">
-          Au fil de l&#039;histoire
-        </a>
-      </div>
-    </header>
-    <div class="rich-section-list-item-content-infos">
-      <span class="rich-section-list-item-content-infos-author">
-      </span>
-    </div>
-  </div>
-</div>'''
-    soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
-    return tag
-
-#+end_src
-
-**** 4. Boceto
-
-#+begin_src python
-
-def podcast_from_tag(tag):
-    # validar que el tag sea un bs4.element.Tag
-
-    # extraer el título con title_from_tag
-    # validar que el título no sea un string vacío
-
-    # extraer el url con url_from_tag
-    # validar que el url no sea un string vacío
-    # validar el url
-
-    # extraer el autor usando author_from_tag
-
-    # crear una instancia de franceinter.podcasts.podcast
-    # con el título, el url y el autor
-    return podcast
-
-#+end_src
-
-**** 5. Definición
-
-Usamos la biblioteca [[https://validators.readthedocs.io/][validators]] para validar el URL del podcast
-
-#+begin_src python :tangle franceinter/podcasts/podcast_from_tag.py
-from franceinter.podcasts.title_from_tag import title_from_tag
-from franceinter.podcasts.url_from_tag import url_from_tag
-from franceinter.podcasts.author_from_tag import author_from_tag
-from franceinter.podcasts.podcast import Podcast
-from validators.url import url as is_valid_url
-import bs4
-
-def podcast_from_tag(tag):
-    assert isinstance(tag, bs4.element.Tag), invalid_tag(tag)
-    title = title_from_tag(tag)
-    assert (title != ""), no_title(tag)
-
-    url = url_from_tag(tag)
-    assert (url != ""), no_url(tag)
-    assert is_valid_url(url), invalid_url(tag)
-
-    author = author_from_tag(tag)
-
-    return Podcast(title, url, author)
-
-def no_url(tag):
-    return "received tag does not have a podcast URL\n %s" % str(tag)
-
-def invalid_url(tag):
-    return "received tag has an invalid podcast URL\n %s" % str(tag)
-
-def no_title(tag):
-    return "received tag does not have a podcast title\n %s" % str(tag)
-
-def invalid_tag(tag):
-    return "tag parameter must be an instance of bs4.element.Tag, received %s instead" % str(type(tag))
-#+end_src
-
-**** 6. Casos de prueba
-
-- Caso exitoso, devuelve un podcast
-- Cuando recibe un tag que no es un =bs4.element.Tag=, lanza un =AssertionError=
-- Cuando recibe un tag que no tiene título, lanza un =AssertionError=
-- Cuando recibe un tag que no tiene url, lanza un =AssertionError=
-- Cuando recibe un tag que tiene un url pero es inválido, lanza un =AssertionError=
-- Cuando recibe un tag que no tiene autor, devuelve un podcast con un =str= vacío en la propiedad author
-
-#+begin_src python :tangle franceinter/podcasts/tests/test_podcast_from_tag.py
-from franceinter.podcasts import podcast
-from franceinter.podcasts.podcast_from_tag import podcast_from_tag
-from franceinter.podcasts.tests.examples_podcast_from_tag import *
-
-def test_podcast_ok():
-    tag = tag_ok()
-    podcast = podcast_from_tag(tag)
-    assert (len(podcast.title) > 0)
-    assert (len(podcast.url) > 0)
-    assert (len(podcast.author) >0)
-    assert (len(str(podcast)) > 0)
-
-def test_podcast_without_title():
-    tag = tag_without_title()
-    try:
-        podcast = podcast_from_tag(tag)
-    except AssertionError:
-        assert True
-
-def test_podcast_without_url():
-    tag = tag_without_url()
-    try:
-        podcast = podcast_from_tag(tag)
-    except AssertionError:
-        assert True
-
-def test_podcast_with_invalid_url():
-    tag = tag_with_invalid_url()
-    try:
-        podcast = podcast_from_tag(tag)
-    except AssertionError:
-        assert True
-
-def test_podcast_without_author():
-    tag = tag_without_author()
-    podcast = podcast_from_tag(tag)
-    assert len(podcast.title) > 0
-    assert len(podcast.url) > 0
-    assert len(podcast.author) == 0
-
-def test_invalid_tag():
-    tag = invalid_tag()
-    try:
-        podcast_from_tag(tag)
-    except AssertionError:
-        assert True
-
-#+end_src
-
-***** Run tests
-
-#+begin_src sh
-pytest franceinter/podcasts/tests/test_podcast_from_tag.py
-#+end_src
-
-*** tags_from_html
-**** 1. Objetivo
-
-Obtener un array de tags con el fragmento de html que tiene el detalle del podcast (título, URL y autor) a partir del html de la página con el listado de podcasts
-
-Hay que extraer todos los =<div>= que tengan la clase =rich-section-list-item-content=
-
-**** 2. Firma
-
-La función recibe un =str= con el html de la página y devuelve un =GeneratorType= de elementos =bs4.element.Tag=
-
-**** 3. Ejemplos
-
-- Un html que tiene varios =<div>= con la clase buscada
-- Un html que no es un =str=
-- Un html que no tiene ningún =<div>=
-- Un html que tiene varios =<div>= pero que ninguno tenga la clase =rich-section-list-item-content=
-- Un html que tiene algunos =<div>= con la clase buscada y otros que no la tienen
-
-#+begin_src python :tangle franceinter/podcasts/tests/examples_tags_from_html.py
-from bs4 import BeautifulSoup
-import random
-
-def html_with_divs(how_many):
-    class_name = "rich-section-list-item-content"
-    divs = map(lambda x: div(class_name), range(how_many))
-    return html(divs)
-
-def html_is_not_string():
-    return 42
-
-def html_without_divs():
-    html = '''<header><h1>dummy title</h1></header>
-<p>bla bla bla</p>
-<ul>
-  <li> item 1 </li>
-  <li> item 2 </li>
-</ul>
-<footer>All rights reserved!</footer>'''
-    return html
-
-def html_divs_without_class(how_many):
-    divs = map(lambda x: div(), range(how_many))
-    return html(divs)
-
-def html_some_divs_with_class(how_many_with, how_many_without):
-    class_name = "rich-section-list-item-content"
-    divs_with = list(map(lambda x: div(class_name), range(how_many_with)))
-    divs_without = list(map(lambda x: div(), range(how_many_without)))
-    divs = divs_with + divs_without
-    random.shuffle(divs)
-    return html(divs)
-
-def div(class_name=""):
-    attr = ""
-    if class_name:
-        attr = "class=%s" % class_name
-    html = '''<div %s>
-    here goes the div body
-</div>''' % attr
-    soup = BeautifulSoup(html, "html.parser")
-    return soup.div
-
-def html(divs):
-    div_str = "".join(map(lambda div: str(div), divs))
-    html = '''<header><h1>dummy title</h1></header>
-<p>bla bla bla</p>
-%s
-<ul>
-  <li> item 1 </li>
-  <li> item 2 </li>
-</ul>
-<footer>All rights reserved!</footer>
-    ''' % div_str
-    return html
-    
-#+end_src
-
-**** 4. Boceto
-
-#+begin_src python
-from bs4 import BeautifulSoup
-
-def tags_from_html(html):
-    # validar que el html sea un string
-    tags = []
-    # instanciar un objeto BeautifulSoup
-    # filtrar los tag <div> que tienen la clase "rich-section-list-item-content"
-    return tags
-
-#+end_src
-
-**** 5. Definición
-
-#+begin_src python :tangle franceinter/podcasts/tags_from_html.py
-from bs4 import BeautifulSoup
-
-def tags_from_html(html):
-    assert isinstance(html, str), invalid_html(html)
-    soup = BeautifulSoup(html, "html.parser")
-    cls = "rich-section-list-item-content"
-    tags = soup.find_all("div", class_=cls)
-    for tag in tags:
-        yield tag
-
-def invalid_html(html):
-    return "html parameter must be a string, received %s instead" % type(html)
-
-#+end_src
-
-**** 6. Casos de prueba
-
-- Caso exitoso, cuando recibe un html que tiene varios =<div>= con la clase buscada, devuelve un =GeneratorType= de tantos elementos como =<div>= hay en el html
-- Cuando recibe un html que no es un string, lanza un =AssertionError=
-- Cuando recibe un html que no tiene ningún =<div>=, devuelve un =GeneratorType= vacío
-- Cuando recibe un html que tiene varios =<div>= pero ninguno tiene la clase =rich-section-list-item-content=, devuelve un =GeneratorType= vacío
-- Cuando recibe un html que tiene algunos =<div>= con la clase buscada y otros que no la tienen, devuelve un =GeneratorType= con solamente los =<div>= que tienen la clase
-
-#+begin_src python :tangle franceinter/podcasts/tests/test_tags_from_html.py
-import types
-from franceinter.podcasts.tags_from_html import tags_from_html
-from franceinter.podcasts.tests.examples_tags_from_html import *
-
-def test_html_with_divs():
-    html = html_with_divs(5)
-    tags = tags_from_html(html)
-    assert isinstance(tags, types.GeneratorType)
-    assert (len(list(tags)) == 5)
-
-def test_html_is_not_string():
-    try:
-        html = html_is_not_string()
-        tags = list(tags_from_html(html))
-    except AssertionError:
-        assert True
-
-def test_html_without_divs():
-    html = html_without_divs()
-    tags = tags_from_html(html)
-    assert isinstance(tags, types.GeneratorType)
-    assert (len(list(tags)) == 0)
-
-def test_divs_without_class():
-    html = html_divs_without_class(4)
-    tags = tags_from_html(html)
-    assert isinstance(tags, types.GeneratorType)
-    assert (len(list(tags)) == 0)
-
-def test_some_divs_with_class():
-    html = html_some_divs_with_class(2,3)
-    tags = tags_from_html(html)
-    assert isinstance(tags, types.GeneratorType)
-    assert (len(list(tags)) == 2)
-
-#+end_src
-
-***** Run tests
-
-#+begin_src sh
-pytest franceinter/podcasts/tests/test_tags_from_html.py
-#+end_src
-
-*** podcasts_from_tags
-**** 1. Objetivo
-
-Generar un listado de podcasts a partir de un listado de fragmentos de HTML tomados de la página
-
-**** 2. Firma
-
-La función recibe un listado de objetos =bs4.element.Tag= y devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
-
-Vamos a aceptar tanto un =list= como un =GeneratorType=
-
-**** 3. Ejemplos
-
-- Un objeto que no es iterable
-- Una lista vacía
-- Una lista con tags válidos
-- Una lista con objetos que no son del tipo =bs4.element.Tag=
-- Una lista con tags válidos y un tag inválido (sin el título o el URL)
-
-#+begin_src python :tangle franceinter/podcasts/tests/examples_podcasts_from_tags.py
-from franceinter.podcasts.tags_from_html import tags_from_html
-from franceinter.podcasts.tests.examples_tags_from_html import *
-from franceinter.podcasts.tests.examples_podcast_from_tag import (
-    tag_ok, 
-    tag_without_url
-)
-
-def invalid_list():
-    return 123
-
-def empty_list():
-    return []
-
-def list_without_tags():
-    return [1, 2, 3, 4, 5]
-
-def list_with_valid_tags(how_many):
-    html = ""
-    for item in range(1, how_many):
-        html+= str(tag_ok())
-    tags = tags_from_html(html)
-    return tags
-
-def list_with_invalid_tag(how_many):
-    tags = list(list_with_valid_tags(how_many - 1))
-    tags+= tag_without_url()
-    return tags
-
-#+end_src
-
-**** 4. Boceto
-
-#+begin_src python
-from franceinter.podcasts.tags_from_html import tags_from_html
-
-def podcasts_from_tags(tags):
-    # validar que tags sea un GeneratorType
-    # para cada tag de la lista
-    # usar podcast_from_tag() para obtener un podcast
-    # yield posdcast
-
-#+end_src
-
-**** 5. Definición
-
-#+begin_src python :tangle franceinter/podcasts/podcasts_from_tags.py
-from franceinter.podcasts.podcast_from_tag import podcast_from_tag
-
-def podcasts_from_tags(tags):
-    try:
-        it = iter(tags)
-    except TypeError:
-        assert False, invalid_tags(tags)
-    for tag in tags:
-        yield podcast_from_tag(tag)
-
-def invalid_tags(tags):
-    return "tags parameter must be iterable, received %s instead" % type(tags)
-#+end_src
-
-**** 6. Casos de prueba
-
-- Si recibe un objeto que no es iterable, lanza un =AssertionError=
-- Si recibe una lista vacía, devuelve un =GeneratorType= vacío
-- Si recibe una lista de tags válidos, devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
-- Si recibe una lista con objetos que no son del tipo =bs4.element.Tag=, lanza un =AssertionError=
-- Si recibe una lista con algún tag inválido (que no tenga el título o el URL), lanza un =AssertionError=
-
-#+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_tags.py
-import types
-from franceinter.podcasts.podcasts_from_tags import podcasts_from_tags
-from franceinter.podcasts.tests.examples_podcasts_from_tags import *
-from franceinter.podcasts.podcast import Podcast
-
-def test_invalid_list():
-    tags = invalid_list()
-    try:
-        podcasts = list(podcasts_from_tags(tags))
-    except AssertionError:
-        assert True
-
-def test_empty_list():
-    tags = empty_list()
-    podcasts = podcasts_from_tags(tags)
-    assert isinstance(podcasts, types.GeneratorType)
-    assert (len(list(podcasts))==0)
-
-def test_list_with_valid_tags():
-    tags = list_with_valid_tags(6)
-    podcasts = podcasts_from_tags(tags)
-    assert isinstance(podcasts, types.GeneratorType)
-    for p in podcasts:
-        assert (isinstance(p, Podcast))
-
-def test_list_without_tags():
-    tags = list_without_tags()
-    try:
-        podcasts = list(podcasts_from_tags(tags))
-    except AssertionError:
-        assert True
-
-def test_list_with_invalid_tag():
-    tags = list_with_invalid_tag(6)
-    podcasts = podcasts_from_tags(tags)
-    try:
-        for p in podcasts:
-            assert (isinstance(p, Podcast))
-    except AssertionError:
-        assert True
-
-#+end_src
-
-***** Run tests
-
-#+begin_src sh
-pytest franceinter/podcasts/tests/test_podcasts_from_tags.py
-#+end_src
-
-*** podcasts_from_response
-**** 1. Objetivo
-
-Extraer el listado de podcasts de la respuesta de una petición HTTP
-
-**** 2. Firma
-
-La función recibe una =requests.model.Response= y devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
-
-**** 3. Ejemplos
-
-- Una respuesta válida, con el HTML de la página del listado de podcasts
-- Una respuesta inválida, que no es de la clase =requests.model.Response=
-- Una respuesta válida, pero que tiene el HTML de otra página
-
-#+begin_src python :tangle franceinter/podcasts/tests/examples_podcasts_from_response.py
-from requests.models import Response
-
-def response_ok():
-    resp = Response()
-    resp.status_code = 200
-    filename = "./franceinter/html/podcast-list-short.html" 
-    with open(filename, "rb") as f:
-        resp._content = f.read()
-    return resp
-
-def invalid_response():
-    return "i am not a Response"
-
-def wrong_page_response():
-    resp = Response()
-    resp.status_code = 200
-    filename = "./franceinter/html/wrong-page.html" 
-    with open(filename, "rb") as f:
-        resp._content = f.read()
-    return resp
-
-#+end_src
-
-#+RESULTS:
-:results:
-:end:
-
-**** 4. Boceto
-
-#+begin_src python
-import requests
-
-def podcasts_from_response(resp):
-    # validar la respuesta
-    # obtener el HTML de resp.text
-    # extraer los tags usando tags_from_html
-    # obtener los podcasts usando podcasts_from_html
-
-#+end_src
-
-**** 5. Definición
-
-#+begin_src python :tangle franceinter/podcasts/podcasts_from_response.py
-import requests
-from franceinter.podcasts.tags_from_html import tags_from_html
-from franceinter.podcasts.podcasts_from_tags import podcasts_from_tags
-
-def podcasts_from_response(resp):
-    assert isinstance(resp, requests.models.Response), invalid_type(resp)
-    html = resp.text
-    tags = tags_from_html(html)
-    podcasts = podcasts_from_tags(tags)
-    return podcasts
-    
-def invalid_type(resp):
-    return "resp parameter must be a requests.models.Response, received %s instead" % type(resp)
-
-#+end_src
-
-**** 6. Casos de prueba
-
-- Cuando recibe una respuesta válida, devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
-- Cuando recibe una respuesta que no es de la clase =requests.model.Response=, lanza un =AssertionError=
-- Cuando recibe una respuesta válida que tiene el HTML de otra página, devuelve un =GeneratorType= vacío
-
-#+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_response.py
-import types
-from franceinter.podcasts.podcast import Podcast
-from franceinter.podcasts.podcasts_from_response import podcasts_from_response
-from franceinter.podcasts.tests.examples_podcasts_from_response import *
-
-def test_response_ok():
-    resp = response_ok()
-    podcasts = podcasts_from_response(resp)
-    assert isinstance(podcasts, types.GeneratorType)
-    for p in podcasts:
-        assert isinstance(p, Podcast)
-
-def test_invalid_response():
-    resp = invalid_response()
-    try:
-        podcasts = podcasts_from_response(resp)
-    except AssertionError:
-        assert True
-    
-def test_wrong_page_response():
-    resp = wrong_page_response()
-    podcasts = podcasts_from_response(resp)
-    assert isinstance(podcasts, types.GeneratorType)
-    assert (len(list(podcasts)) == 0)
-
-#+end_src
-
-***** Run tests
-
-#+begin_src sh
-pytest franceinter/podcasts/tests/test_podcasts_from_response.py
-#+end_src
-
-*** podcasts_from_url
-**** 1. Objetivo
-
-Extraer el listado de podcasts desde un URL
-
-**** 2. Firma
-
-La función recibe un URL y devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
-
-**** 3. Ejemplos
-
-- Un URL con el listado de podcasts
-- Un URL de otra página, que no tiene podcasts
-- Un URL de una página inexistente, que dispare un error 404 (not found)
-- Un URL de un sitio inexistente, que dispare un error de DNS
-- Un URL inválido
-
-#+begin_src python :tangle franceinter/podcasts/tests/examples_podcasts_from_url.py
-
-def url_ok():
-    url = "http://localhost:3000/podcast-list-short.html"
-    return url
-
-def wrong_page_url():
-    url = "http://localhost:3000/wrong-page.html"
-    return url
-
-def not_found_url():
-    url = "http://localhost:3000/this-page-does-not-exist.html"
-    return url
-
-def wrong_site_url():
-    url = "http://host.local:3000/this-page-does-not-exist.html"
-    return url
-
-def invalid_url():
-    url = "ht pt:\\hostlocal:3000/this-url-is-not-valid.html"
-    return url
-
-#+end_src
-
-**** 4. Boceto
-
-#+begin_src python
-
-def podcasts_from_url(url):
-    # validar el url
-    # realizar una petición al url
-    # obtener la respuesta del url
-    # obtener los podcasts llamando a podcasts_from_url
-    # revisar si da un error de conexión
-    return podcasts
-
-#+end_src
-
-**** 5. Definición
-
-#+begin_src python :tangle franceinter/podcasts/podcasts_from_url.py
-import requests
-from validators.url import url as is_valid_url
-from franceinter.podcasts.podcasts_from_response import podcasts_from_response
-
-def podcasts_from_url(url):
-    assert is_valid_url(url), invalid_url(url)
-    try:
-        response = requests.get(url)
-        podcasts = podcasts_from_response(response)
-        return podcasts
-    except requests.ConnectionError:
-        assert False, connection_error(url)
-
-def invalid_url(url):
-    return "url parameter must be a valid URL, received %s instead" % url
-
-def connection_error(url):
-    return "request to %s failed with a connection error" % url
-#+end_src
-
-**** 6. Casos de prueba
-
-Bueno, aquí tenemos un caso de prueba un poco más complejo que lo normal. Para poder testear nuestra función necesitamos realizar una petición HTTP. El problema es que no queremos depender de un sitio web externo, o de que haya conectividad a Internet cuando se ejecuten los casos de prueba. La solución es levantar un servidor HTTP desde una carpeta local y en nuestro caso vamos a usar los archivos HTML de ejemplo que tenemos en =franceinter/html=.
-
-Ahora bien, necesitamos que el servidor HTTP esté levantado antes de correr nuestros casos de prueba y sería ideal poder bajarlo luego de ejecutar todos los tests que lo necesiten. Para ello vamos a usar un [[https://docs.pytest.org/en/latest/fixture.html][fixture]] (=@pytest.fixture=), que es una funcionalidad de pytest que permite que los casos de prueba reciban un argumento con algún recurso, en este caso, el servidor HTTP ya levantado y sirviendo los archivos desde la carpeta local.
-
-El atributo ~scope="module"~ indica que el fixture =http_server= será invocado una sola vez por módulo, que es lo que queremos para que todos los tests de nuestra función compartan el mismo servidor HTTP y no tener que levantarlo y bajarlo para cada test. Cuando no se indica un =scope=, pytest invoca el fixture para cada caso de prueba.
-
-Un fixture es una función común y corriente como cualquier otra, a la que pytest llama cuando comienza a procesar el módulo, se guarda el valor retornado, y se lo inyecta a los casos de prueba que declaren ese fixture como parámetro.
-
-Nótese en el código del fixture =http_server= que se levanta el servidor HTTP en otro thread para no bloquear la ejecución de los tests y que se utiliza =yield= para poder bajar el servidor luego de su uso.
-
-- Cuando recibe un URL con el listado de podcasts, devuelve un =GeneratorType= de objetos =Podcast=
-- Cuando recibe un URL de otra página, que no tiene podcasts, devuelve un =GeneratorType= vacío
-- Cuando recibe un URL de una página inexistente, devuelve un =GeneratorType= vacío
-- Cuando recibe un URL de un sitio inexistente (error de DNS), lanza un =AssertionError=
-- Cuando recibe un URL inválido, lanza un =AssertionError=
-
-#+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_url.py
-import pytest
-import threading
-import types
-from franceinter.podcasts.podcast import Podcast
-from franceinter.podcasts.podcasts_from_url import podcasts_from_url
-from franceinter.podcasts.tests.examples_podcasts_from_url import *
-from utils.http_server import LocalFolderHTTPServer as HTTPServer
-
-def test_url_ok(http_server):
-    url = url_ok()
-    gen = podcasts_from_url(url)
-    assert isinstance(gen, types.GeneratorType)
-    podcasts = list(gen)
-    assert (len(podcasts) > 0)
-    for p in podcasts:
-        assert isinstance(p, Podcast)
-
-def test_wrong_page_url(http_server):
-    url = wrong_page_url()
-    podcasts = list(podcasts_from_url(url))
-    assert (len(podcasts) == 0)
-
-def test_not_found_url(http_server):
-    url = not_found_url()
-    podcasts = list(podcasts_from_url(url))
-    assert (len(podcasts) == 0)
-
-@pytest.mark.skip(reason="Slow test (~10 sec) waiting for DNS error")
-def test_wrong_site_url(http_server):
-    url = wrong_site_url()
-    try:
-        podcasts = list(podcasts_from_url(url))
-    except AssertionError:
-        assert True
-
-def test_invalid_url():
-    url = invalid_url()
-    try:
-        podcasts = podcasts_from_url(url)
-    except AssertionError:
-        assert True
-
-@pytest.fixture(scope="module")
-def http_server():
-    web_dir = './franceinter/html'
-    httpd = HTTPServer(web_dir, ("", 3000))
-    threading.Thread(target=httpd.serve_forever).start()
-    yield httpd
-    httpd.shutdown()
-
-#+end_src
-
-***** Run tests
-
-#+begin_src sh
-pytest franceinter/podcasts/tests/test_podcasts_from_url.py
-#+end_src
-
-*** podcasts_from_filename
-**** 1. Objetivo
-
-Extraer un listado de podcasts desde un archivo
-
-**** 2. Firma
-
-La función recibe un =str= con el nombre del archivo y devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
-
-**** 3. Ejemplos
-
-- Un archivo HTML que tiene un listado de podcasts
-- Un archivo HTML de otra página, que no tiene podcasts
-- Un archivo que no existe
-- Un nombre de archivo que no es un =str=
-
-#+begin_src python :tangle franceinter/podcasts/tests/examples_podcasts_from_filename.py
-
-def ok_filename():
-    return "./franceinter/html/podcast-list-short.html"
-
-def wrong_filename():
-    return "./franceinter/html/wrong-page.html"
-
-def not_found_filename():
-    return "./franceinter/html/this-file-does-not-exist.html"
-
-def invalid_filename():
-    return [1, 2, 3]
-
-#+end_src
-
-**** 4. Boceto
-
-#+begin_src python
-
-def podcasts_from_filename(filename):
-    # validar que filename sea un str
-    # validar que el archivo exista
-    podcasts = []
-    # crear un requests.models.Response con el contenido del archivo
-    # obtener los podcasts llamando a podcasts_from_response
-    return podcasts
-     
-#+end_src
-
-**** 5. Definición
-
-#+begin_src python :tangle franceinter/podcasts/podcasts_from_filename.py
-from requests.models import Response
-from franceinter.podcasts.podcasts_from_response import podcasts_from_response
-
-def podcasts_from_filename(filename):
-    assert isinstance(filename, str), invalid_filename(filename)
-    resp = Response()
-    podcasts = []
-    try:
-        with open(filename, "rb") as f:
-            resp._content = f.read()
-            podcasts = podcasts_from_response(resp)
-    except (OSError, IOError) as error:
-        assert False, not_found(filename, error)
-    return podcasts
-
-def invalid_filename(filename):
-    return "filename parameter must be a str, %s received instead" % filename
-
-def not_found(filename, error):
-    return "filename %s cannot be read, thrown error :\n%s" % (filename, error)
-#+end_src
-
-**** 6. Casos de prueba
-
-- Caso exitoso, cuando recibe un archivo HTML que tiene un listado de podcasts, devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
-- Cuando recibe un archivo HTML de otra página, que no tiene podcasts, devuelve un =GeneratorType= vacío
-- Cuando recibe un archivo que no existe, lanza un =AssertionError=
-- Cuando recibe un nombre de archivo que no es un =str=, lanza un =AssertionError=
-
-#+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_filename.py
-import types
-from franceinter.podcasts.podcast import Podcast
-from franceinter.podcasts.podcasts_from_filename import podcasts_from_filename
-from franceinter.podcasts.tests.examples_podcasts_from_filename import *
-
-def test_ok_filename():
-    filename = ok_filename()
-    podcasts = podcasts_from_filename(filename)
-    assert isinstance(podcasts, types.GeneratorType)
-    podcasts = list(podcasts)
-    assert (len(podcasts) > 0)
-    for p in podcasts:
-        assert isinstance(p, Podcast)
-
-def test_wrong_filename():
-    filename = wrong_filename()
-    podcasts = podcasts_from_filename(filename)
-    assert isinstance(podcasts, types.GeneratorType)
-    podcasts = list(podcasts)
-    assert (len(podcasts) == 0)
-
-def test_not_found_filename():
-    filename = not_found_filename()
-    try:
-        podcasts = podcasts_from_filename(filename)
-    except AssertionError:
-        assert True
-
-def test_invalid_filename():
-    filename = invalid_filename()
-    try:
-        podcasts = podcasts_from_filename(filename)
-    except AssertionError:
-        assert True
-
-#+end_src
-
-***** Run tests
-
-#+begin_src sh
-pytest ./franceinter/podcasts/tests/test_podcasts_from_filename.py
-#+end_src
-
-*** podcasts_from_query
-**** 1. Objetivo
-
-Filtrar un listado de podcasts y obtener solamente los que contienen una palabra clave en el título o en el autor
-
-Se debe buscar la palabra clave sin tener encuenta las mayúsculas o minúsculas (case insensitive match)
-
-**** 2. Firma
-
-La función recibe un listado de objetos =franceinter.podcasts.Podcast= y un =str=, y devuelve un =filter= de objetos =franceinter.podcasts.Podcast=
-
-Para el listado de podcasts vamos a recibir cualquier objeto que sea iterable, como por ejemplo un =list= o un =GeneratorType=
-
-**** 3. Ejemplos
-
-- Un listado de 5 podcasts en el que hay 2 que tienen la palabra "radio" en el título 
-- Un listado de 5 podcasts en el que hay 3 que tienen la palabra "radio" en el autor
-- Un listado de 5 podcasts en el que ninguno tiene la palabra "radio" en el título y/o autor
-- Un listado de podcasts que no es iterable
-- Un listado de podcasts que no tiene objetos =franceinter.podcasts.Podcast=
-- Una query que no es un =str=
-
-#+begin_src python :tangle franceinter/podcasts/tests/examples_podcasts_from_query.py
-import random
-from franceinter.podcasts.podcast import Podcast
-
-def podcasts_with_word_in_title(word):
-    podcasts = []
-    for i in range(0, 3):
-        podcasts.append(new_podcast())
-    p = new_podcast()
-    p.title+= " " + word
-    podcasts.append(p)
-    podcasts.append(p)
-    random.shuffle(podcasts)
-    return podcasts
-
-def podcasts_with_word_in_author(word):
-    podcasts = []
-    for i in range(0, 2):
-        podcasts.append(new_podcast())
-    p = new_podcast()
-    p.author+= " " + word
-    podcasts.append(p)
-    podcasts.append(p)
-    podcasts.append(p)
-    random.shuffle(podcasts)
-    return podcasts
-
-def some_podcasts(how_many):
-    for i in range(0, how_many):
-        yield new_podcast()
-
-def podcasts_not_iterable():
-    return 42
-        
-def invalid_podcasts():
-    return range(0,10)
-
-def invalid_query():
-    return 42
-
-def new_podcast():
-    title = "Este es un podcast de ejemplo"
-    url = "http://podcastplace.com/shows"
-    author = "Juan Perez"
-    return Podcast(title, url, author)
-
-#+end_src
-
-**** 4. Boceto
-
-#+begin_src python
-
-def podcasts_from_query(podcasts, query):
-    # validar que los podcasts sean iterables
-    # validar que la query sea un str
-    # validar que cada podcast sea un Podcast
-    # filtrar los podcasts con una función que devuelva true 
-    # si el título o el autor contienen la query
-
-#+end_src
-
-**** 5. Definición
-
-#+begin_src python :tangle franceinter/podcasts/podcasts_from_query.py
-import re
-from franceinter.podcasts.podcast import Podcast
-
-def podcasts_from_query(podcasts, query):
-    # validar que los podcasts sean iterables
-    try:
-        it = iter(podcasts)
-    except TypeError:
-        assert False, invalid_podcasts(podcasts)
-    # validar que la query sea un str
-    assert isinstance(query, str), invalid_query(query)
-    # validar que cada podcast sea un Podcast
-    valid_podcasts = filter(is_podcast, podcasts)
-    # filtrar los podcasts que contienen la query
-    contains_query = query_matcher(query)
-    return filter(contains_query, valid_podcasts)
-
-def is_podcast(podcast):
-    assert isinstance(podcast, Podcast), invalid_podcast(podcast)
-    return True
-    
-def query_matcher(query):
-    def matcher(podcast):
-        return (re.search(query, podcast.title, re.IGNORECASE) 
-                or re.search(query, podcast.author, re.IGNORECASE))
-    return matcher
-    
-def invalid_podcasts(podcasts):
-    return "podcasts parameter must be iterable, received %s instead" % type(podcasts)
-
-def invalid_query(query):
-    return "query parameter must be a string, received %s instead" % type(query)
-
-def invalid_podcast(podcast):
-    return "podcast parameter must be a Podcast, received %s instead" % type(podcast)
-
-#+end_src
-
-**** 6. Casos de prueba
-
-- Cuando recibe un listado de 5 podcasts en el que hay 2 que tienen la palabra "radio" en el título, devuelve un =filter= con los 2 podcasts que cumplen la condición
-- Cuando recibe un listado de 5 podcasts en el que hay 3 que tienen la palabra "radio" en el autor, devuelve un =filter= con los 3 podcasts que cumplen la condición
-- Cuando recibe un listado de 5 podcasts en el que ninguno tiene la palabra "radio" en el título y/o autor, devuelve un =filter= vacío
-- Cuando recibe un listado de podcasts que no es iterable, lanza un =AssertionError=
-- Cuando recibe un listado de podcasts que no tiene objetos =franceinter.podcasts.Podcast=, lanza un =AssertionError=
-- Cuando recibe una query que no es un =str=, lanza un =AssertionError=
-
-#+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_query.py
-import types
-from franceinter.podcasts.podcasts_from_query import podcasts_from_query
-from franceinter.podcasts.tests.examples_podcasts_from_query import *
-
-def test_podcasts_with_word_in_title():
-    podcasts = podcasts_with_word_in_title("radio")
-    result = podcasts_from_query(podcasts, "radio")
-    assert isinstance(result, filter)
-    assert (len(list(result)) == 2)
-
-def test_podcasts_with_word_in_author():
-    podcasts = podcasts_with_word_in_author("radio")
-    result = podcasts_from_query(podcasts, "radio")
-    assert isinstance(result, filter)
-    assert (len(list(result)) == 3)
-
-def test_podcasts_without_word():
-    podcasts = some_podcasts(8)
-    result = podcasts_from_query(podcasts, "radio")
-    assert isinstance(result, filter)
-    assert (len(list(result)) == 0)
-
-def test_podcasts_not_iterable():
-    podcasts = podcasts_not_iterable()
-    try:
-        result = podcasts_from_query(podcasts, "radio")
-    except AssertionError:
-        assert True
-
-def test_invalid_podcasts():
-    podcasts = invalid_podcasts()
-    try:
-        result = podcasts_from_query(podcasts, "radio")
-        assert (len(list(result)) == 0)
-    except AssertionError:
-        assert True
-
-def test_invalid_query():
-    podcasts = some_podcasts(10)
-    query = invalid_query()
-    try:
-        result = podcasts_from_query(podcasts, query)
-    except AssertionError:
-        assert True
-
-#+end_src
-
-***** Run tests
-
-#+begin_src sh
-pytest franceinter/podcasts/tests/test_podcasts_from_query.py
 #+end_src
 
 ** Episodios
