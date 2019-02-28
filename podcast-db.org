@@ -188,8 +188,7 @@ virtualenv-3.6 ./venv
 pip-3.6 install -r requirements.txt
 #+end_src
 
-* Build
-*** CLI Standalone Executable
+*** Build CLI Standalone Executable
 
 - [ ] Usar [[https://www.pyinstaller.org][PyInstaller]] para generar un ejecutable en un solo archivo
 
@@ -2350,7 +2349,8 @@ __all__ = [
     "episodes_from_filename",
     "episodes_from_podcast",
     "episodes_from_query",
-    "episodes_between_dates"
+    "episodes_between_dates",
+    "episodes_from_year"
 ]
 #+end_src
 
@@ -2373,6 +2373,7 @@ __all__ = [
     "test_episodes_from_podcast", 
     "test_episodes_from_query", 
     "test_episodes_between_dates", 
+    "test_episodes_from_year", 
     "examples_title_from_tag",
     "examples_url_from_tag",
     "examples_date_from_tag",
@@ -2387,7 +2388,8 @@ __all__ = [
     "examples_episodes_from_filename",
     "examples_episodes_from_podcast",
     "examples_episodes_from_query",
-    "examples_episodes_between_dates"
+    "examples_episodes_between_dates",
+    "examples_episodes_from_year"
 ]
 #+end_src
 
@@ -2686,6 +2688,182 @@ def test_invalid_query():
 
 #+begin_src sh
 pytest franceinter/episodes/tests/test_episodes_from_query.py
+#+end_src
+
+*** episodes_from_year
+**** 1. Objetivo
+
+Filtrar un listado de episodios y obtener solamente los que fueron publicados en un año determinado
+
+**** 2. Firma
+
+La función recibe un listado de objetos =franceinter.episodes.Episode= y un número entero con el año y devuelve un =filter= de objetos =franceinter.episodes.Episode=
+
+**** 3. Ejemplos
+
+- Un listado de 5 episodios en el que hay 2 que fueron publicados en un año dado
+- Un listado de 5 episodios en el que ninguno fue publicado en un año dado
+- Un listado de episodios que no es iterable
+- Un listado de episodios que no tiene objetos =franceinter.episodes.Episode=
+- Un año que no es un =int=
+- Un año que es negativo
+
+#+begin_src python :tangle franceinter/episodes/tests/examples_episodes_from_year.py
+import random
+from datetime import date as Date, timedelta as TimeDelta
+from franceinter.episodes.episode import Episode
+
+def some_episodes_with_year(year):
+    other_year = year + 5
+    episodes = list(episodes_with_year(3, other_year))
+    ep = new_episode(year)
+    episodes.append(ep)
+    episodes.append(ep)
+    random.shuffle(episodes)
+    return episodes
+
+def episodes_with_year(how_many, year):
+    for i in range(0, how_many):
+        yield new_episode(year)
+
+def episodes_not_iterable():
+    return 42
+        
+def invalid_episodes():
+    return range(0,10)
+
+def invalid_year():
+    return "This is not a year"
+
+def negative_year():
+    return -42
+
+def new_episode(year):
+    title = "Este es un episodio de ejemplo"
+    url = "http://podcastplace.com/shows/my-podcast/season-01-episode-01.mp3"
+    date = Date(year, 4, 16)
+    duration = 3265
+    return Episode(title, url, date, duration)
+
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+
+def episodes_from_year(episodes, year):
+    # validar que los episodios sean iterables
+    # validar que el año sea un int > 0
+    # filtrar los episodios con una función que devuelva true 
+    # si la fecha tiene el año correcto
+
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle franceinter/episodes/episodes_from_year.py
+from franceinter.episodes.episode import Episode
+
+def episodes_from_year(episodes, year):
+    try:
+        it = iter(episodes)
+    except TypeError:
+        assert False, invalid_episodes(episodes)
+    assert isinstance(year, int), invalid_year(year)
+    valid_episodes = filter(is_episode, episodes)
+    is_from_year = year_filter(year)
+    return filter(is_from_year, valid_episodes)
+
+def is_episode(episode):
+    assert isinstance(episode, Episode), invalid_episode(episode)
+    return True
+    
+def year_filter(year):
+    def matcher(episode):
+        return (episode.date.year == year)
+    return matcher
+    
+def invalid_episodes(episodes):
+    return "episodes parameter must be iterable, received %s instead" % type(episodes)
+
+def invalid_year(year):
+    return "year parameter must be a date, received %s instead" % type(year)
+
+def invalid_episode(episode):
+    return "episode parameter must be an Episode, received %s instead" % type(episode)
+
+#+end_src
+
+**** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un listado de 5 episodios en el que hay 2 que fueron publicados en un año dado, devuelve un =filter= con los 2 episodios que cumplen la condición
+- Cuando recibe un listado de 5 episodios en el que ninguno fue publicado en un año dado, devuelve un =filter= vacío
+- Cuando recibe un listado de episodios que no es iterable, lanza un =AssertionError=
+- Cuando recibe un listado de episodios que no tiene objetos =franceinter.episodes.Episode=, lanza un =AssertionError=
+- Cuando recibe un año que no es un =int=, lanza un =AssertionError=
+- Cuando recibe un año que que es negativo, devuelve un =filter= vacío
+
+#+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_year.py
+import types
+from datetime import date as Date, timedelta as TimeDelta
+from franceinter.episodes.episodes_from_year import episodes_from_year
+from franceinter.episodes.tests.examples_episodes_from_year import *
+
+def test_episodes_from_year():
+    year = 1987
+    episodes = some_episodes_with_year(year)
+    result = episodes_from_year(episodes, year)
+    assert isinstance(result, filter)
+    assert (len(list(result)) == 2)
+
+def test_episodes_from_another_year():
+    year = 1987
+    episodes = episodes_with_year(5, year)
+    another_year = 1948
+    result = episodes_from_year(episodes, another_year)
+    assert isinstance(result, filter)
+    assert (len(list(result)) == 0)
+
+def test_episodes_not_iterable():
+    episodes = episodes_not_iterable()
+    try:
+        year = 1987
+        result = episodes_from_year(episodes, year)
+    except AssertionError:
+        assert True
+
+def test_invalid_episodes():
+    episodes = invalid_episodes()
+    try:
+        year = 1987
+        result = episodes_from_year(episodes, year)
+        assert (len(list(result)) == 0)
+    except AssertionError:
+        assert True
+
+def test_invalid_year():
+    year = 1987
+    episodes = episodes_with_year(5, year)
+    inv_year = invalid_year()
+    try:
+        result = episodes_from_year(episodes, inv_year)
+    except AssertionError:
+        assert True
+
+def test_negative_year():
+    year = 1987
+    episodes = episodes_with_year(5, year)
+    neg_year = negative_year()
+    result = episodes_from_year(episodes, neg_year)
+    assert isinstance(result, filter)
+    assert (len(list(result)) == 0)
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/episodes/tests/test_episodes_from_year.py
 #+end_src
 
 *** episodes_between_dates
