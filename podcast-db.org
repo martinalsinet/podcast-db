@@ -96,16 +96,25 @@ Quiero que mi base de datos pueda consultar las siguientes fuentes de podcasts:
 - RSS feeds
 
 ** Funcionalidades
+*** Obtención de podcasts y episodios
 
 - [X] Listar las fuentes de podcasts disponibles
 - [X] Listar los podcasts de una fuente
 - [X] Listar los episodios de un podcast
 - [X] Obtener el detalle de un episodio
 - [X] Filtrar los episodios de un podcast según algún criterio (año, mes, palabra clave)
+
+*** Descarga y almacenamiento local
+
 - [ ] Guardar las fuentes, los podcasts y sus episodios en una base de datos local
 - [ ] Generar una playlist o feed RSS a partir de un listado de episodios
 - [ ] Crear una cola de descarga a partir de una playlist
 - [ ] Procesar los archivos descargados (p.ej, cambiar el bitrate a 64k)
+
+*** Interfaces de usuario
+
+- [ ] Uso desde línea de comandos (CLI)
+- [ ] Uso desde interface web
 
 * Setup
 *** .gitignore
@@ -179,6 +188,53 @@ virtualenv-3.6 ./venv
 pip-3.6 install -r requirements.txt
 #+end_src
 
+* Build
+*** CLI Standalone Executable
+
+- [ ] Usar [[https://www.pyinstaller.org][PyInstaller]] para generar un ejecutable en un solo archivo
+
+#+begin_quote
+pip install pyinstaller
+
+Go to your program’s directory and run:
+
+pyinstaller yourprogram.py
+
+This will generate the bundle in a subdirectory called dist.
+#+end_quote
+
+* Command Line Interface
+** Diseño
+
+#+begin_src sh :eval never
+
+# listar fuentes de podcasts
+podcast-db --list-sources
+
+# listar podcasts de una fuente
+podcast-db --list-podcasts-from franceinter
+podcast-db --list-podcasts-from franceinter --with-keyword musique
+
+# ver detalle de un podcast
+podcast-db --show-podcast franceinter/darwin
+
+# listar episodios de un podcast
+podcast-db --list-episodes-from franceinter/darwin
+podcast-db --list-episodes-from franceinter/darwin --for-year 2018
+podcast-db --list-episodes-from franceinter/darwin --for-month 2018-05
+podcast-db --list-episodes-from franceinter/darwin --with-keyword musique
+
+# ver detalle de un episodio
+podcast-db --show-episode franceinter/darwin/2018-04-16
+
+#+end_src
+
+** Implementación
+*** TODO Listar fuentes
+*** TODO Listar podcasts de una fuente
+*** TODO Ver detalle de un podcast
+*** TODO Listar episodios de un podcast 
+*** TODO Ver detalle de un episodio
 * Sources
 ** Diseño
 
@@ -285,6 +341,7 @@ Queremos obtener el listado de los podcasts desde un URL y también desde un arc
 - [X] Obtener el listado de los podcasts de France Inter
 - [X] Para cada podcast obtener el nombre, el url y el autor
 - [X] Filtrar el listado de podcasts por una palabra clave
+- [ ] Asignarle un identificador a cada podcast
 
 ***** Obtener el listado de los podcasts de France Inter
 
@@ -2080,7 +2137,11 @@ Por lo que se puede ver en el HTML, muchos de los datos que necesitamos se encue
 - [X] Obtener el listado de los episodios de un podcast
 - [X] Para cada episodio obtener el título, la fecha, el URL del audio y su duración
 - [X] Filtrar el listado por una palabra clave
-- [X] Filtrar el listado por año, mes, día o intervalo de fechas
+- [X] Filtrar el listado por intervalo de fechas
+- [ ] Filtrar el listado por año
+- [ ] Filtrar el listado por mes
+- [ ] Buscar un episodio por su fecha de emisión
+
 
 ***** Obtener el listado de los episodios de un podcast
 
@@ -4995,7 +5056,7 @@ pytest
 *** Generar el reporte de cobertura
 
 #+begin_src sh
-pytest --cov-report html:coverage --cov ./franceinter/ 
+pytest --cov-report html:coverage --cov ./franceinter/ --cov ./sources/
 #+end_src
 
 Para visualizar el reporte se debe abrir el archivo =./coverage/index.html= con el navegador
