@@ -14,7 +14,7 @@
 - [[#diseño][Diseño]]
   - [[#fuentes-de-podcasts][Fuentes de podcasts]]
   - [[#funcionalidades][Funcionalidades]]
-- [[#proyecto][Proyecto]]
+- [[#versionado][Versionado]]
   - [[#changelog][ChangeLog]]
   - [[#roadmap][Roadmap]]
 - [[#setup][Setup]]
@@ -143,8 +143,23 @@ Quiero que mi base de datos pueda consultar las siguientes fuentes de podcasts:
 
 *** Interfaces de usuario
 
-- [ ] Uso desde línea de comandos (CLI)
-- [ ] Uso desde interface web
+- [ ] Linea de comandos (CLI)
+- [ ] Interface web
+
+* Versionado
+** ChangeLog
+*** 0.1.0 - 2019-03-01
+
+- Versión inicial
+- Obtención de podcasts y episodios
+- Fuente FranceInter
+
+** Roadmap
+*** 1.0.0
+
+- Obtención de podcasts y episodios de una fuente (FranceInter)
+- Guardar las fuentes, los podcasts y sus episodios en una base de datos local
+- Interface desde línea de comandos (CLI)
 
 * Setup
 *** .gitignore
