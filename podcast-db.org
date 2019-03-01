@@ -7,6 +7,36 @@
 #+PROPERTY: header-args:sh :results raw drawer
 #+TODO: TODO DOING | DONE
 
+* Indice                                                                :TOC:
+- [[#motivación][Motivación]]
+  - [[#literate-programming][Literate Programming]]
+  - [[#how-to-design-programs][How to Design Programs]]
+- [[#diseño][Diseño]]
+  - [[#fuentes-de-podcasts][Fuentes de podcasts]]
+  - [[#funcionalidades][Funcionalidades]]
+- [[#proyecto][Proyecto]]
+  - [[#changelog][ChangeLog]]
+  - [[#roadmap][Roadmap]]
+- [[#setup][Setup]]
+- [[#command-line-interface][Command Line Interface]]
+  - [[#diseño-1][Diseño]]
+  - [[#implementación][Implementación]]
+- [[#sources][Sources]]
+  - [[#diseño-2][Diseño]]
+  - [[#submódulos][Submódulos]]
+  - [[#list_sources][list_sources]]
+- [[#france-inter][France Inter]]
+  - [[#módulos][Módulos]]
+  - [[#podcasts][Podcasts]]
+  - [[#episodios][Episodios]]
+  - [[#html][HTML]]
+- [[#herramientas][Herramientas]]
+  - [[#módulos-1][Módulos]]
+  - [[#localfolderhttpserver][LocalFolderHTTPServer]]
+- [[#tests][Tests]]
+- [[#licencia][Licencia]]
+- [[#apéndices][Apéndices]]
+
 * Motivación
 
 Me gusta escuchar podcasts de [[https://franceinter.fr][France Inter]] cuando salgo a caminar, y en su momento me armé un script que me genera los links para descargar los episodios usando cURL.
