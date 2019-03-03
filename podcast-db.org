@@ -18,7 +18,7 @@
   - [[#changelog][ChangeLog]]
   - [[#roadmap][Roadmap]]
 - [[#setup][Setup]]
-- [[#command-line-interface][Command Line Interface]]
+- [[#interface-desde-línea-de-comandos][Interface desde línea de comandos]]
   - [[#diseño-1][Diseño]]
   - [[#implementación][Implementación]]
 - [[#sources][Sources]]
@@ -54,7 +54,7 @@ Además, me gustaría usar este proyecto para probar dos enfoques de programaci�
 
 Para escribir este documento estoy usando [[https://www.gnu.org/software/emacs][Emacs]] y [[https://orgmode.org][Org mode]], que es un modo de Emacs que tiene funcionalidades para literate programming.
 
-La idea de la programación literaria consiste en que el código fuente de la aplicación sale de la documentación. Esto quiere decir que para poder generar un ejecutable (un /build/) de una aplicación hecha "literariamente" es necesario procesar la documentación, extraer de ella los fragmentos de código fuente que constituyen la aplicación (en org-mode este proceso se denomina /tangle/) y luego generar el ejecutable correspondiente con ese código.
+La idea de la programación literaria consiste en que el código fuente de la aplicación sale de la documentación. Esto quiere decir que para poder generar un ejecutable (un /build/) de una aplicación hecha "literariamente" es necesario procesar la documentación, extraer de ella los fragmentos de código fuente que la constituyen (en org-mode este proceso se denomina /tangle/) y luego generar el ejecutable correspondiente con ese código.
 
 En nuestro caso, la documentación a procesar es /este documento/. Todo el código fuente de la aplicación está contenido en este documento, dentro de los fragmentos de código delimitados por las etiquetas =#+begin_src= y =#+end_src=. Los bloques de código que tienen el parámetro =:tangle path/to/file= en el tag de inicio son exportados al archivo que indica el path. De esta manera, podemos generar todos los archivos del código fuente de la aplicación /tangleando/ la documentación. El comando =org-babel-tangle= dispara la generación de los archivos en cualquier momento.
 
@@ -163,23 +163,6 @@ Quiero que mi base de datos pueda consultar las siguientes fuentes de podcasts:
 - Interface desde línea de comandos (CLI)
 
 * Setup
-*** .gitignore
-
-#+begin_src text :tangle .gitignore
-.DS_Store
-.pytest_cache
-__pycache__
-.coverage
-cache.sqlite
-coverage
-downloads
-franceinter
-requirements.txt
-sources
-utils
-venv
-#+end_src
-
 *** Dependencias
 
 Vamos a usar las siguientes bibliotecas
@@ -220,7 +203,7 @@ pytest-cov
 validators
 #+end_src
 
-*** Instalación de dependencias
+*** Instalar las dependencias
 **** 1. Inicializar la carpeta =./venv=
 
 #+begin_src sh
@@ -234,7 +217,7 @@ virtualenv-3.6 ./venv
 pip-3.6 install -r requirements.txt
 #+end_src
 
-*** Build CLI Standalone Executable
+*** Generar el ejecutable
 
 - [ ] Usar [[https://www.pyinstaller.org][PyInstaller]] para generar un ejecutable en un solo archivo
 
@@ -248,7 +231,24 @@ pyinstaller yourprogram.py
 This will generate the bundle in a subdirectory called dist.
 #+end_quote
 
-* Command Line Interface
+*** .gitignore
+
+#+begin_src text :tangle .gitignore
+.DS_Store
+.pytest_cache
+__pycache__
+.coverage
+cache.sqlite
+coverage
+downloads
+franceinter
+requirements.txt
+sources
+utils
+venv
+#+end_src
+
+* Interface desde línea de comandos
 ** Diseño
 
 #+begin_src sh :eval never
@@ -2183,9 +2183,9 @@ Por lo que se puede ver en el HTML, muchos de los datos que necesitamos se encue
 - [X] Para cada episodio obtener el título, la fecha, el URL del audio y su duración
 - [X] Filtrar el listado por una palabra clave
 - [X] Filtrar el listado por intervalo de fechas
-- [ ] Filtrar el listado por año
+- [X] Filtrar el listado por año
 - [ ] Filtrar el listado por mes
-- [ ] Buscar un episodio por su fecha de emisión
+- [ ] Filtrar el listado por día
 
 
 ***** Obtener el listado de los episodios de un podcast
