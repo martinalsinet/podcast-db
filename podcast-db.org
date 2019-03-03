@@ -381,7 +381,7 @@ France Inter publica en una sola página (enorme) el listado de todas sus emisio
 
 Queremos obtener el listado de los podcasts desde un URL y también desde un archivo local. Además queremos poder filtrar el listado buscando los podcasts que contengan una palabra clave en el autor o en el título.
 
-**** Wishlist
+*** Wishlist
 
 - [X] Obtener el listado de los podcasts de France Inter
 - [X] Para cada podcast obtener el nombre, el url y el autor
@@ -490,7 +490,7 @@ Podcast(title='Quand la musique donne (été 2012)', url='https://www.franceinte
 
 :end:
 
-**** TODO Mejoras
+*** TODO Mejoras
 
 - [ ] =podcasts_from_filename= :: Se podrían matchear los errores de lectura del archivo con los códigos de la respuesta HTTP (404 si no se encuentra, 500 si hubo un error de I/O, etc)
 
@@ -2177,7 +2177,7 @@ Cada episodio tiene un título, una fecha de emisión y un URL para descargar el
 
 Por lo que se puede ver en el HTML, muchos de los datos que necesitamos se encuentran en un tag =<button>= que tiene la clase =replay-button=
 
-**** Wishlist
+*** Wishlist
 
 - [X] Obtener el listado de los episodios de un podcast
 - [X] Para cada episodio obtener el título, la fecha, el URL del audio y su duración
@@ -2351,7 +2351,7 @@ Episode(title='Le plomb et l'argent', date='2018-06-02')
 
 :end:
 
-**** TODO Mejoras
+*** TODO Mejoras
 
 - [ ] Crear una nueva función =attribute_from_tag= para extraer un atributo de un tag con una clase determinada
 
@@ -2396,7 +2396,8 @@ __all__ = [
     "episodes_from_podcast",
     "episodes_from_query",
     "episodes_between_dates",
-    "episodes_from_year"
+    "episodes_from_year",
+    "episodes_from_month"
 ]
 #+end_src
 
@@ -2420,6 +2421,7 @@ __all__ = [
     "test_episodes_from_query", 
     "test_episodes_between_dates", 
     "test_episodes_from_year", 
+    "test_episodes_from_month", 
     "examples_title_from_tag",
     "examples_url_from_tag",
     "examples_date_from_tag",
@@ -2435,7 +2437,8 @@ __all__ = [
     "examples_episodes_from_podcast",
     "examples_episodes_from_query",
     "examples_episodes_between_dates",
-    "examples_episodes_from_year"
+    "examples_episodes_from_year",
+    "examples_episodes_from_month"
 ]
 #+end_src
 
@@ -2847,7 +2850,7 @@ def invalid_episode(episode):
 - Cuando recibe un listado de episodios que no es iterable, lanza un =AssertionError=
 - Cuando recibe un listado de episodios que no tiene objetos =franceinter.episodes.Episode=, lanza un =AssertionError=
 - Cuando recibe un año que no es un =int=, lanza un =AssertionError=
-- Cuando recibe un año que que es negativo, devuelve un =filter= vacío
+- Cuando recibe un año que es negativo, devuelve un =filter= vacío
 
 #+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_year.py
 import types
@@ -2910,6 +2913,238 @@ def test_negative_year():
 
 #+begin_src sh
 pytest franceinter/episodes/tests/test_episodes_from_year.py
+#+end_src
+
+*** episodes_from_month
+**** 1. Objetivo
+
+Filtrar un listado de episodios y obtener solamente los que fueron publicados en un mes determinado
+
+**** 2. Firma
+
+La función recibe un listado de objetos =franceinter.episodes.Episode= y dos números enteros con el año y el mes respectivamente, y devuelve un =filter= de objetos =franceinter.episodes.Episode=
+
+**** 3. Ejemplos
+
+- Un listado de 5 episodios en el que hay 2 que fueron publicados en un mes dado
+- Un listado de 5 episodios en el que ninguno fue publicado en un mes dado
+- Un listado de episodios que no es iterable
+- Un listado de episodios que no tiene objetos =franceinter.episodes.Episode=
+- Un año que no es un =int=
+- Un mes que no es un =int=
+- Un año que es negativo
+- Un mes que es negativo
+- Un mes que es mayor a 12
+
+#+begin_src python :tangle franceinter/episodes/tests/examples_episodes_from_month.py
+import random
+from datetime import date as Date, timedelta as TimeDelta
+from franceinter.episodes.episode import Episode
+
+def some_episodes_with_month(year, month):
+    other_year = year + 5
+    episodes = list(episodes_with_month(3, other_year, month))
+    ep = new_episode(year, month)
+    episodes.append(ep)
+    episodes.append(ep)
+    random.shuffle(episodes)
+    return episodes
+
+def episodes_with_month(how_many, year, month):
+    for i in range(0, how_many):
+        yield new_episode(year, month)
+
+def episodes_not_iterable():
+    return 42
+        
+def invalid_episodes():
+    return range(0,10)
+
+def invalid_year():
+    return "This is not a year"
+
+def invalid_month():
+    return "This is not a month"
+
+def new_episode(year, month):
+    title = "Este es un episodio de ejemplo"
+    url = "http://podcastplace.com/shows/my-podcast/season-01-episode-01.mp3"
+    date = Date(year, month, 16)
+    duration = 3265
+    return Episode(title, url, date, duration)
+
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+
+def episodes_from_year(episodes, year, month):
+    # validar que los episodios sean iterables
+    # validar que el año sea un int > 0
+    # validar que el mes sea un int entre 1 y 12
+    # filtrar los episodios con una función que devuelva true 
+    # si la fecha tiene el mes correcto
+
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle franceinter/episodes/episodes_from_month.py
+from franceinter.episodes.episode import Episode
+
+def episodes_from_month(episodes, year, month):
+    try:
+        it = iter(episodes)
+    except TypeError:
+        assert False, invalid_episodes(episodes)
+    assert isinstance(year, int), invalid_year(year)
+    assert month_is_valid(month), invalid_month(month)
+    valid_episodes = filter(is_episode, episodes)
+    is_from_month = month_filter(year, month)
+    return filter(is_from_month, valid_episodes)
+
+def is_episode(episode):
+    assert isinstance(episode, Episode), invalid_episode(episode)
+    return True
+    
+def month_filter(year, month):
+    def matcher(episode):
+        return (
+            (episode.date.year == year)
+            and (episode.date.month == month)
+        )
+    return matcher
+    
+def month_is_valid(month):
+    return (
+        isinstance(month, int) 
+        and (month > 0)
+        and (month < 13)
+    )
+    
+def invalid_episodes(episodes):
+    return "episodes parameter must be iterable, received %s instead" % type(episodes)
+
+def invalid_year(year):
+    return "year parameter must be an int, received %s instead" % type(year)
+
+def invalid_month(month):
+    return "month parameter must be an int bewtween 1 and 12, received %s instead" % str(month)
+
+def invalid_episode(episode):
+    return "episode parameter must be an Episode, received %s instead" % type(episode)
+
+#+end_src
+
+**** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un listado de 5 episodios en el que hay 2 que fueron publicados en un mes dado, devuelve un =filter= con los 2 episodios que cumplen la condición
+- Cuando recibe un listado de 5 episodios en el que ninguno fue publicado en un mes dado, devuelve un =filter= vacío
+- Cuando recibe un listado de episodios que no es iterable, lanza un =AssertionError=
+- Cuando recibe un listado de episodios que no tiene objetos =franceinter.episodes.Episode=, lanza un =AssertionError=
+- Cuando recibe un año que no es un =int=, lanza un =AssertionError=
+- Cuando recibe un año que es negativo, devuelve un =filter= vacío
+- Cuando recibe un mes que no es un =int=, lanza un =AssertionError=
+- Cuando recibe un mes que no está entre 1 y 12, lanza un =AssertionError=
+
+#+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_month.py
+import types
+from datetime import date as Date, timedelta as TimeDelta
+from franceinter.episodes.episodes_from_month import episodes_from_month
+from franceinter.episodes.tests.examples_episodes_from_month import *
+
+def test_episodes_from_month():
+    year = 1987
+    month = 2
+    episodes = some_episodes_with_month(year, month)
+    result = episodes_from_month(episodes, year, month)
+    assert isinstance(result, filter)
+    assert (len(list(result)) == 2)
+
+def test_episodes_from_another_month():
+    year = 1987
+    month = 5
+    episodes = episodes_with_month(5, year, month)
+    another_year = 1948
+    result = episodes_from_month(episodes, another_year, month)
+    assert isinstance(result, filter)
+    assert (len(list(result)) == 0)
+
+def test_episodes_not_iterable():
+    episodes = episodes_not_iterable()
+    try:
+        year = 1987
+        month = 4
+        result = episodes_from_month(episodes, year, month)
+    except AssertionError:
+        assert True
+
+def test_invalid_episodes():
+    episodes = invalid_episodes()
+    try:
+        year = 1987
+        month = 4
+        result = episodes_from_month(episodes, year, month)
+        assert (len(list(result)) == 0)
+    except AssertionError:
+        assert True
+
+def test_invalid_year():
+    year = 1987
+    month = 4
+    episodes = episodes_with_month(5, year, month)
+    inv_year = invalid_year()
+    try:
+        result = episodes_from_month(episodes, inv_year, month)
+    except AssertionError:
+        assert True
+
+def test_negative_year():
+    year = 1987
+    month = 4
+    episodes = episodes_with_month(5, year, month)
+    neg_year = -998
+    result = episodes_from_month(episodes, neg_year, month)
+    assert isinstance(result, filter)
+    assert (len(list(result)) == 0)
+
+def test_invalid_month():
+    year = 1987
+    month = 4
+    episodes = episodes_with_month(5, year, month)
+    inv_month = invalid_month()
+    try:
+        result = episodes_from_month(episodes, year, inv_month)
+    except AssertionError:
+        assert True
+
+def test_negative_month():
+    year = 1987
+    month = 4
+    episodes = episodes_with_month(5, year, month)
+    negative_month = -5
+    try:
+        result = episodes_from_month(episodes, year, negative_month)
+    except AssertionError:
+        assert True
+
+def test_month_over_12():
+    year = 1987
+    month = 4
+    episodes = episodes_with_month(5, year, month)
+    month_over_12 = 18
+    try:
+        result = episodes_from_month(episodes, year, month_over_12)
+    except AssertionError:
+        assert True
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/episodes/tests/test_episodes_from_month.py
 #+end_src
 
 *** episodes_between_dates
