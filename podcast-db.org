@@ -496,7 +496,7 @@ Podcast(title='Quand la musique donne (été 2012)', url='https://www.franceinte
 
 - [X] =podcasts_from_query= :: Analizar el cambio de nombre por =podcasts_matching_query=, que expresa mejor que la función es un filtro de podcasts usando una palabra clave. Pensándolo bien, el nombre de que mejor expresa lo que hace la función es =podcasts_with_keyword=
 
-- [ ] =podcasts_from_query= :: Agregar que no distinga entre los caracteres acentuados (á vs a) al buscar. Por ejemplo, si la palabra buscada es =té= debería devolver los podcasts que contengan tanto =té= como =te=
+- [ ] =podcasts_with_keyword= :: Agregar que no distinga entre los caracteres acentuados (á vs a) al buscar. Por ejemplo, si la palabra buscada es =té= debería devolver los podcasts que contengan tanto =té= como =te=
 
 *** Submódulos
 **** Podcasts
@@ -2270,7 +2270,7 @@ import requests
 import requests_cache
 from franceinter.podcasts.podcast import Podcast
 from franceinter.episodes.episodes_from_podcast import episodes_from_podcast
-from franceinter.episodes.episodes_from_query import episodes_from_query
+from franceinter.episodes.episodes_with_keyword import episodes_with_keyword
 
 requests_cache.install_cache()
 
@@ -2279,7 +2279,7 @@ url = "https://www.franceinter.fr/emissions/sur-les-epaules-de-darwin"
 author = "Jean-Claude Ameisen"
 podcast = Podcast(title, url, author)
 episodes = episodes_from_podcast(podcast)
-choco_episodes = episodes_from_query(episodes, "chocolat")
+choco_episodes = episodes_with_keyword(episodes, "chocolat")
 first_five = itertools.islice(choco_episodes, 5)
 for episode in first_five:
     print(episode)
@@ -2396,7 +2396,7 @@ __all__ = [
     "episodes_from_url",
     "episodes_from_filename",
     "episodes_from_podcast",
-    "episodes_from_query",
+    "episodes_with_keyword",
     "episodes_between_dates",
     "episodes_from_year",
     "episodes_from_month",
@@ -2421,7 +2421,7 @@ __all__ = [
     "test_episodes_from_url", 
     "test_episodes_from_filename", 
     "test_episodes_from_podcast", 
-    "test_episodes_from_query", 
+    "test_episodes_with_keyword", 
     "test_episodes_between_dates", 
     "test_episodes_from_year", 
     "test_episodes_from_month", 
@@ -2439,7 +2439,7 @@ __all__ = [
     "examples_episodes_from_url",
     "examples_episodes_from_filename",
     "examples_episodes_from_podcast",
-    "examples_episodes_from_query",
+    "examples_episodes_with_keyword",
     "examples_episodes_between_dates",
     "examples_episodes_from_year",
     "examples_episodes_from_month",
@@ -2583,7 +2583,7 @@ def http_server():
 pytest ./franceinter/episodes/tests/test_episodes_from_podcast.py
 #+end_src
 
-*** episodes_from_query
+*** episodes_with_keyword
 **** 1. Objetivo
 
 Filtrar un listado de episodios y obtener solamente los que contienen una palabra clave en el título
@@ -2604,7 +2604,7 @@ Para el listado de episodios vamos a recibir cualquier objeto que sea iterable, 
 - Un listado de episodios que no tiene objetos =franceinter.episodes.Episode=
 - Una query que no es un =str=
 
-#+begin_src python :tangle franceinter/episodes/tests/examples_episodes_from_query.py
+#+begin_src python :tangle franceinter/episodes/tests/examples_episodes_with_keyword.py
 import random
 from franceinter.episodes.episode import Episode
 
@@ -2627,7 +2627,7 @@ def episodes_not_iterable():
 def invalid_episodes():
     return range(0,10)
 
-def invalid_query():
+def invalid_keyword():
     return 42
 
 def new_episode():
@@ -2643,45 +2643,45 @@ def new_episode():
 
 #+begin_src python
 
-def episodes_from_query(episodes, query):
+def episodes_from_with_keyword(episodes, keyword):
     # validar que los episodios sean iterables
-    # validar que la query sea un str
+    # validar que la keyword sea un str
     # validar que cada episodio sea un Episode
     # filtrar los episodios con una función que devuelva true 
-    # si el título contiene la query
+    # si el título contiene la palabra clave
 
 #+end_src
 
 **** 5. Definición
 
-#+begin_src python :tangle franceinter/episodes/episodes_from_query.py
+#+begin_src python :tangle franceinter/episodes/episodes_with_keyword.py
 import re
 from franceinter.episodes.episode import Episode
 
-def episodes_from_query(episodes, query):
+def episodes_with_keyword(episodes, keyword):
     try:
         it = iter(episodes)
     except TypeError:
         assert False, invalid_episodes(episodes)
-    assert isinstance(query, str), invalid_query(query)
+    assert isinstance(keyword, str), invalid_keyword(keyword)
     valid_episodes = filter(is_episode, episodes)
-    contains_query = query_matcher(query)
-    return filter(contains_query, valid_episodes)
+    contains_keyword = keyword_matcher(keyword)
+    return filter(contains_keyword, valid_episodes)
 
 def is_episode(episode):
     assert isinstance(episode, Episode), invalid_episode(episode)
     return True
     
-def query_matcher(query):
+def keyword_matcher(keyword):
     def matcher(episode):
-        return re.search(query, episode.title, re.IGNORECASE)
+        return re.search(keyword, episode.title, re.IGNORECASE)
     return matcher
     
 def invalid_episodes(episodes):
     return "episodes parameter must be iterable, received %s instead" % type(episodes)
 
-def invalid_query(query):
-    return "query parameter must be a string, received %s instead" % type(query)
+def invalid_keyword(keyword):
+    return "keyword parameter must be a string, received %s instead" % type(keyword)
 
 def invalid_episode(episode):
     return "episode parameter must be an Episode, received %s instead" % type(episode)
@@ -2696,43 +2696,43 @@ def invalid_episode(episode):
 - Un listado de episodios que no tiene objetos =franceinter.episodes.Episode=, lanza un =AssertionError=
 - Una query que no es un =str=, lanza un =AssertionError=
 
-#+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_query.py
+#+begin_src python :tangle franceinter/episodes/tests/test_episodes_with_keyword.py
 import types
-from franceinter.episodes.episodes_from_query import episodes_from_query
-from franceinter.episodes.tests.examples_episodes_from_query import *
+from franceinter.episodes.episodes_with_keyword import episodes_with_keyword
+from franceinter.episodes.tests.examples_episodes_with_keyword import *
 
 def test_episodes_with_word_in_title():
     episodes = episodes_with_word_in_title("radio")
-    result = episodes_from_query(episodes, "radio")
+    result = episodes_with_keyword(episodes, "radio")
     assert isinstance(result, filter)
     assert (len(list(result)) == 2)
 
 def test_episodes_without_word():
     episodes = some_episodes(5)
-    result = episodes_from_query(episodes, "radio")
+    result = episodes_with_keyword(episodes, "radio")
     assert isinstance(result, filter)
     assert (len(list(result)) == 0)
 
 def test_episodes_not_iterable():
     episodes = episodes_not_iterable()
     try:
-        result = episodes_from_query(episodes, "radio")
+        result = episodes_with_keyword(episodes, "radio")
     except AssertionError:
         assert True
 
 def test_invalid_episodes():
     episodes = invalid_episodes()
     try:
-        result = episodes_from_query(episodes, "radio")
+        result = episodes_with_keyword(episodes, "radio")
         assert (len(list(result)) == 0)
     except AssertionError:
         assert True
 
 def test_invalid_query():
     episodes = some_episodes(10)
-    query = invalid_query()
+    keyword = invalid_keyword()
     try:
-        result = episodes_from_query(episodes, query)
+        result = episodes_with_keyword(episodes, keyword)
     except AssertionError:
         assert True
 
@@ -2741,7 +2741,7 @@ def test_invalid_query():
 ***** Run tests
 
 #+begin_src sh
-pytest franceinter/episodes/tests/test_episodes_from_query.py
+pytest franceinter/episodes/tests/test_episodes_with_keyword.py
 #+end_src
 
 *** episodes_from_year
