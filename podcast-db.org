@@ -458,13 +458,13 @@ import itertools
 import requests
 import requests_cache
 from franceinter.podcasts.podcasts_from_url import podcasts_from_url
-from franceinter.podcasts.podcasts_from_query import podcasts_from_query
+from franceinter.podcasts.podcasts_with_keyword import podcasts_with_keyword
 
 requests_cache.install_cache()
 
 url = "https://www.franceinter.fr/emissions/"
 podcasts = podcasts_from_url(url)
-music_podcasts = podcasts_from_query(podcasts, "musique")
+music_podcasts = podcasts_with_keyword(podcasts, "musique")
 first_five = itertools.islice(music_podcasts, 5)
 for podcast in first_five:
     print(podcast)
@@ -494,7 +494,7 @@ Podcast(title='Quand la musique donne (été 2012)', url='https://www.franceinte
 
 - [ ] =podcasts_from_filename= :: Se podrían matchear los errores de lectura del archivo con los códigos de la respuesta HTTP (404 si no se encuentra, 500 si hubo un error de I/O, etc)
 
-- [ ] =podcasts_from_query= :: Analizar el cambio de nombre por =podcasts_matching_query=, que expresa mejor que la función es un filtro de podcasts usando una palabra clave. Pensándolo bien, el nombre de que mejor expresa lo que hace la función es =podcasts_with_keyword=
+- [X] =podcasts_from_query= :: Analizar el cambio de nombre por =podcasts_matching_query=, que expresa mejor que la función es un filtro de podcasts usando una palabra clave. Pensándolo bien, el nombre de que mejor expresa lo que hace la función es =podcasts_with_keyword=
 
 - [ ] =podcasts_from_query= :: Agregar que no distinga entre los caracteres acentuados (á vs a) al buscar. Por ejemplo, si la palabra buscada es =té= debería devolver los podcasts que contengan tanto =té= como =te=
 
@@ -512,7 +512,7 @@ __all__ = [
     "podcasts_from_response", 
     "podcasts_from_url", 
     "podcasts_from_filename", 
-    "podcasts_from_query",
+    "podcasts_with_keyword",
     "podcast"
 ]
 #+end_src
@@ -530,7 +530,7 @@ __all__ = [
     "test_podcasts_from_response", 
     "test_podcasts_from_url", 
     "test_podcasts_from_filename", 
-    "test_podcasts_from_query",
+    "test_podcasts_with_keyword",
     "examples_author_from_tag", 
     "examples_title_from_tag",
     "examples_url_from_tag",
@@ -540,7 +540,7 @@ __all__ = [
     "examples_podcasts_from_response",
     "examples_podcasts_from_url",
     "examples_podcasts_from_filename",
-    "examples_podcasts_from_query"
+    "examples_podcasts_with_keyword"
 ]
 #+end_src
 
@@ -699,7 +699,7 @@ def http_server():
 pytest franceinter/podcasts/tests/test_podcasts_from_url.py
 #+end_src
 
-*** podcasts_from_query
+*** podcasts_with_keyword
 **** 1. Objetivo
 
 Filtrar un listado de podcasts y obtener solamente los que contienen una palabra clave en el título o en el autor
@@ -721,7 +721,7 @@ Para el listado de podcasts vamos a recibir cualquier objeto que sea iterable, c
 - Un listado de podcasts que no tiene objetos =franceinter.podcasts.Podcast=
 - Una query que no es un =str=
 
-#+begin_src python :tangle franceinter/podcasts/tests/examples_podcasts_from_query.py
+#+begin_src python :tangle franceinter/podcasts/tests/examples_podcasts_with_keyword.py
 import random
 from franceinter.podcasts.podcast import Podcast
 
@@ -758,7 +758,7 @@ def podcasts_not_iterable():
 def invalid_podcasts():
     return range(0,10)
 
-def invalid_query():
+def invalid_keyword():
     return 42
 
 def new_podcast():
@@ -773,7 +773,7 @@ def new_podcast():
 
 #+begin_src python
 
-def podcasts_from_query(podcasts, query):
+def podcasts_with_keyword(podcasts, query):
     # validar que los podcasts sean iterables
     # validar que la query sea un str
     # validar que cada podcast sea un Podcast
@@ -784,39 +784,39 @@ def podcasts_from_query(podcasts, query):
 
 **** 5. Definición
 
-#+begin_src python :tangle franceinter/podcasts/podcasts_from_query.py
+#+begin_src python :tangle franceinter/podcasts/podcasts_with_keyword.py
 import re
 from franceinter.podcasts.podcast import Podcast
 
-def podcasts_from_query(podcasts, query):
+def podcasts_with_keyword(podcasts, keyword):
     # validar que los podcasts sean iterables
     try:
         it = iter(podcasts)
     except TypeError:
         assert False, invalid_podcasts(podcasts)
-    # validar que la query sea un str
-    assert isinstance(query, str), invalid_query(query)
+    # validar que la keyword sea un str
+    assert isinstance(keyword, str), invalid_keyword(keyword)
     # validar que cada podcast sea un Podcast
     valid_podcasts = filter(is_podcast, podcasts)
     # filtrar los podcasts que contienen la query
-    contains_query = query_matcher(query)
-    return filter(contains_query, valid_podcasts)
+    contains_keyword = keyword_matcher(keyword)
+    return filter(contains_keyword, valid_podcasts)
 
 def is_podcast(podcast):
     assert isinstance(podcast, Podcast), invalid_podcast(podcast)
     return True
     
-def query_matcher(query):
+def keyword_matcher(keyword):
     def matcher(podcast):
-        return (re.search(query, podcast.title, re.IGNORECASE) 
-                or re.search(query, podcast.author, re.IGNORECASE))
+        return (re.search(keyword, podcast.title, re.IGNORECASE) 
+                or re.search(keyword, podcast.author, re.IGNORECASE))
     return matcher
     
 def invalid_podcasts(podcasts):
     return "podcasts parameter must be iterable, received %s instead" % type(podcasts)
 
-def invalid_query(query):
-    return "query parameter must be a string, received %s instead" % type(query)
+def invalid_keyword(keyword):
+    return "keyword parameter must be a string, received %s instead" % type(keyword)
 
 def invalid_podcast(podcast):
     return "podcast parameter must be a Podcast, received %s instead" % type(podcast)
@@ -832,49 +832,49 @@ def invalid_podcast(podcast):
 - Cuando recibe un listado de podcasts que no tiene objetos =franceinter.podcasts.Podcast=, lanza un =AssertionError=
 - Cuando recibe una query que no es un =str=, lanza un =AssertionError=
 
-#+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_query.py
+#+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_with_keyword.py
 import types
-from franceinter.podcasts.podcasts_from_query import podcasts_from_query
-from franceinter.podcasts.tests.examples_podcasts_from_query import *
+from franceinter.podcasts.podcasts_with_keyword import podcasts_with_keyword
+from franceinter.podcasts.tests.examples_podcasts_with_keyword import *
 
 def test_podcasts_with_word_in_title():
     podcasts = podcasts_with_word_in_title("radio")
-    result = podcasts_from_query(podcasts, "radio")
+    result = podcasts_with_keyword(podcasts, "radio")
     assert isinstance(result, filter)
     assert (len(list(result)) == 2)
 
 def test_podcasts_with_word_in_author():
     podcasts = podcasts_with_word_in_author("radio")
-    result = podcasts_from_query(podcasts, "radio")
+    result = podcasts_with_keyword(podcasts, "radio")
     assert isinstance(result, filter)
     assert (len(list(result)) == 3)
 
 def test_podcasts_without_word():
     podcasts = some_podcasts(8)
-    result = podcasts_from_query(podcasts, "radio")
+    result = podcasts_with_keyword(podcasts, "radio")
     assert isinstance(result, filter)
     assert (len(list(result)) == 0)
 
 def test_podcasts_not_iterable():
     podcasts = podcasts_not_iterable()
     try:
-        result = podcasts_from_query(podcasts, "radio")
+        result = podcasts_with_keyword(podcasts, "radio")
     except AssertionError:
         assert True
 
 def test_invalid_podcasts():
     podcasts = invalid_podcasts()
     try:
-        result = podcasts_from_query(podcasts, "radio")
+        result = podcasts_with_keyword(podcasts, "radio")
         assert (len(list(result)) == 0)
     except AssertionError:
         assert True
 
 def test_invalid_query():
     podcasts = some_podcasts(10)
-    query = invalid_query()
+    keyword = invalid_keyword()
     try:
-        result = podcasts_from_query(podcasts, query)
+        result = podcasts_with_keyword(podcasts, keyword)
     except AssertionError:
         assert True
 
@@ -883,7 +883,7 @@ def test_invalid_query():
 ***** Run tests
 
 #+begin_src sh
-pytest franceinter/podcasts/tests/test_podcasts_from_query.py
+pytest franceinter/podcasts/tests/test_podcasts_with_keyword.py
 #+end_src
 
 *** podcasts_from_response
