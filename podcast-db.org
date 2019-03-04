@@ -2184,8 +2184,8 @@ Por lo que se puede ver en el HTML, muchos de los datos que necesitamos se encue
 - [X] Filtrar el listado por una palabra clave
 - [X] Filtrar el listado por intervalo de fechas
 - [X] Filtrar el listado por año
-- [ ] Filtrar el listado por mes
-- [ ] Filtrar el listado por día
+- [X] Filtrar el listado por mes
+- [X] Filtrar el listado por día
 
 
 ***** Obtener el listado de los episodios de un podcast
@@ -2376,6 +2376,8 @@ AssertionError: received tag has an invalid episode URL
  <button class="replay-button playable" data-clip-type="reecoute" data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-25-juin-2011" data-diffusion-title='"Entendre leurs voix" avec Florence Aubenas' data-diffusion-uuid="136e81f2-a7b2-11e0-b8ee-842b2b72cd1d" data-duration="54 min" data-duration-seconds="3241" data-emission-business-reference="16177" data-emission-title="Sur les épaules de Darwin" data-emission-uuid="6f540125-eb9f-11e1-a7b7-782bcb76618d" data-end-time="1551032275" data-extract-id="" data-extract-title="" data-is-aod="1" data-next-media-info="/get_next_audio/136e81f2-a7b2-11e0-b8ee-842b2b72cd1d" data-start-time="1551029034" data-theme="" data-theme-uuid="" data-url="https://s3-eu-west-1.amazonaws.com/cruiser-production/static/inter/sons/2011/07/s27/carrefour (2).mp3" data-uuid="0962e356-a7b2-11e0-b8ee-842b2b72cd1d" data-xiti-action="C" data-xiti-id="0962e356" data-xiti-level="4" data-xiti-libelle='Reecouter::Sur les épaules de Darwin-"Entendre leurs voix" avec Florence Aubenas-0962e356' data-xiti-trackable="true" data-xiti-type="A" title='réecouter "Entendre leurs voix" avec Florence Aubenas'><svg class="icon replay-button-icon icon-play-player"><use xlink:href="#icon_player-play" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg><svg class="icon replay-button-icon icon-pause-player"><use xlink:href="#icon_player-pause" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg><svg class="icon replay-button-icon icon-play"><use xlink:href="#icon_play" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg><svg class="icon replay-button-icon icon-pause"><use xlink:href="#icon_pause" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg><svg class="icon replay-button-icon icon-play-disabled"><use xlink:href="#icon_playdisabled" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg><svg class="icon replay-button-icon icon-direct-audio"><use xlink:href="#icon_direct-audio" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg></button>
 #+end_src
 
+- [ ] Refactor de =episodes_from_year=, =episodes_from_month= y =episodes_from_day= para que usen =episodes_between_dates=
+
 *** Submódulos
 **** Episodes
 
@@ -2397,7 +2399,8 @@ __all__ = [
     "episodes_from_query",
     "episodes_between_dates",
     "episodes_from_year",
-    "episodes_from_month"
+    "episodes_from_month",
+    "episodes_from_day"
 ]
 #+end_src
 
@@ -2422,6 +2425,7 @@ __all__ = [
     "test_episodes_between_dates", 
     "test_episodes_from_year", 
     "test_episodes_from_month", 
+    "test_episodes_from_day", 
     "examples_title_from_tag",
     "examples_url_from_tag",
     "examples_date_from_tag",
@@ -2438,7 +2442,8 @@ __all__ = [
     "examples_episodes_from_query",
     "examples_episodes_between_dates",
     "examples_episodes_from_year",
-    "examples_episodes_from_month"
+    "examples_episodes_from_month",
+    "examples_episodes_from_day"
 ]
 #+end_src
 
@@ -2979,7 +2984,7 @@ def new_episode(year, month):
 
 #+begin_src python
 
-def episodes_from_year(episodes, year, month):
+def episodes_from_month(episodes, year, month):
     # validar que los episodios sean iterables
     # validar que el año sea un int > 0
     # validar que el mes sea un int entre 1 y 12
@@ -3145,6 +3150,301 @@ def test_month_over_12():
 
 #+begin_src sh
 pytest franceinter/episodes/tests/test_episodes_from_month.py
+#+end_src
+
+*** episodes_from_day
+**** 1. Objetivo
+
+Filtrar un listado de episodios y obtener solamente los que fueron publicados en un día determinado
+
+**** 2. Firma
+
+La función recibe un listado de objetos =franceinter.episodes.Episode= y tres números enteros con el año, el mes y el día respectivamente, y devuelve un =filter= de objetos =franceinter.episodes.Episode=
+
+**** 3. Ejemplos
+
+- Un listado de 5 episodios en el que hay 2 que fueron publicados en un día dado
+- Un listado de 5 episodios en el que ninguno fue publicado en un día dado
+- Un listado de episodios que no es iterable
+- Un listado de episodios que no tiene objetos =franceinter.episodes.Episode=
+- Un año que no es un =int=
+- Un mes que no es un =int=
+- Un día que no es un =int=
+- Un año que es negativo
+- Un mes que es negativo
+- Un día que es negativo
+- Un mes que es mayor a 12
+- Un día que es mayor a 31
+
+#+begin_src python :tangle franceinter/episodes/tests/examples_episodes_from_day.py
+import random
+from datetime import date as Date, timedelta as TimeDelta
+from franceinter.episodes.episode import Episode
+
+def some_episodes_with_day(year, month, day):
+    other_year = year + 5
+    episodes = list(episodes_with_day(3, other_year, month, day))
+    ep = new_episode(year, month, day)
+    episodes.append(ep)
+    episodes.append(ep)
+    random.shuffle(episodes)
+    return episodes
+
+def episodes_with_day(how_many, year, month, day):
+    for i in range(0, how_many):
+        yield new_episode(year, month, day)
+
+def episodes_not_iterable():
+    return 42
+        
+def invalid_episodes():
+    return range(0,10)
+
+def invalid_year():
+    return "This is not a year"
+
+def invalid_month():
+    return "This is not a month"
+
+def invalid_day():
+    return "This is not a day"
+
+def new_episode(year, month, day):
+    title = "Este es un episodio de ejemplo"
+    url = "http://podcastplace.com/shows/my-podcast/season-01-episode-01.mp3"
+    date = Date(year, month, day)
+    duration = 3265
+    return Episode(title, url, date, duration)
+
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+
+def episodes_from_day(episodes, year, month, day):
+    # validar que los episodios sean iterables
+    # validar que el año sea un int > 0
+    # validar que el mes sea un int entre 1 y 12
+    # validar que el mes sea un int entre 1 y 31
+    # filtrar los episodios con una función que devuelva true 
+    # si la fecha tiene el día correcto
+
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle franceinter/episodes/episodes_from_day.py
+from franceinter.episodes.episode import Episode
+
+def episodes_from_day(episodes, year, month, day):
+    try:
+        it = iter(episodes)
+    except TypeError:
+        assert False, invalid_episodes(episodes)
+    assert isinstance(year, int), invalid_year(year)
+    assert month_is_valid(month), invalid_month(month)
+    assert day_is_valid(day), invalid_day(day)
+    valid_episodes = filter(is_episode, episodes)
+    is_from_day = day_filter(year, month, day)
+    return filter(is_from_day, valid_episodes)
+
+def is_episode(episode):
+    assert isinstance(episode, Episode), invalid_episode(episode)
+    return True
+    
+def day_filter(year, month, day):
+    def matcher(episode):
+        return (
+            (episode.date.year == year)
+            and (episode.date.month == month)
+            and (episode.date.day == day)
+        )
+    return matcher
+    
+def month_is_valid(month):
+    return (
+        isinstance(month, int) 
+        and (month > 0)
+        and (month < 13)
+    )
+
+def day_is_valid(day):
+    return (
+        isinstance(day, int) 
+        and (day > 0)
+        and (day < 32)
+    )
+    
+def invalid_episodes(episodes):
+    return "episodes parameter must be iterable, received %s instead" % type(episodes)
+
+def invalid_year(year):
+    return "year parameter must be an int, received %s instead" % type(year)
+
+def invalid_month(month):
+    return "month parameter must be an int bewtween 1 and 12, received %s instead" % str(month)
+
+def invalid_day(day):
+    return "day parameter must be an int bewtween 1 and 31, received %s instead" % str(day)
+
+def invalid_episode(episode):
+    return "episode parameter must be an Episode, received %s instead" % type(episode)
+
+#+end_src
+
+**** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un listado de 5 episodios en el que hay 2 que fueron publicados en un mes dado, devuelve un =filter= con los 2 episodios que cumplen la condición
+- Cuando recibe un listado de 5 episodios en el que ninguno fue publicado en un mes dado, devuelve un =filter= vacío
+- Cuando recibe un listado de episodios que no es iterable, lanza un =AssertionError=
+- Cuando recibe un listado de episodios que no tiene objetos =franceinter.episodes.Episode=, lanza un =AssertionError=
+- Cuando recibe un año que no es un =int=, lanza un =AssertionError=
+- Cuando recibe un año que es negativo, devuelve un =filter= vacío
+- Cuando recibe un mes que no es un =int=, lanza un =AssertionError=
+- Cuando recibe un mes que no está entre 1 y 12, lanza un =AssertionError=
+- Cuando recibe un día que no es un =int=, lanza un =AssertionError=
+- Cuando recibe un día que no está entre 1 y 31, lanza un =AssertionError=
+
+#+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_day.py
+import types
+from datetime import date as Date, timedelta as TimeDelta
+from franceinter.episodes.episodes_from_day import episodes_from_day
+from franceinter.episodes.tests.examples_episodes_from_day import *
+
+def test_episodes_from_day():
+    year = 1987
+    month = 2
+    day = 23
+    episodes = some_episodes_with_day(year, month, day)
+    result = episodes_from_day(episodes, year, month, day)
+    assert isinstance(result, filter)
+    assert (len(list(result)) == 2)
+
+def test_episodes_from_another_day():
+    year = 1987
+    month = 5
+    day = 21
+    episodes = episodes_with_day(5, year, month, day)
+    another_year = 1948
+    result = episodes_from_day(episodes, another_year, month, day)
+    assert isinstance(result, filter)
+    assert (len(list(result)) == 0)
+
+def test_episodes_not_iterable():
+    episodes = episodes_not_iterable()
+    try:
+        year = 1987
+        month = 4
+        day = 7
+        result = episodes_from_day(episodes, year, month, day)
+    except AssertionError:
+        assert True
+
+def test_invalid_episodes():
+    episodes = invalid_episodes()
+    try:
+        year = 1987
+        month = 4
+        day = 7
+        result = episodes_from_day(episodes, year, month, day)
+        assert (len(list(result)) == 0)
+    except AssertionError:
+        assert True
+
+def test_invalid_year():
+    year = 1987
+    month = 4
+    day = 7
+    episodes = episodes_with_day(5, year, month, day)
+    inv_year = invalid_year()
+    try:
+        result = episodes_from_day(episodes, inv_year, month, day)
+    except AssertionError:
+        assert True
+
+def test_negative_year():
+    year = 1987
+    month = 4
+    day = 7
+    episodes = episodes_with_day(5, year, month, day)
+    neg_year = -998
+    result = episodes_from_day(episodes, neg_year, month, day)
+    assert isinstance(result, filter)
+    assert (len(list(result)) == 0)
+
+def test_invalid_month():
+    year = 1987
+    month = 4
+    day = 7
+    episodes = episodes_with_day(5, year, month, day)
+    inv_month = invalid_month()
+    try:
+        result = episodes_from_day(episodes, year, inv_month, day)
+    except AssertionError:
+        assert True
+
+def test_negative_month():
+    year = 1987
+    month = 4
+    day = 7
+    episodes = episodes_with_day(5, year, month, day)
+    negative_month = -5
+    try:
+        result = episodes_from_day(episodes, year, negative_month, day)
+    except AssertionError:
+        assert True
+
+def test_month_over_12():
+    year = 1987
+    month = 4
+    day = 7
+    episodes = episodes_with_day(5, year, month, day)
+    month_over_12 = 18
+    try:
+        result = episodes_from_day(episodes, year, month_over_12, day)
+    except AssertionError:
+        assert True
+
+def test_invalid_day():
+    year = 1987
+    month = 4
+    day = 7
+    episodes = episodes_with_day(5, year, month, day)
+    inv_day = invalid_day()
+    try:
+        result = episodes_from_day(episodes, year, month, inv_day)
+    except AssertionError:
+        assert True
+
+def test_negative_day():
+    year = 1987
+    month = 4
+    day = 7
+    episodes = episodes_with_day(5, year, month, day)
+    negative_day = -5
+    try:
+        result = episodes_from_day(episodes, year, month, negative_day)
+    except AssertionError:
+        assert True
+
+def test_day_over_31():
+    year = 1987
+    month = 4
+    day = 7
+    episodes = episodes_with_day(5, year, month, day)
+    day_over_31 = 43
+    try:
+        result = episodes_from_day(episodes, year, month, day_over_31)
+    except AssertionError:
+        assert True
+
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest franceinter/episodes/tests/test_episodes_from_day.py
 #+end_src
 
 *** episodes_between_dates
@@ -5530,7 +5830,7 @@ Voy a usar la licencia GPLv3 porque me interesa que los trabajos derivados de es
 
 ** GPLv3
 
-#+begin_src text :tangle LICENSE
+#+begin_src text
                     GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
 
