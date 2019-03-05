@@ -20,11 +20,12 @@
 - [[#setup][Setup]]
 - [[#interface-desde-línea-de-comandos][Interface desde línea de comandos]]
   - [[#diseño-1][Diseño]]
+  - [[#wishlist][Wishlist]]
+  - [[#mejoras][Mejoras]]
   - [[#implementación][Implementación]]
 - [[#sources][Sources]]
   - [[#diseño-2][Diseño]]
-  - [[#submódulos][Submódulos]]
-  - [[#list_sources][list_sources]]
+  - [[#implementación-1][Implementación]]
 - [[#france-inter][France Inter]]
   - [[#módulos][Módulos]]
   - [[#podcasts][Podcasts]]
@@ -129,12 +130,13 @@ Quiero que mi base de datos pueda consultar las siguientes fuentes de podcasts:
 - RSS feeds
 
 ** Funcionalidades
-*** Obtención de podcasts y episodios
+*** Consulta de podcasts y episodios
 
 - [X] Listar las fuentes de podcasts disponibles
 - [X] Listar los podcasts de una fuente
+- [X] Consultar el detalle de un podcast
 - [X] Listar los episodios de un podcast
-- [X] Obtener el detalle de un episodio
+- [X] Consultar el detalle de un episodio
 - [X] Filtrar los episodios de un podcast según algún criterio (año, mes, palabra clave)
 
 *** Descarga y almacenamiento local
@@ -154,13 +156,13 @@ Quiero que mi base de datos pueda consultar las siguientes fuentes de podcasts:
 *** 0.1.0 - 2019-03-01
 
 - Versión inicial
-- Obtención de podcasts y episodios
+- Consulta de podcasts y episodios
 - Fuente FranceInter
 
 ** Roadmap
 *** 1.0.0
 
-- Obtención de podcasts y episodios de una fuente (FranceInter)
+- Consulta de podcasts y episodios de una fuente (FranceInter)
 - Guardar las fuentes, los podcasts y sus episodios en una base de datos local
 - Interface desde línea de comandos (CLI)
 
@@ -252,6 +254,7 @@ venv
 
 * Interface desde línea de comandos
 ** Diseño
+*** Consulta de podcasts y episodios
 
 #+begin_src sh :eval never
 
@@ -276,12 +279,68 @@ podcast-db --show-episode franceinter/darwin/2018-04-16
 
 #+end_src
 
+** Wishlist
+
+- [ ] Validar los argumentos recibidos
+- [ ] Generar el comando a ejecutar a partir de los argumentos
+- [ ] Listar las fuentes de podcasts
+- [ ] Listar los podcasts de una fuente
+- [ ] Mostrar el detalle de un podcast
+- [ ] Listar los episodios de un podcast
+- [ ] Mostrar el detalle de un episodio
+- [ ] Mostrar el mensaje de ayuda
+- [ ] Mostrar el mensaje con la versión
+
+** Mejoras
 ** Implementación
-*** TODO Listar fuentes
-*** TODO Listar podcasts de una fuente
-*** TODO Ver detalle de un podcast
-*** TODO Listar episodios de un podcast 
-*** TODO Ver detalle de un episodio
+*** Submódulos
+**** cli
+
+ #+begin_src python :tangle cli/__init__.py
+__all__ = [
+    "command_from_arguments"
+]
+ #+end_src
+
+**** Tests
+
+ #+begin_src python :tangle sources/tests/__init__.py
+__all__ = [
+    "examples_command_from_arguments"
+    "test_command_from_arguments"
+]
+ #+end_src
+
+*** TODO arguments_from_cli
+**** 1. Objetivo
+**** 2. Firma
+**** 3. Ejemplos
+**** 4. Boceto
+**** 5. Definición
+**** 6. Casos de prueba
+*** TODO command_from_arguments
+**** 1. Objetivo
+**** 2. Firma
+**** 3. Ejemplos
+**** 4. Boceto
+**** 5. Definición
+**** 6. Casos de prueba
+*** TODO source_from_arguments
+**** 1. Objetivo
+**** 2. Firma
+**** 3. Ejemplos
+**** 4. Boceto
+**** 5. Definición
+**** 6. Casos de prueba
+*** TODO module_from_source
+*** TODO output_from_command
+*** TODO output_from_source_list
+*** TODO output_from_podcast_list
+*** TODO output_from_podcast_details
+*** TODO output_from_episode_list
+*** TODO output_from_episode_details
+*** TODO output_from_help
+*** TODO output_from_version
 * Sources
 ** Diseño
 
@@ -289,8 +348,9 @@ podcast-db --show-episode franceinter/darwin/2018-04-16
 
 Por el momento, la única fuente disponible es FranceInter
 
-** Submódulos
-*** Sources
+** Implementación
+*** Submódulos
+**** Sources
 
 #+begin_src python :tangle sources/__init__.py
 __all__ = [
@@ -298,7 +358,7 @@ __all__ = [
 ]
 #+end_src
 
-*** Tests
+**** Tests
 
 #+begin_src python :tangle sources/tests/__init__.py
 __all__ = [
@@ -306,12 +366,12 @@ __all__ = [
 ]
 #+end_src
 
-** list_sources
-*** 1. Objetivo
+*** list_sources
+**** 1. Objetivo
 
 Obtener el listado de fuentes de podcasts disponibles.
 
-*** 2. Firma
+**** 2. Firma
 
 La función no recibe argumentos y devuelve una lista de objetos =sources.Source=
 
@@ -325,11 +385,11 @@ class Source:
         return "Source(name='%s', code='%s')" % (self.name, self.code)
 #+end_src
 
-*** 3. Ejemplos
+**** 3. Ejemplos
 
 Dado que la función no recibe argumentos, no es necesario confeccionar ejemplos.
 
-*** 4. Boceto
+**** 4. Boceto
 
 #+begin_src python
 def list_sources():
@@ -339,7 +399,7 @@ def list_sources():
     return sources
 #+end_src
 
-*** 5. Definición
+**** 5. Definición
 
 #+begin_src python :tangle sources/list_sources.py
 from sources.source import Source
@@ -350,7 +410,7 @@ def list_sources():
     return sources
 #+end_src
 
-*** 6. Casos de prueba
+**** 6. Casos de prueba
 
 - Caso exitoso, devuelve una lista de un solo elemento.
 
@@ -368,7 +428,7 @@ def test_sources_ok():
 
 #+end_src
 
-***** Run tests
+****** Run tests
 
 #+begin_src sh
 pytest sources/tests/test_list_sources.py
