@@ -243,6 +243,7 @@ This will generate the bundle in a subdirectory called dist.
 __pycache__
 .coverage
 cache.sqlite
+cli
 coverage
 downloads
 franceinter

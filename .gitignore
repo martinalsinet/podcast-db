@@ -3,6 +3,7 @@
 __pycache__
 .coverage
 cache.sqlite
+cli
 coverage
 downloads
 franceinter
