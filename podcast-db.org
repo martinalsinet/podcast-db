@@ -256,6 +256,12 @@ venv
 ** Diseño
 *** Consulta de podcasts y episodios
 
+Quiero que los comandos de consulta sean lo más claro y conciso posible. Tenemos básicamente dos operaciones, listar y ver el detalle, tanto para los podcasts como para los episodios. 
+
+En los listados se puede agregar el argumento =--with-keyword= que filtra por palabra clave y, para los episodios, también se puede filtrar por año con el argumento =--for-year= y por mes con =--for-month=.
+
+Para ver el detalle de un podcast o de un episodio se debe indicar un identificador. En el caso de los podcasts vamos a usar el nombre de la fuente (o su código) seguido de un slash y el identificador del podcast. Para identificar un episodio dentro de un determinado podcast, en principio, vamos a usar como identificador su fecha de publicación.
+
 #+begin_src sh :eval never
 
 # listar fuentes de podcasts
@@ -293,54 +299,47 @@ podcast-db --show-episode franceinter/darwin/2018-04-16
 
 ** Mejoras
 ** Implementación
-*** Submódulos
+*** Módulos
 **** cli
 
- #+begin_src python :tangle cli/__init__.py
+#+begin_src python :tangle cli/__init__.py
 __all__ = [
-    "command_from_arguments"
+    "commands", "query", "database"
 ]
- #+end_src
+#+end_src
 
-**** Tests
-
- #+begin_src python :tangle sources/tests/__init__.py
-__all__ = [
-    "examples_command_from_arguments"
-    "test_command_from_arguments"
-]
- #+end_src
-
-*** TODO arguments_from_cli
-**** 1. Objetivo
-**** 2. Firma
-**** 3. Ejemplos
-**** 4. Boceto
-**** 5. Definición
-**** 6. Casos de prueba
-*** TODO command_from_arguments
-**** 1. Objetivo
-**** 2. Firma
-**** 3. Ejemplos
-**** 4. Boceto
-**** 5. Definición
-**** 6. Casos de prueba
-*** TODO source_from_arguments
-**** 1. Objetivo
-**** 2. Firma
-**** 3. Ejemplos
-**** 4. Boceto
-**** 5. Definición
-**** 6. Casos de prueba
-*** TODO module_from_source
-*** TODO output_from_command
-*** TODO output_from_source_list
-*** TODO output_from_podcast_list
-*** TODO output_from_podcast_details
-*** TODO output_from_episode_list
-*** TODO output_from_episode_details
-*** TODO output_from_help
-*** TODO output_from_version
+*** Commands
+**** Submódulos
+**** TODO arguments_from_cli
+***** 1. Objetivo
+***** 2. Firma
+***** 3. Ejemplos
+***** 4. Boceto
+***** 5. Definición
+***** 6. Casos de prueba
+**** TODO command_from_arguments
+***** 1. Objetivo
+***** 2. Firma
+***** 3. Ejemplos
+***** 4. Boceto
+***** 5. Definición
+***** 6. Casos de prueba
+**** TODO module_from_source
+**** TODO output_from_command
+*** Query
+**** TODO output_from_source_list
+**** TODO output_from_podcast_list
+**** TODO output_from_podcast_details
+**** TODO output_from_episode_list
+**** TODO output_from_episode_details
+**** TODO output_from_help
+**** TODO output_from_version
+*** Storage
+**** TODO output_from_save_sources
+**** TODO output_from_save_podcasts
+**** TODO output_from_save_episodes
+**** TODO output_from_download_episodes
+*** Files
 * Sources
 ** Diseño
 
