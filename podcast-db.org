@@ -554,7 +554,7 @@ for podcast in first_five:
 
 Realizamos una prueba de concepto para determinar si se puede utilizar la frecuencia de las palabras que componen el título y el autor para asignarle un identificador único a cada podcast que no sea un código difícil de recordar.
 
-Encontramos que, de los 973 podcasts de France Inter hay 655 que tienen una palabra única en su título o autor que se puede utilizar como identificador
+Encontramos que, de los 973 podcasts de France Inter hay solamente 655 que tienen una palabra única en su título o autor que se pueda utilizar como identificador. Esto significa que no tendríamos un identificador único para los 318 podcasts restantes, por lo que *este método no nos sirve*.
 
 Ejemplos:
 
@@ -658,70 +658,69 @@ def duplicated_podcasts(keyword, how_many):
     return podcasts_with_duplicate_id(podcasts)
     
 
-#unique_stats()
+unique_stats()
 #podcasts = unique_podcasts("cheissoux", 200)
 #podcasts = podcast_slice("cheissoux", 200)
-podcasts = duplicated_podcasts("france", 30)
-print_identifier(podcasts)
+#podcasts = duplicated_podcasts("france", 30)
+#print_identifier(podcasts)
 
 #+end_src
 
 #+RESULTS:
 :results:
-Dans la playlist de France Inter - 
-id: playlist (4)
+Unique ID: 655
+Total: 973
+:end:
+
+***** Otra alternativa: Usar la parte única del URL del podcast
+
+Vemos que el URL es una propiedad única de un podcast, dado que dos podcasts no pueden tener el mismo URL. En el caso de France Inter, la parte única del URL de cada podcast es lo que le sigue a =https://www.franceinter.fr/emissions/=.
+
+Podríamos usar la parte única del URL para identificar al podcast.
+
+#+begin_src python
+import itertools
+import requests
+import requests_cache
+from franceinter.podcasts.podcasts_from_url import podcasts_from_url
+
+requests_cache.install_cache()
+
+url = "https://www.franceinter.fr/emissions/"
+podcasts = podcasts_from_url(url)
+first_five = list(itertools.islice(podcasts, 5))
+for podcast in first_five:
+    print(" Podcast title: " + podcast.title)
+    print("   Podcast URL: " + podcast.url)
+    print("Podcast author: " + podcast.author)
+    print("\n")
+#+end_src
+
+#+RESULTS:
+:results:
+ Podcast title: 1001 mondes
+   Podcast URL: https://www.franceinter.fr/emissions/mille-et-un-mondes
+Podcast author: Laura El Makki
 
 
-Festival de Radio France  - Sylvie Chapelle
-id: radio (8)
+ Podcast title: 116 rue Albert-Londres
+   Podcast URL: https://www.franceinter.fr/emissions/116-rue-albert-londres
+Podcast author: Alexandre Héraud
 
 
-France Inter : 50 ans de science - Mathieu Vidard
-id: science (4)
+ Podcast title: 18 bis, boulevard Hache-Coeur
+   Podcast URL: https://www.franceinter.fr/emissions/18-bis-boulevard-hache-coeur
+Podcast author: Frédéric Pommier
 
 
-France Inter avec et pour les femmes - Stéphanie Duncan
-id: femmes (4)
+ Podcast title: 1914/1918 : la grande guerre, cent ans après
+   Podcast URL: https://www.franceinter.fr/emissions/1914-1918-la-grande-guerre-cent-ans-apres
+Podcast author: 
 
 
-France Inter et les 40 ans du Prix du Livre Inter - Eva Bettan
-id: 40 (2)
-
-
-France Inter et le cinéma - Laurent Delmas
-id: cinema (6)
-
-
-France Inter et le jazz - Elsa Boublil
-id: jazz (3)
-
-
-France Inter  fait son show à Nantes - Laurence Peuron
-id: nantes (2)
-
-
-La France verte - 
-id: verte (2)
-
-
-Les grands concerts de Radio France - Frédéric Lodéon
-id: lodeon (2)
-
-
-Un jour en France - Bruno Duvic
-id: duvic (3)
-
-
-Radio France Politique - 
-id: radio (8)
-
-
-Une Semaine en France - Claire Servajean
-id: servajean (2)
-
-
-Le tour de France de la présidentielle - 
-id: presidentielle (4)
+ Podcast title: 1918, un monde en révolutions
+   Podcast URL: https://www.franceinter.fr/emissions/1918-un-monde-en-revolutions
+Podcast author: Ali Baddou
 
 
 :end:
