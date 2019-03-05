@@ -34,6 +34,8 @@
   - [[#módulos-1][Módulos]]
   - [[#localfolderhttpserver][LocalFolderHTTPServer]]
 - [[#tests][Tests]]
+  - [[#ejecutar-los-casos-de-prueba][Ejecutar los casos de prueba]]
+  - [[#generar-el-reporte-de-cobertura][Generar el reporte de cobertura]]
 - [[#licencia][Licencia]]
   - [[#gplv3][GPLv3]]
 - [[#apéndices][Apéndices]]
@@ -311,7 +313,17 @@ Obtener el listado de fuentes de podcasts disponibles.
 
 *** 2. Firma
 
-La función no recibe argumentos y devuelve una lista de =str=.
+La función no recibe argumentos y devuelve una lista de objetos =sources.Source=
+
+#+begin_src python :tangle sources/source.py
+class Source:
+    def __init__(self, name, code):
+        self.name = name
+        self.code = code
+
+    def __repr__(self):
+        return "Source(name='%s', code='%s')" % (self.name, self.code)
+#+end_src
 
 *** 3. Ejemplos
 
@@ -330,23 +342,29 @@ def list_sources():
 *** 5. Definición
 
 #+begin_src python :tangle sources/list_sources.py
+from sources.source import Source
+
 def list_sources():
-    sources = ["franceinter"]
+    franceinter = Source("franceinter", "fri")
+    sources = [franceinter]
     return sources
 #+end_src
 
 *** 6. Casos de prueba
 
-- Caso exitoso, devuelve una lista de un solo elemento (=franceinter=).
+- Caso exitoso, devuelve una lista de un solo elemento.
 
 #+begin_src python :tangle sources/tests/test_list_sources.py
 from sources.list_sources import list_sources
+from sources.source import Source
 
 def test_sources_ok():
     sources = list_sources()
-    assert (sources == ["franceinter"])
+    assert (len(sources) == 1)
+    assert (sources[0].name == "franceinter")
+    assert (sources[0].code == "fri")
     for source in sources:
-        assert isinstance(source, str)
+        assert isinstance(source, Source)
 
 #+end_src
 
@@ -2184,7 +2202,6 @@ Por lo que se puede ver en el HTML, muchos de los datos que necesitamos se encue
 - [X] Filtrar el listado por año
 - [X] Filtrar el listado por mes
 - [X] Filtrar el listado por día
-
 
 ***** Obtener el listado de los episodios de un podcast
 
@@ -5807,13 +5824,13 @@ class LocalFolderHTTPServer(BaseHTTPServer):
 #+end_src
 
 * Tests
-*** Ejecutar los casos de prueba
+** Ejecutar los casos de prueba
 
 #+begin_src sh
 pytest
 #+end_src
 
-*** Generar el reporte de cobertura
+** Generar el reporte de cobertura
 
 #+begin_src sh
 pytest --cov-report html:coverage --cov ./franceinter/ --cov ./sources/
