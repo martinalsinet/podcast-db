@@ -454,6 +454,10 @@ France Inter publica en una sola página (enorme) el listado de todas sus emisio
 
 Queremos obtener el listado de los podcasts desde un URL y también desde un archivo local. Además queremos poder filtrar el listado buscando los podcasts que contengan una palabra clave en el autor o en el título.
 
+Para poder consultar los podcasts y los episodios desde la línea de comandos necesitamos asignarle un identificador único a cada podcast. Lo más sencillo de implementar sería asignarle a cada podcast un código numérico o un hash a partir de su nombre o de su URL. El problema es que eso no es muy amigable para el usuario, que debería primero listar los podcasts que le interesan, tomar nota o recordar el código o hash y luego usar ese código para consultar los episodios. 
+
+Sería mejor utilizar el título y el autor del podcast para generar un identificador que sea sencillo de recordar (o por lo menos, más fácil de recordar que un hash). La idea es extraer las palabras del título y del autor de cada podcast y generar un listado con las frecuencias de aparición de cada palabra. Luego, si entre las palabras de un podcast hay una que tenga frecuencia igual a uno (1), esa debería ser la palabra que debemos usar como identificador.
+
 *** Wishlist
 
 - [X] Obtener el listado de los podcasts de France Inter
@@ -461,7 +465,7 @@ Queremos obtener el listado de los podcasts desde un URL y también desde un arc
 - [X] Filtrar el listado de podcasts por una palabra clave
 - [ ] Asignarle un identificador a cada podcast
 
-***** Obtener el listado de los podcasts de France Inter
+**** Obtener el listado de los podcasts de France Inter
 
 #+begin_src python
 import itertools
@@ -498,7 +502,7 @@ Podcast(title='1918, un monde en révolutions', url='https://www.franceinter.fr/
 
 :end:
 
-***** Para cada podcast obtener el nombre, el url y el autor
+**** Para cada podcast obtener el nombre, el url y el autor
 
 #+begin_src python
 import itertools
@@ -524,7 +528,7 @@ print("Podcast author: " + first.author)
 Podcast author: Laura El Makki
 :end:
 
-***** Filtrar el listado de podcasts por una palabra clave
+**** Filtrar el listado de podcasts por una palabra clave
 
 #+begin_src python
 import itertools
@@ -544,21 +548,179 @@ for podcast in first_five:
     print("\n")
 #+end_src
 
+**** Asignarle un identificador a cada podcast
+***** Prueba de concepto: Frecuencia de palabras en título + autor
+
+Realizamos una prueba de concepto para determinar si se puede utilizar la frecuencia de las palabras que componen el título y el autor para asignarle un identificador único a cada podcast que no sea un código difícil de recordar.
+
+Encontramos que, de los 973 podcasts de France Inter hay 655 que tienen una palabra única en su título o autor que se puede utilizar como identificador
+
+Ejemplos:
+
+#+begin_src text
+Dans la playlist de France Inter - 
+id: playlist (4)
+
+
+Festival de Radio France  - Sylvie Chapelle
+id: radio (8)
+
+
+France Inter : 50 ans de science - Mathieu Vidard
+id: science (4)
+
+
+France Inter avec et pour les femmes - Stéphanie Duncan
+id: femmes (4)
+#+end_src
+
+#+begin_src python
+import re
+import itertools
+import requests
+import requests_cache
+from unidecode import unidecode
+from franceinter.podcasts.podcasts_from_url import podcasts_from_url
+from franceinter.podcasts.podcasts_with_keyword import podcasts_with_keyword
+
+requests_cache.install_cache()
+
+def all_podcasts():
+    url = "https://www.franceinter.fr/emissions/"
+    podcasts = podcasts_from_url(url)
+    return podcasts
+
+def podcast_words(podcast):
+    words = re.split('\W+', podcast.title)
+    words+= re.split('\W+', podcast.author)
+    words = list(set(words))
+    words = map(lambda w: unidecode(w.lower()), words)
+    words = filter(lambda w: len(w)>0, words)
+    return list(words)
+
+def word_frequencies():
+    freq = {}
+    podcasts = all_podcasts()
+    for podcast in podcasts:
+        words = podcast_words(podcast)
+        for word in words:
+            if word not in freq:
+                freq[word]=0
+            freq[word]+=1
+    return freq
+
+def identifier(freqs, podcast):
+    words = podcast_words(podcast)
+    identifier = words[0]
+    for word in words:
+        if freqs[word] <= freqs[identifier]:
+            identifier = word
+    return identifier
+
+def podcasts_with_unique_id(podcasts):
+    frequencies = word_frequencies()
+    podcasts_with_id = map(lambda p: [p, identifier(frequencies, p)], podcasts)
+    uniques = filter(lambda item: frequencies[item[1]]==1, podcasts_with_id)
+    return map(lambda p: p[0], uniques)
+
+def podcasts_with_duplicate_id(podcasts):
+    frequencies = word_frequencies()
+    podcasts_with_id = map(lambda p: [p, identifier(frequencies, p)], podcasts)
+    duplicates = filter(lambda item: frequencies[item[1]]>1, podcasts_with_id)
+    return map(lambda p: p[0], duplicates)
+
+def unique_stats():
+    frequencies = word_frequencies()
+    unique_podcasts = podcasts_with_unique_id(all_podcasts())
+    print ("Unique ID: " + str(len(list(unique_podcasts))))
+    print ("Total: " + str(len(list(all_podcasts()))))
+
+def print_identifier(podcasts):
+    frequencies = word_frequencies()
+    for podcast in podcasts:
+        print("%s - %s" % (podcast.title, podcast.author))
+        podcast_id = identifier(frequencies, podcast)
+        print("id: %s (%s)" % (podcast_id, frequencies[podcast_id]))
+        print("\n")
+
+def podcast_slice(keyword, how_many):
+    podcasts_keyword = podcasts_with_keyword(all_podcasts(), keyword)
+    podcast_slice = itertools.islice(podcasts_keyword, how_many)
+    return podcast_slice
+
+def unique_podcasts(keyword, how_many):
+    podcasts = podcast_slice(keyword, how_many)
+    return podcasts_with_unique_id(podcasts)
+    
+def duplicated_podcasts(keyword, how_many):
+    podcasts = podcast_slice(keyword, how_many)
+    return podcasts_with_duplicate_id(podcasts)
+    
+
+#unique_stats()
+#podcasts = unique_podcasts("cheissoux", 200)
+#podcasts = podcast_slice("cheissoux", 200)
+podcasts = duplicated_podcasts("france", 30)
+print_identifier(podcasts)
+
+#+end_src
+
 #+RESULTS:
 :results:
-Podcast(title='Je veux de la musique !', url='https://www.franceinter.fr/emissions/je-veux-de-la-musique')
+Dans la playlist de France Inter - 
+id: playlist (4)
 
 
-Podcast(title='Michel Berger, tout pour la musique', url='https://www.franceinter.fr/emissions/michel-berger-tout-pour-la-musique')
+Festival de Radio France  - Sylvie Chapelle
+id: radio (8)
 
 
-Podcast(title='La musique d'Inter', url='https://www.franceinter.fr/emissions/la-musique-d-inter')
+France Inter : 50 ans de science - Mathieu Vidard
+id: science (4)
 
 
-Podcast(title='On parle musique', url='https://www.franceinter.fr/emissions/parle-musique')
+France Inter avec et pour les femmes - Stéphanie Duncan
+id: femmes (4)
 
 
-Podcast(title='Quand la musique donne (été 2012)', url='https://www.franceinter.fr/emissions/quand-la-musique-donne-ete-2012')
+France Inter et les 40 ans du Prix du Livre Inter - Eva Bettan
+id: 40 (2)
+
+
+France Inter et le cinéma - Laurent Delmas
+id: cinema (6)
+
+
+France Inter et le jazz - Elsa Boublil
+id: jazz (3)
+
+
+France Inter  fait son show à Nantes - Laurence Peuron
+id: nantes (2)
+
+
+La France verte - 
+id: verte (2)
+
+
+Les grands concerts de Radio France - Frédéric Lodéon
+id: lodeon (2)
+
+
+Un jour en France - Bruno Duvic
+id: duvic (3)
+
+
+Radio France Politique - 
+id: radio (8)
+
+
+Une Semaine en France - Claire Servajean
+id: servajean (2)
+
+
+Le tour de France de la présidentielle - 
+id: presidentielle (4)
 
 
 :end:
