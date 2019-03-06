@@ -266,7 +266,7 @@ Quiero que los comandos de consulta sean lo más claro y conciso posible. Tenemo
 
 En los listados se puede agregar el argumento =--with-keyword= que filtra por palabra clave y, para los episodios, también se puede filtrar por año con el argumento =--for-year= y por mes con =--for-month=.
 
-Para ver el detalle de un podcast o de un episodio se debe indicar un identificador. En el caso de los podcasts vamos a usar el nombre de la fuente (o su código) seguido de un slash y el identificador del podcast. Para identificar un episodio dentro de un determinado podcast, en principio, vamos a usar como identificador su fecha de publicación.
+Para ver el detalle de un podcast o de un episodio se debe indicar un identificador. En el caso de los podcasts vamos a usar el nombre de la fuente (o su código) seguido de un slash y el identificador del podcast. Para identificar un episodio dentro de un determinado podcast, en principio, vamos a usar como identificador su fecha de publicación, mientras que para identificar un podcast vamos a usar un fragmento de su URL.
 
 #+begin_src sh :eval never
 
@@ -762,9 +762,11 @@ Podcast author: Ali Baddou
 
 - [X] =podcasts_from_query= :: Analizar el cambio de nombre por =podcasts_matching_query=, que expresa mejor que la función es un filtro de podcasts usando una palabra clave. Pensándolo bien, el nombre de que mejor expresa lo que hace la función es =podcasts_with_keyword=
 
-- [ ] =podcasts_with_keyword= :: Agregar que no distinga entre los caracteres acentuados (á vs a) al buscar. Por ejemplo, si la palabra buscada es =té= debería devolver los podcasts que contengan tanto =té= como =te=
+- [X] =podcasts_with_keyword= :: Agregar que no distinga entre los caracteres acentuados (á vs a) al buscar. Por ejemplo, si la palabra buscada es =té= debería devolver los podcasts que contengan tanto =té= como =te=
 
 - [ ] =autopep8= :: Aplicar el estándar PEP8 a todas las funciones
+
+- [ ] =identifier= :: Agregar un método =identifier()= a la clase Podcast que devuelva la parte única del URL. Modificar la función =podcasts-with-keyword= para que busque la palabra clave en el identificador.
 
 *** Submódulos
 **** Podcasts
@@ -988,6 +990,7 @@ Para el listado de podcasts vamos a recibir cualquier objeto que sea iterable, c
 - Un listado de podcasts que no es iterable
 - Un listado de podcasts que no tiene objetos =franceinter.podcasts.Podcast=
 - Una query que no es un =str=
+- Un listado de 3 podcasts en el que hay 1 que tiene la palabra "café" en el título
 
 #+begin_src python :tangle franceinter/podcasts/tests/examples_podcasts_with_keyword.py
 import random
@@ -1054,7 +1057,9 @@ def podcasts_with_keyword(podcasts, query):
 
 #+begin_src python :tangle franceinter/podcasts/podcasts_with_keyword.py
 import re
+from unidecode import unidecode
 from franceinter.podcasts.podcast import Podcast
+
 
 def podcasts_with_keyword(podcasts, keyword):
     # validar que los podcasts sean iterables
@@ -1070,25 +1075,32 @@ def podcasts_with_keyword(podcasts, keyword):
     contains_keyword = keyword_matcher(keyword)
     return filter(contains_keyword, valid_podcasts)
 
+
 def is_podcast(podcast):
     assert isinstance(podcast, Podcast), invalid_podcast(podcast)
     return True
-    
+
+
 def keyword_matcher(keyword):
     def matcher(podcast):
-        return (re.search(keyword, podcast.title, re.IGNORECASE) 
-                or re.search(keyword, podcast.author, re.IGNORECASE))
+        kw = unidecode(keyword)
+        title = unidecode(podcast.title)
+        author = unidecode(podcast.author)
+        return (re.search(kw, title, re.IGNORECASE)
+                or re.search(kw, author, re.IGNORECASE))
     return matcher
-    
+
+
 def invalid_podcasts(podcasts):
     return "podcasts parameter must be iterable, received %s instead" % type(podcasts)
+
 
 def invalid_keyword(keyword):
     return "keyword parameter must be a string, received %s instead" % type(keyword)
 
+
 def invalid_podcast(podcast):
     return "podcast parameter must be a Podcast, received %s instead" % type(podcast)
-
 #+end_src
 
 **** 6. Casos de prueba
@@ -1099,6 +1111,7 @@ def invalid_podcast(podcast):
 - Cuando recibe un listado de podcasts que no es iterable, lanza un =AssertionError=
 - Cuando recibe un listado de podcasts que no tiene objetos =franceinter.podcasts.Podcast=, lanza un =AssertionError=
 - Cuando recibe una query que no es un =str=, lanza un =AssertionError=
+- Cuando recibe listado de 5 podcasts en el que hay 2 que tiene la palabra "café" en el título, y la palabra buscada es "cafe", devuelve un =filter= con los podcasts que tienen la palabra "café"
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_with_keyword.py
 import types
@@ -1145,6 +1158,12 @@ def test_invalid_query():
         result = podcasts_with_keyword(podcasts, keyword)
     except AssertionError:
         assert True
+
+def test_podcasts_with_accented_word():
+    podcasts = podcasts_with_word_in_title("café")
+    result = podcasts_with_keyword(podcasts, "cafe")
+    assert isinstance(result, filter)
+    assert (len(list(result)) == 2)
 
 #+end_src
 
@@ -1696,7 +1715,7 @@ pytest franceinter/podcasts/tests/test_tags_from_html.py
 
 Obtener un podcast de un fragmento de html.
 
-Un podcast tiene tres propiedades, a saber:
+Un podcast tiene tres propiedades principales, a saber:
 
 - título :: es un =str= y es obligatorio
 - url :: es un =str=, es obligatorio y debe ser un URL válido
@@ -2647,6 +2666,8 @@ AssertionError: received tag has an invalid episode URL
 
 - [ ] =autopep8= :: Aplicar el estándar PEP8 a todas las funciones
 
+- [X] =episodes_with_keyword= :: Agregar que no distinga entre los caracteres acentuados (á vs a) al buscar. Por ejemplo, si la palabra buscada es =té= debería devolver los podcasts que contengan tanto =té= como =te=
+
 *** Submódulos
 **** Episodes
 
@@ -2926,6 +2947,7 @@ def episodes_from_with_keyword(episodes, keyword):
 
 #+begin_src python :tangle franceinter/episodes/episodes_with_keyword.py
 import re
+from unidecode import unidecode
 from franceinter.episodes.episode import Episode
 
 def episodes_with_keyword(episodes, keyword):
@@ -2944,7 +2966,9 @@ def is_episode(episode):
     
 def keyword_matcher(keyword):
     def matcher(episode):
-        return re.search(keyword, episode.title, re.IGNORECASE)
+        kw = unidecode(keyword)
+        title = unidecode(episode.title)
+        return re.search(kw, title, re.IGNORECASE)
     return matcher
     
 def invalid_episodes(episodes):
@@ -2965,6 +2989,7 @@ def invalid_episode(episode):
 - Cuando recibe un listado de podcasts que no es iterable, lanza un =AssertionError=
 - Un listado de episodios que no tiene objetos =franceinter.episodes.Episode=, lanza un =AssertionError=
 - Una query que no es un =str=, lanza un =AssertionError=
+- Caso exitoso, cuando recibe un listado de 5 episodios en el que hay 2 que tienen la palabra "canción" el título y se busca "cancion", devuelve un =filter= con los 2 episodios sin importar la diferencia en la o acentuada
 
 #+begin_src python :tangle franceinter/episodes/tests/test_episodes_with_keyword.py
 import types
@@ -3005,6 +3030,12 @@ def test_invalid_query():
         result = episodes_with_keyword(episodes, keyword)
     except AssertionError:
         assert True
+
+def test_episodes_with_accented_word():
+    episodes = episodes_with_word_in_title("canción")
+    result = episodes_with_keyword(episodes, "cancion")
+    assert isinstance(result, filter)
+    assert (len(list(result)) == 2)
 
 #+end_src
 
