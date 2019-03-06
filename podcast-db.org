@@ -18,6 +18,11 @@
   - [[#changelog][ChangeLog]]
   - [[#roadmap][Roadmap]]
 - [[#setup][Setup]]
+  - [[#dependencias][Dependencias]]
+  - [[#requirementstxt][requirements.txt]]
+  - [[#instalar-las-dependencias][Instalar las dependencias]]
+  - [[#generar-el-ejecutable][Generar el ejecutable]]
+  - [[#gitignore][.gitignore]]
 - [[#interface-desde-línea-de-comandos][Interface desde línea de comandos]]
   - [[#diseño-1][Diseño]]
   - [[#wishlist][Wishlist]]
@@ -167,7 +172,7 @@ Quiero que mi base de datos pueda consultar las siguientes fuentes de podcasts:
 - Interface desde línea de comandos (CLI)
 
 * Setup
-*** Dependencias
+** Dependencias
 
 Vamos a usar las siguientes bibliotecas
 
@@ -195,7 +200,7 @@ Desventajas:
 - Tiene apenas un año de desarrollo (bs4 está /battle-tested/)
 - Depende de muchos módulos (bloated?)
 
-*** requirements.txt
+** requirements.txt
 
 #+begin_src txt :tangle requirements.txt
 beautifulsoup4
@@ -207,7 +212,7 @@ pytest-cov
 validators
 #+end_src
 
-*** Instalar las dependencias
+** Instalar las dependencias
 **** 1. Inicializar la carpeta =./venv=
 
 #+begin_src sh
@@ -221,7 +226,7 @@ virtualenv-3.6 ./venv
 pip-3.6 install -r requirements.txt
 #+end_src
 
-*** Generar el ejecutable
+** Generar el ejecutable
 
 - [ ] Usar [[https://www.pyinstaller.org][PyInstaller]] para generar un ejecutable en un solo archivo
 
@@ -235,7 +240,7 @@ pyinstaller yourprogram.py
 This will generate the bundle in a subdirectory called dist.
 #+end_quote
 
-*** .gitignore
+** .gitignore
 
 #+begin_src text :tangle .gitignore
 .DS_Store
@@ -658,18 +663,44 @@ def duplicated_podcasts(keyword, how_many):
     return podcasts_with_duplicate_id(podcasts)
     
 
-unique_stats()
+#unique_stats()
 #podcasts = unique_podcasts("cheissoux", 200)
 #podcasts = podcast_slice("cheissoux", 200)
-#podcasts = duplicated_podcasts("france", 30)
-#print_identifier(podcasts)
+podcasts = duplicated_podcasts("france", 15)
+print_identifier(podcasts)
 
 #+end_src
 
 #+RESULTS:
 :results:
-Unique ID: 655
-Total: 973
+Dans la playlist de France Inter - 
+id: playlist (4)
+
+
+Festival de Radio France  - Sylvie Chapelle
+id: radio (8)
+
+
+France Inter : 50 ans de science - Mathieu Vidard
+id: science (4)
+
+
+France Inter avec et pour les femmes - Stéphanie Duncan
+id: femmes (4)
+
+
+France Inter et les 40 ans du Prix du Livre Inter - Eva Bettan
+id: prix (2)
+
+
+France Inter et le cinéma - Laurent Delmas
+id: cinema (6)
+
+
+France Inter et le jazz - Elsa Boublil
+id: jazz (3)
+
+
 :end:
 
 ***** Otra alternativa: Usar la parte única del URL del podcast
