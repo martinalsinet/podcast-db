@@ -1168,7 +1168,7 @@ def test_podcasts_with_accented_word():
     assert (len(list(result)) == 2)
 
 def test_podcasts_with_identifier():
-    podcasts = list(podcasts_with_word_in_title("café"))
+    podcasts = list(some_podcasts(5))
     title = "Sur les épaules de Darwin"
     author = "Jean-Claude Ameisen"
     url = "https://www.franceinter.fr/emissions/sur-les-epaules-de-darwin"
@@ -2693,6 +2693,8 @@ AssertionError: received tag has an invalid episode URL
 
 - [X] =episodes_with_keyword= :: Agregar que no distinga entre los caracteres acentuados (á vs a) al buscar. Por ejemplo, si la palabra buscada es =té= debería devolver los podcasts que contengan tanto =té= como =te=
 
+- [X] =identifier= :: Agregar un método =identifier()= a la clase Episode que devuelva la fecha de publicación del episodio en formato =YYYY-MM-DD=. Modificar la función =episodes-with-keyword= para que también busque la palabra clave en el identificador.
+
 *** Submódulos
 **** Episodes
 
@@ -2993,7 +2995,8 @@ def keyword_matcher(keyword):
     def matcher(episode):
         kw = unidecode(keyword)
         title = unidecode(episode.title)
-        return re.search(kw, title, re.IGNORECASE)
+        return (re.search(kw, title, re.IGNORECASE) 
+                or (keyword == episode.identifier))
     return matcher
     
 def invalid_episodes(episodes):
@@ -3014,10 +3017,11 @@ def invalid_episode(episode):
 - Cuando recibe un listado de podcasts que no es iterable, lanza un =AssertionError=
 - Un listado de episodios que no tiene objetos =franceinter.episodes.Episode=, lanza un =AssertionError=
 - Una query que no es un =str=, lanza un =AssertionError=
-- Caso exitoso, cuando recibe un listado de 5 episodios en el que hay 2 que tienen la palabra "canción" el título y se busca "cancion", devuelve un =filter= con los 2 episodios sin importar la diferencia en la o acentuada
+- Cuando recibe un listado de 5 episodios en el que hay 1 con fecha de publicación "2007-12-23" y se busca la palabra clave "2007-12-23", devuelve un =filter= con ese episodio
 
 #+begin_src python :tangle franceinter/episodes/tests/test_episodes_with_keyword.py
 import types
+import datetime
 from franceinter.episodes.episodes_with_keyword import episodes_with_keyword
 from franceinter.episodes.tests.examples_episodes_with_keyword import *
 
@@ -3061,6 +3065,15 @@ def test_episodes_with_accented_word():
     result = episodes_with_keyword(episodes, "cancion")
     assert isinstance(result, filter)
     assert (len(list(result)) == 2)
+
+def test_episodes_with_identifier():
+    episodes = list(some_episodes(5))
+    title = "My december 2007 episode"
+    episodes[2].title = title
+    episodes[2].date = datetime.date(2007, 12, 23)
+    result = list(episodes_with_keyword(episodes, "2007-12-23"))
+    assert (len(result) == 1)
+    assert (result[0].title == title)
 
 #+end_src
 
@@ -5122,7 +5135,7 @@ Un episodio tiene cuatro propiedades, a saber:
 
 La función recibe un objeto =bs4.element.Tag= y devuelve un objeto =franceinter.episodes.episode=
 
-Necesitamos entonces definir la clase =episode=
+Necesitamos entonces definir la clase =Episode=
 
 #+begin_src python :tangle franceinter/episodes/episode.py
 
@@ -5132,6 +5145,10 @@ class Episode:
         self.url = url
         self.date = date
         self.duration = duration
+
+    @property
+    def identifier(self):
+        return str(self.date)
 
     def __repr__(self):
         return "Episode(title='%s', date='%s')" % (
