@@ -766,7 +766,7 @@ Podcast author: Ali Baddou
 
 - [ ] =autopep8= :: Aplicar el estándar PEP8 a todas las funciones
 
-- [ ] =identifier= :: Agregar un método =identifier()= a la clase Podcast que devuelva la parte única del URL. Modificar la función =podcasts-with-keyword= para que busque la palabra clave en el identificador.
+- [X] =identifier= :: Agregar un método =identifier()= a la clase Podcast que devuelva la parte única del URL. Modificar la función =podcasts-with-keyword= para que también busque la palabra clave en el identificador.
 
 *** Submódulos
 **** Podcasts
@@ -990,7 +990,6 @@ Para el listado de podcasts vamos a recibir cualquier objeto que sea iterable, c
 - Un listado de podcasts que no es iterable
 - Un listado de podcasts que no tiene objetos =franceinter.podcasts.Podcast=
 - Una query que no es un =str=
-- Un listado de 3 podcasts en el que hay 1 que tiene la palabra "café" en el título
 
 #+begin_src python :tangle franceinter/podcasts/tests/examples_podcasts_with_keyword.py
 import random
@@ -1086,8 +1085,10 @@ def keyword_matcher(keyword):
         kw = unidecode(keyword)
         title = unidecode(podcast.title)
         author = unidecode(podcast.author)
+        identifier = podcast.identifier
         return (re.search(kw, title, re.IGNORECASE)
-                or re.search(kw, author, re.IGNORECASE))
+                or re.search(kw, author, re.IGNORECASE)
+                or re.search(kw, identifier, re.IGNORECASE))
     return matcher
 
 
@@ -1112,6 +1113,7 @@ def invalid_podcast(podcast):
 - Cuando recibe un listado de podcasts que no tiene objetos =franceinter.podcasts.Podcast=, lanza un =AssertionError=
 - Cuando recibe una query que no es un =str=, lanza un =AssertionError=
 - Cuando recibe listado de 5 podcasts en el que hay 2 que tiene la palabra "café" en el título, y la palabra buscada es "cafe", devuelve un =filter= con los podcasts que tienen la palabra "café"
+- Cuando recibe listado de 5 podcasts en el que hay 1 cuyo URL es "https://www.franceinter.fr/emissions/sur-les-epaules-de-darwin", cuando se busca la palabra "sur-les-epaules-de-darwin", devuelve un =filter= con el podcast que tiene ese identificador
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_with_keyword.py
 import types
@@ -1164,6 +1166,21 @@ def test_podcasts_with_accented_word():
     result = podcasts_with_keyword(podcasts, "cafe")
     assert isinstance(result, filter)
     assert (len(list(result)) == 2)
+
+def test_podcasts_with_identifier():
+    podcasts = list(podcasts_with_word_in_title("café"))
+    title = "Sur les épaules de Darwin"
+    author = "Jean-Claude Ameisen"
+    url = "https://www.franceinter.fr/emissions/sur-les-epaules-de-darwin"
+    podcasts[2].title = title
+    podcasts[2].url = url
+    podcasts[2].author = author
+    identifier = "sur-les-epaules-de-darwin"
+    result = list(podcasts_with_keyword(podcasts, identifier))
+    assert (len(result) == 1)
+    assert (result[0].title == title)
+    assert (result[0].url == url)
+    assert (result[0].author == author)
 
 #+end_src
 
@@ -1735,6 +1752,12 @@ class Podcast:
         self.url = url
         self.author = author
 
+    @property
+    def identifier(self):
+        return self.url.lower().replace(
+            "https://www.franceinter.fr/emissions/", ""
+        )
+
     def __repr__(self):
         return "Podcast(title='%s', url='%s')" % (self.title, self.url)
 
@@ -1953,7 +1976,8 @@ def test_podcast_ok():
     podcast = podcast_from_tag(tag)
     assert (len(podcast.title) > 0)
     assert (len(podcast.url) > 0)
-    assert (len(podcast.author) >0)
+    assert (len(podcast.author) > 0)
+    assert (len(podcast.identifier) > 0)
     assert (len(str(podcast)) > 0)
 
 def test_podcast_without_title():
@@ -1982,6 +2006,7 @@ def test_podcast_without_author():
     podcast = podcast_from_tag(tag)
     assert len(podcast.title) > 0
     assert len(podcast.url) > 0
+    assert len(podcast.identifier) > 0
     assert len(podcast.author) == 0
 
 def test_invalid_tag():
