@@ -166,6 +166,12 @@ Quiero que mi base de datos pueda consultar las siguientes fuentes de podcasts:
 - Fuente FranceInter
 
 ** Roadmap
+*** 0.2.0
+
+- Consulta de fuentes disponibles
+- Consulta de podcasts y episodios de FranceInter
+- Interface desde línea de comandos (CLI)
+
 *** 1.0.0
 
 - Consulta de podcasts y episodios de una fuente (FranceInter)
@@ -316,8 +322,77 @@ __all__ = [
 ]
 #+end_src
 
+*** Prueba de concepto con argparse
+
+#+begin_src python :tangle podcast-db :tangle-mode (identity #o755)
+#!/usr/bin/env python-3.6
+import argparse
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument(
+    "command", 
+    help="list-sources | list-podcasts | list-episodes | show-podcast | show-episode",  
+    choices=["list-sources", "list-podcasts", "list-episodes", "show-podcast", 
+"show-episode"],
+    metavar="command"
+)
+parser.add_argument(
+    "-v", "--version", 
+    help="show version",
+    metavar=""
+)
+parser.add_argument(
+    "--source", 
+    help="source name or code ('franceinter' or 'fri')"
+)
+parser.add_argument(
+    "--podcast", 
+    help="podcast identifier string ('sur-les-epaules')" 
+)
+parser.add_argument(
+    "--episode", 
+    help="episode date in YYYY-MM-DD format ('2018-04-17')"
+)
+parser.add_argument(
+    "--keyword", 
+    help="search keyword ('musique')"
+)
+
+args = parser.parse_args()
+
+if args.command == 'list-sources':
+    from sources.list_sources import list_sources
+    print(list_sources())
+
+if args.command == 'list-podcasts':
+    source = args.source
+
+if args.command == 'show-podcast':
+    source = args.source
+    podcast = args.podcast
+
+if args.command == 'list-episodes':
+    source = args.source
+    podcast = args.podcast
+
+if args.command == 'show-episode':
+    source = args.source
+    podcast = args.podcast
+    episode = args.episode
+
+print(args)
+#+end_src
+
 *** Commands
 **** Submódulos
+
+#+begin_src python :tangle cli/commands/__init__.py
+__all__ = [
+    "arguments_from_cli"
+]
+#+end_src
+
 **** TODO arguments_from_cli
 ***** 1. Objetivo
 ***** 2. Firma
@@ -3019,6 +3094,7 @@ def invalid_episode(episode):
 - Cuando recibe un listado de podcasts que no es iterable, lanza un =AssertionError=
 - Un listado de episodios que no tiene objetos =franceinter.episodes.Episode=, lanza un =AssertionError=
 - Una query que no es un =str=, lanza un =AssertionError=
+- Cuando recibe un listado de 5 episodios en el que hay 2 que tienen la palabra "canción" el título y se busca "cancion", devuelve un =filter= con los 2 episodios sin importar la diferencia en la letra "o" acentuada
 - Cuando recibe un listado de 5 episodios en el que hay 1 con fecha de publicación "2007-12-23" y se busca la palabra clave "2007-12-23", devuelve un =filter= con ese episodio
 
 #+begin_src python :tangle franceinter/episodes/tests/test_episodes_with_keyword.py
@@ -6171,8 +6247,11 @@ firefox --new-tab ./coverage/index.html
 
 ** TODO Integración continua
 
-- Evaluar [[https://docs.travis-ci.com/][Travis CI]]
-- Evaluar Jenkins para limitar la dependencia de servicios externos
+- Evaluar [[https://travis-ci.com/plans][Travis CI]]
+- Evaluar [[https://circleci.com/open-source/][Circle CI]]
+- Evaluar [[https://jenkins.io/][Jenkins]] para limitar la dependencia de servicios externos
+
+Lo ideal sería tener un único proceso de generación de build + testing que se pueda utilizar en cualquiera de las soluciones de integración continua.
 
 * Licencia
 
