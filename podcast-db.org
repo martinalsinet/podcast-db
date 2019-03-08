@@ -272,30 +272,30 @@ venv
 
 Quiero que los comandos de consulta sean lo más claro y conciso posible. Tenemos básicamente dos operaciones, listar y ver el detalle, tanto para los podcasts como para los episodios. 
 
-En los listados se puede agregar el argumento =--with-keyword= que filtra por palabra clave y, para los episodios, también se puede filtrar por año con el argumento =--for-year= y por mes con =--for-month=.
+En los listados se puede agregar el argumento =--keyword= que filtra por palabra clave y, para los episodios, también se puede filtrar por año con el argumento =--year= y por mes con =--month=.
 
 Para ver el detalle de un podcast o de un episodio se debe indicar un identificador. En el caso de los podcasts vamos a usar el nombre de la fuente (o su código) seguido de un slash y el identificador del podcast. Para identificar un episodio dentro de un determinado podcast, en principio, vamos a usar como identificador su fecha de publicación, mientras que para identificar un podcast vamos a usar un fragmento de su URL.
 
 #+begin_src sh :eval never
 
 # listar fuentes de podcasts
-podcast-db --list-sources
+podcast-db list-sources
 
 # listar podcasts de una fuente
-podcast-db --list-podcasts-from franceinter
-podcast-db --list-podcasts-from franceinter --with-keyword musique
+podcast-db list-podcasts --source franceinter
+podcast-db list-podcasts --source franceinter --keyword musique
 
 # ver detalle de un podcast
 podcast-db --show-podcast franceinter/darwin
 
 # listar episodios de un podcast
-podcast-db --list-episodes-from franceinter/darwin
-podcast-db --list-episodes-from franceinter/darwin --for-year 2018
-podcast-db --list-episodes-from franceinter/darwin --for-month 2018-05
-podcast-db --list-episodes-from franceinter/darwin --with-keyword musique
+podcast-db list-episodes --podcast franceinter/darwin
+podcast-db list-episodes --podcast franceinter/darwin --year 2018
+podcast-db list-episodes --podcast franceinter/darwin --month 2018-05
+podcast-db list-episodes --podcast franceinter/darwin --keyword musique
 
 # ver detalle de un episodio
-podcast-db --show-episode franceinter/darwin/2018-04-16
+podcast-db show-episode --episode franceinter/darwin/2018-04-16
 
 #+end_src
 
@@ -356,7 +356,15 @@ parser.add_argument(
 )
 parser.add_argument(
     "--keyword", 
-    help="search keyword ('musique')"
+    help="filter list by keyword ('musique')"
+)
+parser.add_argument(
+    "--year", 
+    help="filter list by year ('2018')"
+)
+parser.add_argument(
+    "--month", 
+    help="filter list by month ('2018-03')"
 )
 
 args = parser.parse_args()
@@ -393,35 +401,23 @@ __all__ = [
 ]
 #+end_src
 
-**** TODO arguments_from_cli
-***** 1. Objetivo
-***** 2. Firma
-***** 3. Ejemplos
-***** 4. Boceto
-***** 5. Definición
-***** 6. Casos de prueba
+**** TODO command_variables
+**** TODO parser_from_variables
 **** TODO command_from_arguments
-***** 1. Objetivo
-***** 2. Firma
-***** 3. Ejemplos
-***** 4. Boceto
-***** 5. Definición
-***** 6. Casos de prueba
-**** TODO module_from_source
-**** TODO output_from_command
+**** TODO source_from_arguments
+**** TODO podcast_from_arguments
+**** TODO episode_from_arguments
+**** TODO keyword_from_arguments
+**** TODO year_from_arguments
+**** TODO month_from_arguments
 *** Query
 **** TODO output_from_source_list
 **** TODO output_from_podcast_list
 **** TODO output_from_podcast_details
 **** TODO output_from_episode_list
 **** TODO output_from_episode_details
-**** TODO output_from_help
 **** TODO output_from_version
 *** Storage
-**** TODO output_from_save_sources
-**** TODO output_from_save_podcasts
-**** TODO output_from_save_episodes
-**** TODO output_from_download_episodes
 *** Files
 * Sources
 ** Diseño
