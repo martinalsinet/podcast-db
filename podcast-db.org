@@ -318,7 +318,7 @@ podcast-db show-episode --episode franceinter/darwin/2018-04-16
 
 #+begin_src python :tangle cli/__init__.py
 __all__ = [
-    "commands", "query", "database"
+    "arguments", "query", "database"
 ]
 #+end_src
 
@@ -392,17 +392,142 @@ if args.command == 'show-episode':
 print(args)
 #+end_src
 
-*** Commands
+*** Arguments
 **** Submódulos
+***** Funciones
 
-#+begin_src python :tangle cli/commands/__init__.py
+#+begin_src python :tangle cli/arguments/__init__.py
 __all__ = [
-    "arguments_from_cli"
+    "argument_tuples"
 ]
 #+end_src
 
-**** TODO command_variables
-**** TODO parser_from_variables
+***** Tests
+
+#+begin_src python :tangle cli/arguments/tests/__init__.py
+__all__ = [
+    "test_argument_tuples"
+]
+#+end_src
+
+**** argument_tuples
+***** 1. Objetivo
+
+Obtener el listado de tuplas para generar los argumentos que acepta el parser de línea de comandos
+
+***** 2. Firma
+
+La función no recibe argumentos y devuelve una lista de tuplas =(*args, **kwargs)=.
+
+***** 3. Ejemplos
+
+Dado que la función no recibe argumentos, no es necesario confeccionar ejemplos.
+
+***** 4. Boceto
+
+#+begin_src python
+
+def argument_tuples():
+    # devuelve una lista de tuplas
+    tuples = []
+    # agregar una tupla para cada argumento
+    return tuples
+
+#+end_src
+
+***** 5. Definición
+
+#+begin_src python :tangle cli/arguments/argument_tuples.py
+
+def argument_tuples():
+    tuples = []
+    tuples.append((
+        ["command"],
+        {
+            "help": "list-sources | list-podcasts | list-episodes | show-podcast | show-episode",  
+            "choices": ["list-sources", "list-podcasts", "list-episodes", "show-podcast", "show-episode"],
+            "metavar": "command"
+        }
+    ))
+    tuples.append((
+        ["-v", "--version"], 
+        {"help": "show version", "metavar": ""}
+    ))
+    tuples.append((
+        ["--source"], 
+        {"help": "source name or code ('franceinter' or 'fri')"}
+    ))
+    tuples.append((
+        ["--podcast"], 
+        {"help": "podcast identifier string ('sur-les-epaules')"}
+    ))
+    tuples.append((
+        ["--episode"], 
+        {"help": "episode date in YYYY-MM-DD format ('2018-04-17')"}
+    ))
+    tuples.append((
+        ["--keyword"], 
+        {"help": "filter list by keyword ('musique')"}
+    ))
+    tuples.append((
+        ["--year"], 
+        {"help": "filter list by year ('2018')"}
+    ))
+    tuples.append((
+        ["--month"], 
+        {"help": "filter list by month ('2018-03')"}
+    ))
+    return tuples
+
+#+end_src
+
+***** 6. Casos de prueba
+
+- Todas las tuplas deben tener un =str= como primer elemento de los argumentos posicionales
+- Todas las tuplas deben tener un =str= con el mensaje de ayuda en la clave =help= de los argumentos de diccionario
+- Todos los argumentos que acepta el programa deben estar presentes en los argumentos posicionales
+
+#+begin_src python :tangle cli/arguments/tests/test_argument_tuples.py
+from cli.arguments.argument_tuples import argument_tuples
+
+def test_postitional_arguments():
+    tuples = argument_tuples()
+    for (args, kwargs) in tuples:
+        assert isinstance(args[0], str)
+
+def test_keyword_arguments():
+    tuples = argument_tuples()
+    for (args, kwargs) in tuples:
+        assert 'help' in kwargs
+        assert isinstance(kwargs['help'], str)
+
+def test_arguments_are_present():
+    tuples = argument_tuples()
+    arguments = [
+        "command", "-v", "--version", 
+        "--source", "--podcast", "--episode",
+        "--year", "--month", "--keyword",
+    ]
+    for argument in arguments:
+        found = False
+        for (args, kwargs) in tuples:
+            if argument in args:
+                found = True
+                break
+        assert found, argument_not_found(argument)
+        
+def argument_not_found(argument):
+    return "argument tuples do not contain '%s' argument" % argument
+
+#+end_src
+
+****** Run tests
+
+#+begin_src sh
+pytest cli/arguments/tests/test_argument_tuples.py
+#+end_src
+
+**** TODO parser_from_tuples
 **** TODO command_from_arguments
 **** TODO source_from_arguments
 **** TODO podcast_from_arguments
@@ -428,7 +553,7 @@ Por el momento, la única fuente disponible es FranceInter
 
 ** Implementación
 *** Submódulos
-**** Sources
+**** Funciones
 
 #+begin_src python :tangle sources/__init__.py
 __all__ = [
@@ -842,7 +967,7 @@ Podcast author: Ali Baddou
 - [X] =identifier= :: Agregar un método =identifier()= a la clase Podcast que devuelva la parte única del URL. Modificar la función =podcasts-with-keyword= para que también busque la palabra clave en el identificador.
 
 *** Submódulos
-**** Podcasts
+**** Funciones
 
 #+begin_src python :tangle franceinter/podcasts/__init__.py
 __all__ = [
@@ -2769,7 +2894,7 @@ AssertionError: received tag has an invalid episode URL
 - [X] =identifier= :: Agregar un método =identifier()= a la clase Episode que devuelva la fecha de publicación del episodio en formato =YYYY-MM-DD=. Modificar la función =episodes-with-keyword= para que también busque la palabra clave en el identificador.
 
 *** Submódulos
-**** Episodes
+**** Funciones
 
 #+begin_src python :tangle franceinter/episodes/__init__.py
 __all__ = [
