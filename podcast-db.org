@@ -42,6 +42,7 @@
 - [[#tests][Tests]]
   - [[#ejecutar-los-casos-de-prueba][Ejecutar los casos de prueba]]
   - [[#generar-el-reporte-de-cobertura][Generar el reporte de cobertura]]
+  - [[#integración-continua][Integración continua]]
 - [[#licencia][Licencia]]
   - [[#gplv3][GPLv3]]
 - [[#apéndices][Apéndices]]
@@ -170,6 +171,7 @@ Quiero que mi base de datos pueda consultar las siguientes fuentes de podcasts:
 - Consulta de podcasts y episodios de una fuente (FranceInter)
 - Guardar las fuentes, los podcasts y sus episodios en una base de datos local
 - Interface desde línea de comandos (CLI)
+- Generar un ejecutable en un solo archivo
 
 * Setup
 ** Dependencias
@@ -1112,8 +1114,8 @@ def invalid_podcast(podcast):
 - Cuando recibe un listado de podcasts que no es iterable, lanza un =AssertionError=
 - Cuando recibe un listado de podcasts que no tiene objetos =franceinter.podcasts.Podcast=, lanza un =AssertionError=
 - Cuando recibe una query que no es un =str=, lanza un =AssertionError=
-- Cuando recibe listado de 5 podcasts en el que hay 2 que tiene la palabra "café" en el título, y la palabra buscada es "cafe", devuelve un =filter= con los podcasts que tienen la palabra "café"
-- Cuando recibe listado de 5 podcasts en el que hay 1 cuyo URL es "https://www.franceinter.fr/emissions/sur-les-epaules-de-darwin", cuando se busca la palabra "sur-les-epaules-de-darwin", devuelve un =filter= con el podcast que tiene ese identificador
+- Cuando recibe listado de 5 podcasts en el que hay 2 que tienen la palabra "café" en el título, y la palabra buscada es "cafe", devuelve un =filter= con los dos podcasts que tienen la palabra "café"
+- Cuando recibe listado de 5 podcasts en el que hay 1 cuyo URL es "https://www.franceinter.fr/emissions/sur-les-epaules-de-darwin", y se busca la palabra "sur-les-epaules-de-darwin", devuelve un =filter= con el podcast que tiene ese identificador
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_with_keyword.py
 import types
@@ -2680,7 +2682,7 @@ Notamos que la función =tags_from_html= está repetida en los módulos Podcasts
 
 - [X] Cambiar el tipo de dato de la fecha del episodio =Episode.date= para que sea un =datetime.date=
 
-- [ ] Revisar el listado de episodios de "Sur les épaules de Darwin" porque está dando URL inválido para un episodio de 2011
+- [ ] Revisar el listado de episodios de "Sur les épaules de Darwin" porque está dando URL inválido para un episodio de 2011. Aparentemente el error es porque el URL tiene un espacio (=.../carrefour (2).mp3=).
 
 #+begin_src txt
 AssertionError: received tag has an invalid episode URL
@@ -6166,6 +6168,11 @@ Para visualizar el reporte se debe abrir el archivo =./coverage/index.html= con 
 #+begin_src sh
 firefox --new-tab ./coverage/index.html
 #+end_src
+
+** TODO Integración continua
+
+- Evaluar [[https://docs.travis-ci.com/][Travis CI]]
+- Evaluar Jenkins para limitar la dependencia de servicios externos
 
 * Licencia
 
