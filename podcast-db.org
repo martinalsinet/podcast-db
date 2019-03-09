@@ -313,15 +313,6 @@ podcast-db show-episode --episode franceinter/darwin/2018-04-16
 
 ** Mejoras
 ** Implementación
-*** Módulos
-**** cli
-
-#+begin_src python :tangle cli/__init__.py
-__all__ = [
-    "arguments", "query", "database"
-]
-#+end_src
-
 *** Prueba de concepto con argparse
 
 #+begin_src python :tangle podcast-db :tangle-mode (identity #o755)
@@ -392,13 +383,23 @@ if args.command == 'show-episode':
 print(args)
 #+end_src
 
+*** Módulos
+**** cli
+
+#+begin_src python :tangle cli/__init__.py
+__all__ = [
+    "arguments", "query", "database"
+]
+#+end_src
+
 *** Arguments
 **** Submódulos
 ***** Funciones
 
 #+begin_src python :tangle cli/arguments/__init__.py
 __all__ = [
-    "argument_tuples"
+    "argument_tuples",
+    "parser_from_tuples"
 ]
 #+end_src
 
@@ -406,7 +407,9 @@ __all__ = [
 
 #+begin_src python :tangle cli/arguments/tests/__init__.py
 __all__ = [
-    "test_argument_tuples"
+    "test_argument_tuples",
+    "test_parser_from_tuples",
+    "examples_parser_from_tuples"
 ]
 #+end_src
 
@@ -490,21 +493,25 @@ def argument_tuples():
 #+begin_src python :tangle cli/arguments/tests/test_argument_tuples.py
 from cli.arguments.argument_tuples import argument_tuples
 
+
 def test_postitional_arguments():
     tuples = argument_tuples()
     for (args, kwargs) in tuples:
         assert isinstance(args[0], str)
+
 
 def test_keyword_arguments():
     tuples = argument_tuples()
     for (args, kwargs) in tuples:
         assert 'help' in kwargs
         assert isinstance(kwargs['help'], str)
+        assert len(kwargs['help']) > 0
+
 
 def test_arguments_are_present():
     tuples = argument_tuples()
     arguments = [
-        "command", "-v", "--version", 
+        "command", "-v", "--version",
         "--source", "--podcast", "--episode",
         "--year", "--month", "--keyword",
     ]
@@ -514,10 +521,7 @@ def test_arguments_are_present():
             if argument in args:
                 found = True
                 break
-        assert found, argument_not_found(argument)
-        
-def argument_not_found(argument):
-    return "argument tuples do not contain '%s' argument" % argument
+        assert found, "argument tuples do not contain '%s' argument" % argument
 
 #+end_src
 
@@ -527,7 +531,168 @@ def argument_not_found(argument):
 pytest cli/arguments/tests/test_argument_tuples.py
 #+end_src
 
-**** TODO parser_from_tuples
+**** DOING parser_from_tuples
+***** 1. Objetivo
+
+Obtener el parser de argumentos de línea de comando
+
+***** 2. Firma
+
+La función recibe una lista de tuplas =(args, kwargs)= y devuelve un objeto =argparse.ArgumentParser=
+
+***** 3. Ejemplos
+
+- Caso exitoso, una lista con una tupla de un argumento
+- Una lista de tuplas vacía
+- Una lista de tuplas que no es un =list=
+- Una lista de tuplas con un elemento que no es una tupla
+- Una lista con una tupla que no tiene un =list= en su primer elemento
+- Una lista con una tupla que no tiene un =dict= en su segundo elemento
+
+#+begin_src python :tangle cli/arguments/tests/examples_parser_from_tuples.py
+
+def valid_tuple_list():
+    tuples = [
+        (["argument-1"], {"help": "help message for arg 1"}),
+        (["--argument-2"], {"help": "help message for arg 2"})
+    ]
+    return tuples
+
+def empty_tuple_list():
+    tuples = []
+    return tuples
+
+def invalid_tuple_list():
+    tuples = 42
+    return tuples
+
+def list_with_invalid_tuple():
+    tuples = valid_tuple_list()
+    tuples.append(42)
+    return tuples
+
+def tuple_list_without_list_as_first():
+    tuples = [(42, {"help": "help message for command"})]
+    return tuples
+    
+def tuple_list_without_dict_as_second():
+    tuples = [(["valid_command"], 42)]
+    return tuples
+
+#+end_src
+
+***** 4. Boceto
+
+#+begin_src python
+import argparse
+
+def parser_from_tuples(tuples):
+    parser = argparse.ArgumentParser()
+    # validar que tuples sea una lista
+    # validar que cada elemento de la lista
+    # sea una tupla (list, dict)
+    # agregarle al parser un argumento para cada tupla
+    # usando parser.add_argument()
+    return parser
+
+#+end_src
+
+***** 5. Definición
+
+#+begin_src python :tangle cli/arguments/parser_from_tuples.py
+import argparse
+
+def parser_from_tuples(tuples):
+    parser = argparse.ArgumentParser()
+    assert isinstance(tuples, list), invalid_list(tuples)
+
+    for t in tuples:
+        assert isinstance(t, tuple), invalid_tuple(t)
+        (args, kwargs) = t
+        assert isinstance(args, list), invalid_args(args)
+        assert isinstance(kwargs, dict), invalid_kwargs(kwargs)
+        parser.add_argument(*args, **kwargs)
+
+    return parser
+
+def invalid_list(tuples):
+    return "tuples parameter must be a list, received %s instead" % type(tuples)
+
+def invalid_tuple(tup):
+    return "tup parameter must be a tuple, received %s instead" % type(tup)
+
+def invalid_args(args):
+    return "args parameter must be a list, received %s instead" % type(args)
+
+def invalid_kwargs(kwargs):
+    return "kwargs parameter must be a dict, received %s instead" % type(kwargs)
+
+#+end_src
+
+***** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe una lista con una tupla de un argumento, devuelve un =ArgumentParser= que tiene asignado ese argumento
+- Cuando recibe una lista de tuplas vacía, devuelve un =ArgumentParser= vacío
+- Cuando recibe lista de tuplas que no es un =list=, lanza un =AssertionError=
+- Cuando recibe lista de tuplas con un elemento que no es un =tuple=, lanza un =AssertionError=
+- Cuando recibe una lista con una tupla que no tiene un =list= en su primer elemento, lanza un =AssertionError=
+- Cuando recibe una lista con una tupla que no tiene un =dict= en su segundo elemento, lanza un =AssertionError=
+
+#+begin_src python :tangle cli/arguments/tests/test_parser_from_tuples.py
+from argparse import ArgumentParser, Namespace
+from cli.arguments.parser_from_tuples import parser_from_tuples
+from cli.arguments.tests.examples_parser_from_tuples import *
+
+def test_valid_tuple_list():
+    tuples = valid_tuple_list()
+    parser = parser_from_tuples(tuples)
+    args = parser.parse_args(["argument-1"])
+    assert isinstance(parser, ArgumentParser)
+    assert isinstance(args, Namespace)
+    
+def test_empty_tuple_list():
+    tuples = empty_tuple_list()
+    parser = parser_from_tuples(tuples)
+    args = parser.parse_args([])
+    assert isinstance(parser, ArgumentParser)
+    assert isinstance(args, Namespace)
+
+def test_invalid_tuple_list():
+    tuples = invalid_tuple_list()
+    try:
+        parser = parser_from_tuples(tuples)
+    except AssertionError:
+        assert True
+
+def test_list_with_invalid_tuple():
+    tuples = list_with_invalid_tuple()
+    try:
+        parser = parser_from_tuples(tuples)
+    except AssertionError:
+        assert True
+
+def test_tuple_list_without_list_as_first():
+    tuples = tuple_list_without_list_as_first()
+    try:
+        parser = parser_from_tuples(tuples)
+    except AssertionError:
+        assert True
+
+def test_tuple_list_without_dict_as_second():
+    tuples = tuple_list_without_dict_as_second()
+    try:
+        parser = parser_from_tuples(tuples)
+    except AssertionError:
+        assert True
+
+#+end_src
+
+****** Run tests
+
+#+begin_src sh
+pytest cli/arguments/tests/test_parser_from_tuples.py
+#+end_src
+
 **** TODO command_from_arguments
 **** TODO source_from_arguments
 **** TODO podcast_from_arguments
@@ -628,6 +793,7 @@ def test_sources_ok():
     assert (sources[0].code == "fri")
     for source in sources:
         assert isinstance(source, Source)
+        assert len(str(source)) > 0
 
 #+end_src
 
