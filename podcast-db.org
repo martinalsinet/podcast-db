@@ -34,7 +34,7 @@
 - [[#france-inter][France Inter]]
   - [[#módulos][Módulos]]
   - [[#podcasts][Podcasts]]
-  - [[#episodios][Episodios]]
+  - [[#episodes][Episodes]]
   - [[#html][HTML]]
 - [[#herramientas][Herramientas]]
   - [[#módulos-1][Módulos]]
@@ -2824,7 +2824,7 @@ None
 pytest franceinter/podcasts/tests/test_author_from_tag.py
 #+end_src
 
-** Episodios
+** Episodes
 *** Diseño
 
 En el URL de un podcast vemos el listado de los últimos episodios disponibles. Al final del listado hay un selector de páginas para acceder al historial de episodios. Para poder obtener el historial completo necesitamos la cantidad de páginas, que está en un tag =<li>= que tiene la clase =last=. 
@@ -2851,8 +2851,8 @@ Por lo que se puede ver en el HTML, muchos de los datos que necesitamos se encue
 import itertools
 import requests
 import requests_cache
-from franceinter.podcasts.podcast import Podcast
-from franceinter.episodes.episodes_from_podcast import episodes_from_podcast
+from franceinter.podcasts import Podcast
+from franceinter.episodes import episodes_from_podcast
 
 requests_cache.install_cache()
 
@@ -2893,8 +2893,8 @@ Episode(title='Aux origines du chocolat (8)', date='2019-01-19')
 import itertools
 import requests
 import requests_cache
-from franceinter.podcasts.podcast import Podcast
-from franceinter.episodes.episodes_from_podcast import episodes_from_podcast
+from franceinter.podcasts import Podcast
+from franceinter.episodes import episodes_from_podcast
 
 requests_cache.install_cache()
 
@@ -2905,7 +2905,7 @@ podcast = Podcast(title, url, author)
 episodes = episodes_from_podcast(podcast)
 first = list(itertools.islice(episodes, 5))[0]
 print ("   Title: " + first.title)
-print ("    Date: " + first.date)
+print ("    Date: " + str(first.date))
 print ("     URL: " + first.url)
 print ("Duration: " + str(first.duration))
 
@@ -2925,9 +2925,11 @@ Duration: 3253
 import itertools
 import requests
 import requests_cache
-from franceinter.podcasts.podcast import Podcast
-from franceinter.episodes.episodes_from_podcast import episodes_from_podcast
-from franceinter.episodes.episodes_with_keyword import episodes_with_keyword
+from franceinter.podcasts import Podcast
+from franceinter.episodes import (
+    episodes_from_podcast, 
+    episodes_with_keyword
+)
 
 requests_cache.install_cache()
 
@@ -2970,9 +2972,11 @@ import itertools
 import requests
 import requests_cache
 from datetime import date as Date
-from franceinter.podcasts.podcast import Podcast
-from franceinter.episodes.episodes_from_podcast import episodes_from_podcast
-from franceinter.episodes.episodes_between_dates import episodes_between_dates
+from franceinter.podcasts import Podcast
+from franceinter.episodes import (
+    episodes_from_podcast, 
+    episodes_between_dates
+)
 
 requests_cache.install_cache()
 
@@ -3045,69 +3049,32 @@ AssertionError: received tag has an invalid episode URL
 **** Funciones
 
 #+begin_src python :tangle franceinter/episodes/__init__.py
-__all__ = [
-    "title_from_tag",
-    "url_from_tag",
-    "date_from_tag",
-    "duration_from_tag",
-    "episode_from_tag",
-    "html_from_url",
-    "lastpage_from_html",
-    "pages_from_podcast",
-    "tags_from_html",
-    "episodes_from_response",
-    "episodes_from_url",
-    "episodes_from_filename",
-    "episodes_from_podcast",
-    "episodes_with_keyword",
-    "episodes_between_dates",
-    "episodes_from_year",
-    "episodes_from_month",
-    "episodes_from_day"
-]
+from franceinter.episodes.episode import Episode
+from franceinter.episodes.title_from_tag import title_from_tag
+from franceinter.episodes.url_from_tag import url_from_tag
+from franceinter.episodes.date_from_tag import date_from_tag
+from franceinter.episodes.duration_from_tag import duration_from_tag
+from franceinter.episodes.episode_from_tag import episode_from_tag
+from franceinter.episodes.html_from_url import html_from_url
+from franceinter.episodes.lastpage_from_html import lastpage_from_html
+from franceinter.episodes.pages_from_podcast import pages_from_podcast
+from franceinter.episodes.tags_from_html import tags_from_html
+from franceinter.episodes.episodes_from_tags import episodes_from_tags
+from franceinter.episodes.episodes_from_response import episodes_from_response
+from franceinter.episodes.episodes_from_url import episodes_from_url
+from franceinter.episodes.episodes_from_filename import episodes_from_filename
+from franceinter.episodes.episodes_from_podcast import episodes_from_podcast
+from franceinter.episodes.episodes_with_keyword import episodes_with_keyword
+from franceinter.episodes.episodes_between_dates import episodes_between_dates
+from franceinter.episodes.episodes_from_year import episodes_from_year
+from franceinter.episodes.episodes_from_month import episodes_from_month
+from franceinter.episodes.episodes_from_day import episodes_from_day
 #+end_src
 
 **** Tests
 
 #+begin_src python :tangle franceinter/episodes/tests/__init__.py
-__all__ = [
-    "test_title_from_tag", 
-    "test_url_from_tag", 
-    "test_date_from_tag", 
-    "test_duration_from_tag", 
-    "test_episode_from_tag", 
-    "test_html_from_url",
-    "test_lastpage_from_html",
-    "test_pages_from_podcast",
-    "test_tags_from_html",
-    "test_episodes_from_response", 
-    "test_episodes_from_url", 
-    "test_episodes_from_filename", 
-    "test_episodes_from_podcast", 
-    "test_episodes_with_keyword", 
-    "test_episodes_between_dates", 
-    "test_episodes_from_year", 
-    "test_episodes_from_month", 
-    "test_episodes_from_day", 
-    "examples_title_from_tag",
-    "examples_url_from_tag",
-    "examples_date_from_tag",
-    "examples_duration_from_tag",
-    "examples_episode_from_tag",
-    "examples_html_from_url",
-    "examples_lastpage_from_html",
-    "examples_pages_from_podcast",
-    "examples_tags_from_html",
-    "examples_episodes_from_response",
-    "examples_episodes_from_url",
-    "examples_episodes_from_filename",
-    "examples_episodes_from_podcast",
-    "examples_episodes_with_keyword",
-    "examples_episodes_between_dates",
-    "examples_episodes_from_year",
-    "examples_episodes_from_month",
-    "examples_episodes_from_day"
-]
+
 #+end_src
 
 *** episodes_from_podcast
@@ -3129,7 +3096,7 @@ La función recibe un =franceinter.podcast.Podcast= y devuelve un =GeneratorType
 - Un objeto que no es un =franceinter.podcasts.Podcast=
 
 #+begin_src python :tangle franceinter/episodes/tests/examples_episodes_from_podcast.py
-from franceinter.podcasts.podcast import Podcast
+from franceinter.podcasts import Podcast
 
 def valid_podcast():
     title = "Sur les epaules de Darwin"
@@ -3169,9 +3136,8 @@ def episodes_from_podcast(podcast):
 **** 5. Definición
 
 #+begin_src python :tangle franceinter/episodes/episodes_from_podcast.py
-from franceinter.podcasts.podcast import Podcast
-from franceinter.episodes.pages_from_podcast import pages_from_podcast
-from franceinter.episodes.episodes_from_url import episodes_from_url
+from franceinter.podcasts import Podcast
+from franceinter.episodes import pages_from_podcast, episodes_from_url
 
 
 def episodes_from_podcast(podcast):
@@ -3198,8 +3164,7 @@ def invalid_podcast(podcast):
 import types
 import pytest
 import threading
-from franceinter.episodes.episode import Episode
-from franceinter.episodes.episodes_from_podcast import episodes_from_podcast
+from franceinter.episodes import Episode, episodes_from_podcast
 from franceinter.episodes.tests.examples_episodes_from_podcast import *
 from utils.http_server import LocalFolderHTTPServer as HTTPServer
 
@@ -3270,7 +3235,7 @@ Para el listado de episodios vamos a recibir cualquier objeto que sea iterable, 
 
 #+begin_src python :tangle franceinter/episodes/tests/examples_episodes_with_keyword.py
 import random
-from franceinter.episodes.episode import Episode
+from franceinter.episodes import Episode
 
 def episodes_with_word_in_title(word):
     episodes = list(some_episodes(3))
@@ -3321,7 +3286,7 @@ def episodes_from_with_keyword(episodes, keyword):
 #+begin_src python :tangle franceinter/episodes/episodes_with_keyword.py
 import re
 from unidecode import unidecode
-from franceinter.episodes.episode import Episode
+from franceinter.episodes import Episode
 
 def episodes_with_keyword(episodes, keyword):
     try:
@@ -3369,7 +3334,7 @@ def invalid_episode(episode):
 #+begin_src python :tangle franceinter/episodes/tests/test_episodes_with_keyword.py
 import types
 import datetime
-from franceinter.episodes.episodes_with_keyword import episodes_with_keyword
+from franceinter.episodes import episodes_with_keyword
 from franceinter.episodes.tests.examples_episodes_with_keyword import *
 
 def test_episodes_with_word_in_title():
@@ -3451,7 +3416,7 @@ La función recibe un listado de objetos =franceinter.episodes.Episode= y un nú
 #+begin_src python :tangle franceinter/episodes/tests/examples_episodes_from_year.py
 import random
 from datetime import date as Date, timedelta as TimeDelta
-from franceinter.episodes.episode import Episode
+from franceinter.episodes import Episode
 
 def some_episodes_with_year(year):
     other_year = year + 5
@@ -3502,7 +3467,7 @@ def episodes_from_year(episodes, year):
 **** 5. Definición
 
 #+begin_src python :tangle franceinter/episodes/episodes_from_year.py
-from franceinter.episodes.episode import Episode
+from franceinter.episodes import Episode
 
 def episodes_from_year(episodes, year):
     try:
@@ -3546,7 +3511,7 @@ def invalid_episode(episode):
 #+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_year.py
 import types
 from datetime import date as Date, timedelta as TimeDelta
-from franceinter.episodes.episodes_from_year import episodes_from_year
+from franceinter.episodes import episodes_from_year
 from franceinter.episodes.tests.examples_episodes_from_year import *
 
 def test_episodes_from_year():
@@ -3630,7 +3595,7 @@ La función recibe un listado de objetos =franceinter.episodes.Episode= y dos n�
 #+begin_src python :tangle franceinter/episodes/tests/examples_episodes_from_month.py
 import random
 from datetime import date as Date, timedelta as TimeDelta
-from franceinter.episodes.episode import Episode
+from franceinter.episodes import Episode
 
 def some_episodes_with_month(year, month):
     other_year = year + 5
@@ -3682,7 +3647,7 @@ def episodes_from_month(episodes, year, month):
 **** 5. Definición
 
 #+begin_src python :tangle franceinter/episodes/episodes_from_month.py
-from franceinter.episodes.episode import Episode
+from franceinter.episodes import Episode
 
 def episodes_from_month(episodes, year, month):
     try:
@@ -3742,7 +3707,7 @@ def invalid_episode(episode):
 #+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_month.py
 import types
 from datetime import date as Date, timedelta as TimeDelta
-from franceinter.episodes.episodes_from_month import episodes_from_month
+from franceinter.episodes import episodes_from_month
 from franceinter.episodes.tests.examples_episodes_from_month import *
 
 def test_episodes_from_month():
@@ -3865,7 +3830,7 @@ La función recibe un listado de objetos =franceinter.episodes.Episode= y tres n
 #+begin_src python :tangle franceinter/episodes/tests/examples_episodes_from_day.py
 import random
 from datetime import date as Date, timedelta as TimeDelta
-from franceinter.episodes.episode import Episode
+from franceinter.episodes import Episode
 
 def some_episodes_with_day(year, month, day):
     other_year = year + 5
@@ -3921,7 +3886,7 @@ def episodes_from_day(episodes, year, month, day):
 **** 5. Definición
 
 #+begin_src python :tangle franceinter/episodes/episodes_from_day.py
-from franceinter.episodes.episode import Episode
+from franceinter.episodes import Episode
 
 def episodes_from_day(episodes, year, month, day):
     try:
@@ -3995,7 +3960,7 @@ def invalid_episode(episode):
 #+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_day.py
 import types
 from datetime import date as Date, timedelta as TimeDelta
-from franceinter.episodes.episodes_from_day import episodes_from_day
+from franceinter.episodes import episodes_from_day
 from franceinter.episodes.tests.examples_episodes_from_day import *
 
 def test_episodes_from_day():
@@ -4157,7 +4122,7 @@ Para el listado de episodios vamos a recibir cualquier objeto que sea iterable, 
 #+begin_src python :tangle franceinter/episodes/tests/examples_episodes_between_dates.py
 import random
 from datetime import date as Date, timedelta as TimeDelta
-from franceinter.episodes.episode import Episode
+from franceinter.episodes import Episode
 
 def some_episodes_between_dates(starting_at, ending_at):
     date_outside = ending_at + TimeDelta(days=5)
@@ -4191,7 +4156,7 @@ def invalid_date():
 def new_episode(episode_date):
     title = "Este es un episodio de ejemplo"
     url = "http://podcastplace.com/shows/my-podcast/season-01-episode-01.mp3"
-    date = str(episode_date)
+    date = episode_date
     duration = 3265
     return Episode(title, url, date, duration)
 
@@ -4214,7 +4179,7 @@ def episodes_between_dates(episodes, starting_at, ending_at):
 
 #+begin_src python :tangle franceinter/episodes/episodes_between_dates.py
 from datetime import date as Date, datetime as DateTime
-from franceinter.episodes.episode import Episode
+from franceinter.episodes import Episode
 
 def episodes_between_dates(episodes, starting_at, ending_at):
     try:
@@ -4233,9 +4198,8 @@ def is_episode(episode):
     
 def date_filter(starting_at, ending_at):
     def matcher(episode):
-        episode_date = DateTime.strptime(episode.date, "%Y-%m-%d").date()
-        return ((starting_at <= episode_date) 
-                and (episode_date <= ending_at))
+        return ((starting_at <= episode.date) 
+                and (episode.date <= ending_at))
     return matcher
     
 def invalid_episodes(episodes):
@@ -4262,7 +4226,7 @@ def invalid_episode(episode):
 #+begin_src python :tangle franceinter/episodes/tests/test_episodes_between_dates.py
 import types
 from datetime import date as Date, timedelta as TimeDelta
-from franceinter.episodes.episodes_between_dates import episodes_between_dates
+from franceinter.episodes import episodes_between_dates
 from franceinter.episodes.tests.examples_episodes_between_dates import *
 
 def test_episodes_between_dates():
@@ -4398,7 +4362,7 @@ def episodes_from_url(url):
 #+begin_src python :tangle franceinter/episodes/episodes_from_url.py
 import requests
 from validators.url import url as is_valid_url
-from franceinter.episodes.episodes_from_response import episodes_from_response
+from franceinter.episodes import episodes_from_response
 
 def episodes_from_url(url):
     assert is_valid_url(url), invalid_url(url)
@@ -4428,8 +4392,7 @@ def connection_error(url):
 import pytest
 import threading
 import types
-from franceinter.episodes.episode import Episode
-from franceinter.episodes.episodes_from_url import episodes_from_url
+from franceinter.episodes import Episode, episodes_from_url
 from franceinter.episodes.tests.examples_episodes_from_url import *
 from utils.http_server import LocalFolderHTTPServer as HTTPServer
 
@@ -4539,8 +4502,7 @@ def episodes_from_response(resp):
 
 #+begin_src python :tangle franceinter/episodes/episodes_from_response.py
 import requests
-from franceinter.episodes.tags_from_html import tags_from_html
-from franceinter.episodes.episodes_from_tags import episodes_from_tags
+from franceinter.episodes import tags_from_html, episodes_from_tags
 
 def episodes_from_response(resp):
     assert isinstance(resp, requests.models.Response), invalid_type(resp)
@@ -4562,8 +4524,7 @@ def invalid_type(resp):
 
 #+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_response.py
 import types
-from franceinter.episodes.episode import Episode
-from franceinter.episodes.episodes_from_response import episodes_from_response
+from franceinter.episodes import Episode, episodes_from_response
 from franceinter.episodes.tests.examples_episodes_from_response import *
 
 def test_response_ok():
@@ -4644,7 +4605,7 @@ def episodes_from_filename(filename):
 
 #+begin_src python :tangle franceinter/episodes/episodes_from_filename.py
 from requests.models import Response
-from franceinter.episodes.episodes_from_response import episodes_from_response
+from franceinter.episodes import episodes_from_response
 
 def episodes_from_filename(filename):
     assert isinstance(filename, str), invalid_filename(filename)
@@ -4674,8 +4635,7 @@ def not_found(filename, error):
 
 #+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_filename.py
 import types
-from franceinter.episodes.episode import Episode
-from franceinter.episodes.episodes_from_filename import episodes_from_filename
+from franceinter.episodes import Episode, episodes_from_filename
 from franceinter.episodes.tests.examples_episodes_from_filename import *
 
 def test_ok_filename():
@@ -4741,7 +4701,7 @@ Vamos a aceptar tanto un =list= como un =GeneratorType=
 
 #+begin_src python :tangle franceinter/episodes/tests/examples_episodes_from_tags.py
 import random
-from franceinter.episodes.tags_from_html import tags_from_html
+from franceinter.episodes import tags_from_html
 from franceinter.episodes.tests.examples_episode_from_tag import (
     tag_ok,
     tag_without_title
@@ -4775,7 +4735,7 @@ def list_with_invalid_tag(how_many):
 **** 4. Boceto
 
 #+begin_src python
-from franceinter.episodes.tags_from_html import tags_from_html
+from franceinter.episodes import tags_from_html
 
 def podcasts_from_tags(tags):
     # validar que tags sea un GeneratorType
@@ -4788,7 +4748,7 @@ def podcasts_from_tags(tags):
 **** 5. Definición
 
 #+begin_src python :tangle franceinter/episodes/episodes_from_tags.py
-from franceinter.episodes.episode_from_tag import episode_from_tag
+from franceinter.episodes import episode_from_tag
 
 def episodes_from_tags(tags):
     try:
@@ -4812,9 +4772,8 @@ def invalid_tags(tags):
 
 #+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_tags.py
 import types
-from franceinter.episodes.episodes_from_tags import episodes_from_tags
+from franceinter.episodes import Episode, episodes_from_tags
 from franceinter.episodes.tests.examples_episodes_from_tags import *
-from franceinter.episodes.episode import Episode
 
 def test_invalid_list():
     tags = invalid_list()
@@ -4877,7 +4836,7 @@ La función recibe un objeto =franceinter.podcasts.Podcast= y devuelve un =Gener
 - Un objeto que no es un =franceinter.podcasts.Podcast=
 
 #+begin_src python :tangle franceinter/episodes/tests/examples_pages_from_podcast.py
-from franceinter.podcasts.podcast import Podcast
+from franceinter.podcasts import Podcast
 
 def valid_podcast():
     title = "Sur les epaules de Darwin"
@@ -4919,9 +4878,8 @@ def pages_from_podcast(podcast):
 **** 5. Definición
 
 #+begin_src python :tangle franceinter/episodes/pages_from_podcast.py
-from franceinter.podcasts.podcast import Podcast
-from franceinter.episodes.html_from_url import html_from_url
-from franceinter.episodes.lastpage_from_html import lastpage_from_html
+from franceinter.podcasts import Podcast
+from franceinter.episodes import html_from_url, lastpage_from_html
 
 def pages_from_podcast(podcast):
     assert isinstance(podcast, Podcast), invalid_podcast(podcast)
@@ -4948,7 +4906,7 @@ import types
 import pytest
 import threading
 from validators.url import url as is_valid_url
-from franceinter.episodes.pages_from_podcast import pages_from_podcast
+from franceinter.episodes import pages_from_podcast
 from franceinter.episodes.tests.examples_pages_from_podcast import *
 from utils.http_server import LocalFolderHTTPServer as HTTPServer
 
@@ -5108,7 +5066,7 @@ def invalid_html(html):
 - Cuando recibe un HTML que tiene el tag =<li>= con la clase =last=, pero éste no tiene el =<a>=, devuelve la primera página (=1=)
 
 #+begin_src python :tangle franceinter/episodes/tests/test_lastpage_from_html.py
-from franceinter.episodes.lastpage_from_html import lastpage_from_html
+from franceinter.episodes import lastpage_from_html
 from franceinter.episodes.tests.examples_lastpage_from_html import *
 
 def test_html_ok():
@@ -5237,7 +5195,7 @@ def connection_error(url):
 import re
 import pytest
 import threading
-from franceinter.episodes.html_from_url import html_from_url
+from franceinter.episodes import html_from_url
 from franceinter.episodes.tests.examples_html_from_url import *
 from utils.http_server import LocalFolderHTTPServer as HTTPServer
 
@@ -5424,7 +5382,7 @@ def invalid_html(html):
 
 #+begin_src python :tangle franceinter/episodes/tests/test_tags_from_html.py
 import types
-from franceinter.episodes.tags_from_html import tags_from_html
+from franceinter.episodes import tags_from_html
 from franceinter.episodes.tests.examples_tags_from_html import *
 
 def test_html_with_buttons():
@@ -5655,11 +5613,13 @@ def episode_from_tag(tag):
 Usamos la biblioteca [[https://validators.readthedocs.io/][validators]] para validar el URL del podcast
 
 #+begin_src python :tangle franceinter/episodes/episode_from_tag.py
-from franceinter.episodes.title_from_tag import title_from_tag
-from franceinter.episodes.url_from_tag import url_from_tag
-from franceinter.episodes.date_from_tag import date_from_tag
-from franceinter.episodes.duration_from_tag import duration_from_tag
-from franceinter.episodes.episode import Episode
+from franceinter.episodes import (
+    title_from_tag,
+    url_from_tag,
+    date_from_tag,
+    duration_from_tag,
+    Episode
+)
 from validators.url import url as is_valid_url
 import datetime
 import bs4
@@ -5714,8 +5674,7 @@ def invalid_duration(tag):
 - Cuando recibe un tag que tiene el elemento de la duración, pero ésta no es válida, lanza un =AssertionError=
 
 #+begin_src python :tangle franceinter/episodes/tests/test_episode_from_tag.py
-from franceinter.episodes.episode import Episode
-from franceinter.episodes.episode_from_tag import episode_from_tag
+from franceinter.episodes import Episode, episode_from_tag
 from franceinter.episodes.tests.examples_episode_from_tag import *
 
 def test_episode_ok():
@@ -5889,7 +5848,7 @@ def invalid_tag(tag):
 - Cuando recibe un =<button>= que no tiene el atributo =data-diffusion-title=, devuelve un string vacío
 
 #+begin_src python :tangle franceinter/episodes/tests/test_title_from_tag.py
-from franceinter.episodes.title_from_tag import title_from_tag
+from franceinter.episodes import title_from_tag
 from franceinter.episodes.tests.examples_title_from_tag import *
 
 def test_author_ok():
@@ -6019,7 +5978,7 @@ def invalid_tag(tag):
 - Cuando recibe un tag =<button>= que no tiene el atributo =data-url=, devuelve un string vacío
 
 #+begin_src python :tangle franceinter/episodes/tests/test_url_from_tag.py
-from franceinter.episodes.url_from_tag import url_from_tag
+from franceinter.episodes import url_from_tag
 from franceinter.episodes.tests.examples_url_from_tag import *
 
 def test_url_ok():
@@ -6231,7 +6190,7 @@ def invalid_month(month_name):
 
 #+begin_src python :tangle franceinter/episodes/tests/test_date_from_tag.py
 import datetime
-from franceinter.episodes.date_from_tag import date_from_tag
+from franceinter.episodes import date_from_tag
 from franceinter.episodes.tests.examples_date_from_tag import *
 
 def test_url_ok():
@@ -6394,7 +6353,7 @@ def invalid_duration(duration, tag):
 - Cuando recibe un =<button>= con la clase =replay-button= pero que no contiene un número entero en el atributo =data-duration-seconds=, lanza un =AssertionError=
 
 #+begin_src python :tangle franceinter/episodes/tests/test_duration_from_tag.py
-from franceinter.episodes.duration_from_tag import duration_from_tag
+from franceinter.episodes import duration_from_tag
 from franceinter.episodes.tests.examples_duration_from_tag import *
 
 def test_duration_ok():
