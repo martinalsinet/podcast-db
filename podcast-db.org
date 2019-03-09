@@ -191,6 +191,7 @@ Vamos a usar las siguientes bibliotecas
 - pytest :: Para ejecutar los casos de prueba
 - pytest-cov :: Para generar el reporte de cobertura de tests
 - validators :: Para validar URLs
+- unidecode :: Para comparar strings sin los acentos (á == a)
 
 **** TODO evaluar [[https://html.python-requests.org/][Requests-HTML]]
 
@@ -218,6 +219,7 @@ requests-cache
 pytest
 pytest-cov
 validators
+unidecode
 #+end_src
 
 ** Instalar las dependencias
