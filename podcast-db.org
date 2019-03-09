@@ -387,9 +387,7 @@ print(args)
 **** cli
 
 #+begin_src python :tangle cli/__init__.py
-__all__ = [
-    "arguments", "query", "database"
-]
+
 #+end_src
 
 *** Arguments
@@ -397,20 +395,14 @@ __all__ = [
 ***** Funciones
 
 #+begin_src python :tangle cli/arguments/__init__.py
-__all__ = [
-    "argument_tuples",
-    "parser_from_tuples"
-]
+from cli.arguments.argument_tuples import argument_tuples
+from cli.arguments.parser_from_tuples import parser_from_tuples
 #+end_src
 
 ***** Tests
 
 #+begin_src python :tangle cli/arguments/tests/__init__.py
-__all__ = [
-    "test_argument_tuples",
-    "test_parser_from_tuples",
-    "examples_parser_from_tuples"
-]
+
 #+end_src
 
 **** argument_tuples
@@ -491,7 +483,7 @@ def argument_tuples():
 - Todos los argumentos que acepta el programa deben estar presentes en los argumentos posicionales
 
 #+begin_src python :tangle cli/arguments/tests/test_argument_tuples.py
-from cli.arguments.argument_tuples import argument_tuples
+from cli.arguments import argument_tuples
 
 
 def test_postitional_arguments():
@@ -531,7 +523,7 @@ def test_arguments_are_present():
 pytest cli/arguments/tests/test_argument_tuples.py
 #+end_src
 
-**** DOING parser_from_tuples
+**** parser_from_tuples
 ***** 1. Objetivo
 
 Obtener el parser de argumentos de línea de comando
@@ -640,7 +632,7 @@ def invalid_kwargs(kwargs):
 
 #+begin_src python :tangle cli/arguments/tests/test_parser_from_tuples.py
 from argparse import ArgumentParser, Namespace
-from cli.arguments.parser_from_tuples import parser_from_tuples
+from cli.arguments import parser_from_tuples
 from cli.arguments.tests.examples_parser_from_tuples import *
 
 def test_valid_tuple_list():
