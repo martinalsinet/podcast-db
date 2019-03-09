@@ -1114,6 +1114,8 @@ Podcast author: Ali Baddou
 
 - [ ] =podcasts_from_filename= :: Se podrían matchear los errores de lectura del archivo con los códigos de la respuesta HTTP (404 si no se encuentra, 500 si hubo un error de I/O, etc)
 
+- [ ] Tests condicionales :: Estamos ignorando los tests de fallas en la conexión de red porque tardan más de 10 segundos en dar timeout. Hay que usar =@pytest.mark.skipif= para agregar una variable de entorno que permita saltearlos en desarrollo. Ver [[https://stackoverflow.com/questions/22603562/how-to-check-a-member-variable-with-py-test-skipif][esta pregunta]] de StackOverflow que tiene un ejemplo similar.
+
 *** =__init.py__=
 **** Funciones
 
