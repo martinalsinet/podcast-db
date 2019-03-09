@@ -713,17 +713,14 @@ Por el momento, la única fuente disponible es FranceInter
 **** Funciones
 
 #+begin_src python :tangle sources/__init__.py
-__all__ = [
-    "list_sources"
-]
+from sources.list_sources import list_sources
+from sources.source import Source
 #+end_src
 
 **** Tests
 
 #+begin_src python :tangle sources/tests/__init__.py
-__all__ = [
-    "test_list_sources"
-]
+
 #+end_src
 
 *** list_sources
@@ -775,8 +772,8 @@ def list_sources():
 - Caso exitoso, devuelve una lista de un solo elemento.
 
 #+begin_src python :tangle sources/tests/test_list_sources.py
-from sources.list_sources import list_sources
-from sources.source import Source
+from sources import list_sources
+from sources import Source
 
 def test_sources_ok():
     sources = list_sources()
