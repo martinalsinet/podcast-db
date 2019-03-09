@@ -312,86 +312,55 @@ podcast-db show-episode --episode franceinter/darwin/2018-04-16
 - [ ] Mostrar el mensaje con la versión
 
 ** Mejoras
+
+- [X] Corregir los imports :: Declarar las funciones que se exportan en cada módulo dentro del archivo =__init.py__=
+
 ** Implementación
 *** Prueba de concepto con argparse
 
 #+begin_src python :tangle podcast-db :tangle-mode (identity #o755)
 #!/usr/bin/env python-3.6
-import argparse
+from cli.arguments import argument_tuples, parser_from_tuples
 
-parser = argparse.ArgumentParser()
-
-parser.add_argument(
-    "command", 
-    help="list-sources | list-podcasts | list-episodes | show-podcast | show-episode",  
-    choices=["list-sources", "list-podcasts", "list-episodes", "show-podcast", 
-"show-episode"],
-    metavar="command"
-)
-parser.add_argument(
-    "-v", "--version", 
-    help="show version",
-    metavar=""
-)
-parser.add_argument(
-    "--source", 
-    help="source name or code ('franceinter' or 'fri')"
-)
-parser.add_argument(
-    "--podcast", 
-    help="podcast identifier string ('sur-les-epaules')" 
-)
-parser.add_argument(
-    "--episode", 
-    help="episode date in YYYY-MM-DD format ('2018-04-17')"
-)
-parser.add_argument(
-    "--keyword", 
-    help="filter list by keyword ('musique')"
-)
-parser.add_argument(
-    "--year", 
-    help="filter list by year ('2018')"
-)
-parser.add_argument(
-    "--month", 
-    help="filter list by month ('2018-03')"
-)
-
-args = parser.parse_args()
-
-if args.command == 'list-sources':
-    from sources.list_sources import list_sources
-    print(list_sources())
-
-if args.command == 'list-podcasts':
-    source = args.source
-
-if args.command == 'show-podcast':
-    source = args.source
-    podcast = args.podcast
-
-if args.command == 'list-episodes':
-    source = args.source
-    podcast = args.podcast
-
-if args.command == 'show-episode':
-    source = args.source
-    podcast = args.podcast
-    episode = args.episode
+tuples = argument_tuples()
+parser = parser_from_tuples(tuples)
+parser.description = "Query podcasts and episodes from France Inter"
+args = parser.parse_args(["list-sources"])
 
 print(args)
 #+end_src
 
-*** Módulos
-**** cli
+#+RESULTS:
+:results:
+usage:  [-h] [-v] [--source SOURCE] [--podcast PODCAST] [--episode EPISODE]
+        [--keyword KEYWORD] [--year YEAR] [--month MONTH]
+        command
+
+Query podcasts and episodes from France Inter
+
+positional arguments:
+  command            list-sources | list-podcasts | list-episodes | show-
+                     podcast | show-episode
+
+optional arguments:
+  -h, --help         show this help message and exit
+  -v , --version     show version
+  --source SOURCE    source name or code ('franceinter' or 'fri')
+  --podcast PODCAST  podcast identifier string ('sur-les-epaules')
+  --episode EPISODE  episode date in YYYY-MM-DD format ('2018-04-17')
+  --keyword KEYWORD  filter list by keyword ('musique')
+  --year YEAR        filter list by year ('2018')
+  --month MONTH      filter list by month ('2018-03')
+:end:
+
+*** =__init.py__=
 
 #+begin_src python :tangle cli/__init__.py
 
 #+end_src
 
 *** Arguments
-**** Submódulos
+**** =__init.py__=
 ***** Funciones
 
 #+begin_src python :tangle cli/arguments/__init__.py
@@ -408,7 +377,7 @@ from cli.arguments.parser_from_tuples import parser_from_tuples
 **** argument_tuples
 ***** 1. Objetivo
 
-Obtener el listado de tuplas para generar los argumentos que acepta el parser de línea de comandos
+Obtener el listado de los parámetros que acepta nuestro programa desde la línea de comandos
 
 ***** 2. Firma
 
@@ -425,7 +394,7 @@ Dado que la función no recibe argumentos, no es necesario confeccionar ejemplos
 def argument_tuples():
     # devuelve una lista de tuplas
     tuples = []
-    # agregar una tupla para cada argumento
+    # agregar una tupla para cada parámetro
     return tuples
 
 #+end_src
@@ -6422,9 +6391,10 @@ drwxr-xr-x  7 martin  staff   224B Feb  8 17:18 ..
 
 * Herramientas
 ** Módulos
+*** =__init.py__=
 
 #+begin_src python :tangle utils/__init__.py
-__all__ = ["http_server"]
+
 #+end_src
 
 ** LocalFolderHTTPServer
