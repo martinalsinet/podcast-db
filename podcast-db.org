@@ -377,6 +377,7 @@ from cli.arguments.parser_from_tuples import parser_from_tuples
 from cli.arguments.command_from_arguments import command_from_arguments
 from cli.arguments.source_from_arguments import source_from_arguments
 from cli.arguments.podcast_from_arguments import podcast_from_arguments
+from cli.arguments.episode_from_arguments import episode_from_arguments
 #+end_src
 
 ***** Tests
@@ -1171,13 +1172,127 @@ def test_arguments_without_podcast():
 pytest ./cli/arguments/tests/test_podcast_from_arguments.py
 #+end_src
 
-**** TODO episode_from_arguments
+**** episode_from_arguments
+***** 1. Objetivo
+
+Obtener el identificador del episodio a partir de los argumentos recibidos
+
+***** 2. Firma
+
+La función recibe un objeto =argparse.Namespace= y devuelve un =str= con el identificador del episodio
+
+***** 3. Ejemplos
+
+- Caso exitoso, un =Namespace= que tiene solamente el identificador del episodio en la propiedad =episode=
+- Caso exitoso, un =Namespace= que tiene la fuente, el podcast y el identificador del episodio en la propiedad =episode=
+- Un =Namespace= que no es un objeto =argparse.Namespace=
+- Un =Namespace= que no tiene la propiedad =episode=
+
+#+begin_src python :tangle cli/arguments/tests/examples_episode_from_arguments.py
+from argparse import Namespace
+
+def arguments_with_episode():
+    args = Namespace()
+    args.episode = "2018-03-13"
+    return args
+
+def arguments_with_source_podcast_episode():
+    args = Namespace()
+    args.episode = "franceinter/l-histoire-africaine/2018-03-13"
+    return args
+
+def invalid_arguments():
+    args = 42
+    return args
+
+def arguments_without_episode():
+    args = Namespace()
+    args.podcast = "l-histoire-africaine"
+    return args
+
+#+end_src
+
+***** 4. Boceto
+
+#+begin_src python
+def episode_from_arguments(args):
+    # validar que args sea un argparse.Namespace
+    # verificar si hay un episodio en args.episode
+    return episode
+#+end_src
+
+***** 5. Definición
+
+#+begin_src python :tangle cli/arguments/episode_from_arguments.py
+import re
+from argparse import Namespace
+
+def episode_from_arguments(args):
+    assert isinstance(args, Namespace), invalid_arguments(args)
+    assert hasattr(args, "episode"), missing_episode(args)
+    episode = args.episode
+    match = re.search("^([a-z0-9-]+)/([a-z0-9-]+)/([a-z0-9-]+)$", episode)
+    if match:
+        episode = match.groups()[2]
+    return episode
+
+def invalid_arguments(args):
+    return "arguments parameters must be an argparse.Namespace, received %s instead" % type(args)
+
+def missing_episode(args):
+    return "arguments parameter must have an episode property, received %s" % args
+#+end_src
+
+***** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un =Namespace= que tiene solamente el identificador del episodio en la propiedad =episode=, devuelve un =str= con el identificador del episodio
+- Caso exitoso, cuando recibe un =Namespace= que tiene la fuente, el podcast y el identificador del episodio en la propiedad =episode=, devuelve un =str= con el identificador del episodio
+- Cuando recibe un =Namespace= que no es un objeto =argparse.Namespace=, lanza un =AssertionError=
+- Cuando recibe un =Namespace= que no tiene la propiedad =episode=, lanza un =AssertionError=
+
+#+begin_src python :tangle cli/arguments/tests/test_episode_from_arguments.py
+from cli.arguments import episode_from_arguments
+from cli.arguments.tests.examples_episode_from_arguments import *
+
+def test_arguments_with_episode():
+    args = arguments_with_episode()
+    episode = episode_from_arguments(args)
+    assert (episode == "2018-03-13")
+
+def test_arguments_with_source_podcast_episode():
+    args = arguments_with_source_podcast_episode()
+    episode = episode_from_arguments(args)
+    assert (episode == "2018-03-13")
+
+def test_invalid_arguments():
+    args = invalid_arguments()
+    try:
+        episode = episode_from_arguments(args)
+    except AssertionError:
+        assert True
+
+def test_arguments_without_episode():
+    args = arguments_without_episode()
+    try:
+        episode = episode_from_arguments(args)
+    except AssertionError:
+        assert True
+#+end_src
+
+****** Run tests
+
+#+begin_src sh
+pytest ./cli/arguments/tests/test_episode_from_arguments.py
+#+end_src
+
 **** TODO keyword_from_arguments
 **** TODO year_from_arguments
 **** TODO month_from_arguments
 **** TODO handlers_from_commands
 **** TODO output_from_arguments
+
 switch/case: https://stackoverflow.com/a/11479840
+
 *** Query
 **** TODO output_from_source_list
 **** TODO output_from_podcast_list
