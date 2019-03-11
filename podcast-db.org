@@ -371,6 +371,7 @@ optional arguments:
 ***** Funciones
 
 #+begin_src python :tangle cli/arguments/__init__.py
+from cli.arguments.known_commands import known_commands
 from cli.arguments.argument_tuples import argument_tuples
 from cli.arguments.parser_from_tuples import parser_from_tuples
 from cli.arguments.command_from_arguments import command_from_arguments
@@ -384,6 +385,60 @@ from cli.arguments.podcast_from_arguments import podcast_from_arguments
 
 #+end_src
 
+**** known_commands
+***** 1. Objetivo
+
+Obtener el listado de comandos que acepta la aplicación
+
+***** 2. Firma
+
+La función no recibe argumentos y devuelve un =list= de =str=
+
+***** 3. Ejemplos
+
+Dado que la función no recibe argumentos, no es necesario confeccionar ejemplos
+
+***** 4. Boceto
+
+#+begin_src python
+def known_commands():
+    commands = []
+    # agregar los comandos a la lista
+    return commands
+#+end_src
+
+***** 5. Definición
+
+#+begin_src python :tangle cli/arguments/known_commands.py
+def known_commands():
+    commands = [
+        "list-sources", "list-podcasts", "list-episodes", 
+        "show-podcast", "show-episode"
+    ]
+    return commands
+#+end_src
+
+***** 6. Casos de prueba
+
+- Todos los comandos deben ser de tipo =str=
+
+#+begin_src python :tangle cli/arguments/tests/test_known_commands.py
+from cli.arguments import known_commands
+
+def test_known_commands():
+    commands = known_commands()
+    assert (len(commands) == 5)
+    for command in commands:
+        assert isinstance(command, str)
+
+#+end_src
+
+****** Run tests
+
+#+begin_src sh
+pytest ./cli/arguments/tests/test_known_commands.py
+#+end_src
+
 **** argument_tuples
 ***** 1. Objetivo
 
@@ -392,6 +447,8 @@ Obtener el listado de los parámetros que acepta nuestro programa desde la líne
 ***** 2. Firma
 
 La función no recibe argumentos y devuelve una lista de tuplas =(*args, **kwargs)=.
+
+Cada tupla contiene los argumentos que recibe el método =add_argument= de la clase =argparse.Parser= para agregar un nuevo parámetro al parser de línea de comandos.
 
 ***** 3. Ejemplos
 
@@ -412,14 +469,15 @@ def argument_tuples():
 ***** 5. Definición
 
 #+begin_src python :tangle cli/arguments/argument_tuples.py
+from cli.arguments import known_commands
 
 def argument_tuples():
     tuples = []
     tuples.append((
         ["command"],
         {
-            "help": "list-sources | list-podcasts | list-episodes | show-podcast | show-episode",  
-            "choices": ["list-sources", "list-podcasts", "list-episodes", "show-podcast", "show-episode"],
+            "help": " | ".join(known_commands()),  
+            "choices": known_commands(),
             "metavar": "command"
         }
     ))
@@ -722,23 +780,13 @@ def command_from_arguments(args):
 
 #+begin_src python :tangle cli/arguments/command_from_arguments.py
 from argparse import Namespace
-
+from cli.arguments import known_commands
 
 def command_from_arguments(args):
     assert isinstance(args, Namespace), invalid_arguments(args)
     assert "command" in args, missing_command(args)
     assert args.command in known_commands(), unknown_command(args.command)
     return args.command
-
-
-def known_commands():
-    return [
-        "list-sources",
-        "list-podcasts",
-        "list-episodes",
-        "show-podcast",
-        "show-episode"
-    ]
 
 
 def invalid_arguments(args):
@@ -1127,6 +1175,9 @@ pytest ./cli/arguments/tests/test_podcast_from_arguments.py
 **** TODO keyword_from_arguments
 **** TODO year_from_arguments
 **** TODO month_from_arguments
+**** TODO handlers_from_commands
+**** TODO output_from_arguments
+switch/case: https://stackoverflow.com/a/11479840
 *** Query
 **** TODO output_from_source_list
 **** TODO output_from_podcast_list
