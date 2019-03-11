@@ -264,6 +264,7 @@ cli
 coverage
 downloads
 franceinter
+podcast-db
 requirements.txt
 sources
 utils
@@ -320,7 +321,9 @@ podcast-db show-episode --episode franceinter/darwin/2018-04-16
 - [X] Corregir los imports :: Declarar las funciones que se exportan en cada módulo dentro del archivo =__init.py__=
 
 ** Implementación
-*** Prueba de concepto con argparse
+*** CLI script
+
+Generamos un script =./podcast-db= que será la interface desde línea de comandos con la aplicación, parseando los parámetros recibidos y ejecutando las acciones correspondientes.
 
 #+begin_src python :tangle podcast-db :tangle-mode (identity #o755)
 #!/usr/bin/env python-3.6
@@ -329,7 +332,7 @@ from cli.arguments import argument_tuples, parser_from_tuples
 tuples = argument_tuples()
 parser = parser_from_tuples(tuples)
 parser.description = "Query podcasts and episodes from France Inter"
-args = parser.parse_args(["list-sources"])
+args = parser.parse_args(["--help"])
 
 print(args)
 #+end_src
