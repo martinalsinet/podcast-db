@@ -321,6 +321,12 @@ podcast-db show-episode --episode franceinter/darwin/2018-04-16
 - [X] Corregir los imports :: Declarar las funciones que se exportan en cada módulo dentro del archivo =__init.py__=
 
 ** Implementación
+*** =__init.py__=
+
+#+begin_src python :tangle cli/__init__.py
+
+#+end_src
+
 *** CLI script
 
 Generamos un script =./podcast-db= que será la interface desde línea de comandos con la aplicación, parseando los parámetros recibidos y ejecutando las acciones correspondientes.
@@ -360,12 +366,6 @@ optional arguments:
   --month MONTH      filter list by month ('2018-03')
 :end:
 
-*** =__init.py__=
-
-#+begin_src python :tangle cli/__init__.py
-
-#+end_src
-
 *** Arguments
 **** =__init.py__=
 ***** Funciones
@@ -375,6 +375,7 @@ from cli.arguments.argument_tuples import argument_tuples
 from cli.arguments.parser_from_tuples import parser_from_tuples
 from cli.arguments.command_from_arguments import command_from_arguments
 from cli.arguments.source_from_arguments import source_from_arguments
+from cli.arguments.podcast_from_arguments import podcast_from_arguments
 #+end_src
 
 ***** Tests
@@ -879,7 +880,7 @@ from argparse import Namespace
 def source_from_arguments(args):
     assert isinstance (args, Namespace), invalid_arguments(args)
     source = False
-    if not source and hasattr(args, "source"):
+    if hasattr(args, "source"):
         source = args.source
     if not source and hasattr(args, "podcast"):
         source = source_from_podcast(args.podcast)
@@ -981,7 +982,147 @@ def test_arguments_with_unknown_source():
 #+end_src
 
 ****** Run tests
-**** TODO podcast_from_arguments
+**** podcast_from_arguments
+***** 1. Objetivo
+
+Obtener el identificador del podcast a partir de los argumentos recibidos
+
+***** 2. Firma
+
+La función recibe un objeto =argparse.Namespace= y devuelve un =str= con el identificador del podcast
+
+***** 3. Ejemplos
+
+- Caso exitoso, un =Namespace= que tiene solamente el identificador del podcast en la propiedad =podcast=
+- Caso exitoso, un =Namespace= que tiene la fuente y el identificador del podcast en la propiedad =podcast=
+- Caso exitoso, un =Namespace= que tiene el identificador del podcast en la propiedad =episode=
+- Un =Namespace= que no es un objeto =argparse.Namespace=
+- Un =Namespace= que no tiene la propiedad =podcast=
+
+#+begin_src python :tangle cli/arguments/tests/examples_podcast_from_arguments.py
+from argparse import Namespace
+
+def arguments_with_podcast():
+    args = Namespace()
+    args.podcast = "la-france-aujourdhui"
+    return args
+    
+def arguments_with_source_and_podcast():
+    args = Namespace()
+    args.podcast = "franceinter/la-france-aujourdhui"
+    return args
+
+def arguments_with_podcast_in_episode():
+    args = Namespace()
+    args.episode = "fri/la-france-aujourdhui/2018-08-21"
+    return args
+
+def invalid_arguments():
+    return 42
+
+def arguments_without_podcast():
+    args = Namespace()
+    args.source = "fri"
+    return args
+#+end_src
+
+***** 4. Boceto
+
+#+begin_src python
+def podcast_from_arguments(args):
+    # validar que args sea un argparse.Namespace
+    # verificar si hay un podcast en args.podcast
+    # verificar si hay un podcast en args.episode
+    return podcast
+#+end_src
+
+***** 5. Definición
+
+#+begin_src python :tangle cli/arguments/podcast_from_arguments.py
+import re
+from argparse import Namespace
+
+def podcast_from_arguments(args):
+    assert isinstance(args, Namespace), invalid_arguments(args)
+    podcast = False
+    if hasattr(args, "podcast"):
+        podcast = podcast_from_attr(args.podcast)
+    if not podcast and hasattr(args, "episode"):
+        podcast = podcast_from_episode(args.episode)
+    assert isinstance(podcast, str), missing_podcast(args)
+    return podcast
+
+def invalid_arguments(args):
+    return "arguments parameters must be an argparse.Namespace, received %s instead" % type(args)
+
+def podcast_from_attr(attr):
+    podcast = attr
+    match = re.search("^([a-z0-9-]+)/([a-z0-9-]+)$", podcast)
+    if match:
+        podcast = match.groups()[1]
+    return podcast
+    
+def podcast_from_episode(episode):
+    podcast = False
+    match = re.search("^([a-z0-9-]+)/([a-z0-9-]+)/([a-z0-9-]+)$", episode)
+    if match:
+        podcast = match.groups()[1]
+    return podcast
+
+def missing_podcast(args):
+    return "arguments parameter must have a podcast property, received %s" % args
+
+
+#+end_src
+
+***** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un =Namespace= que tiene solamente el identificador del podcast en la propiedad =podcast=, devuelve un =str= con el identificador del podcast
+- Caso exitoso, cuando recibe un =Namespace= que tiene la fuente y el identificador del podcast en la propiedad =podcast=, devuelve un =str= solamente con el identificador del podcast
+- Caso exitoso, cuando recibe un =Namespace= que tiene el identificador del podcast en la propiedad =episode=, devuelve un =str= con el identificador del podcast
+- Cuando recibe un =Namespace= que no es un objeto =argparse.Namespace=, lanza un =AssertionError=
+- Cuando recibe un =Namespace= que no tiene la propiedad =podcast=, lanza un =AssertionError=
+
+#+begin_src python :tangle cli/arguments/tests/test_podcast_from_arguments.py
+from cli.arguments import podcast_from_arguments
+from cli.arguments.tests.examples_podcast_from_arguments import *
+
+def test_arguments_with_podcast():
+    args = arguments_with_podcast()
+    podcast = podcast_from_arguments(args)
+    assert (podcast == "la-france-aujourdhui")
+
+def test_arguments_with_source_and_podcast():
+    args = arguments_with_source_and_podcast()
+    podcast = podcast_from_arguments(args)
+    assert (podcast == "la-france-aujourdhui")
+
+def test_arguments_with_podcast_in_episode():
+    args = arguments_with_podcast_in_episode()
+    podcast = podcast_from_arguments(args)
+    assert (podcast == "la-france-aujourdhui")
+
+def test_invalid_arguments():
+    args = invalid_arguments()
+    try:
+        podcast = podcast_from_arguments(args)
+    except AssertionError:
+        assert True
+
+def test_arguments_without_podcast():
+    args = arguments_without_podcast()
+    try:
+        podcast = podcast_from_arguments(args)
+    except AssertionError:
+        assert True
+#+end_src
+
+****** Run tests
+
+#+begin_src sh
+pytest ./cli/arguments/tests/test_podcast_from_arguments.py
+#+end_src
+
 **** TODO episode_from_arguments
 **** TODO keyword_from_arguments
 **** TODO year_from_arguments
