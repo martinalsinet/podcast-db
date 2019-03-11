@@ -369,6 +369,7 @@ optional arguments:
 from cli.arguments.argument_tuples import argument_tuples
 from cli.arguments.parser_from_tuples import parser_from_tuples
 from cli.arguments.command_from_arguments import command_from_arguments
+from cli.arguments.source_from_arguments import source_from_arguments
 #+end_src
 
 ***** Tests
@@ -719,12 +720,12 @@ from argparse import Namespace
 
 def command_from_arguments(args):
     assert isinstance(args, Namespace), invalid_arguments(args)
-    assert "command" in args, missing_argument(args)
-    assert args.command in accepted_commands(), unknown_command(args.command)
+    assert "command" in args, missing_command(args)
+    assert args.command in known_commands(), unknown_command(args.command)
     return args.command
 
 
-def accepted_commands():
+def known_commands():
     return [
         "list-sources",
         "list-podcasts",
@@ -738,12 +739,12 @@ def invalid_arguments(args):
     return "arguments parameter must be an argparse.Namespace, received %s instead" % type(args)
 
 
-def missing_argument(args):
+def missing_command(args):
     return "arguments parameter must have a command property, received %s" % args
 
 
 def unknown_command(command):
-    return "unknown %s command" % command
+    return "unknown command: " % command
 #+end_src
 
 ***** 6. Casos de prueba
@@ -794,7 +795,187 @@ def test_arguments_with_unknown_command():
 pytest ./cli/arguments/tests/test_command_from_arguments.py
 #+end_src
 
-**** TODO source_from_arguments
+**** source_from_arguments
+***** 1. Objetivo
+
+Obtener la fuente de podcasts a partir de los argumentos recibidos
+
+***** 2. Firma
+
+La función recibe un objeto =argparse.Namespace= y devuelve un =str= con el nombre de la fuente
+
+***** 3. Ejemplos
+
+- Caso exitoso, un =Namespace= que tiene el nombre de una fuente válida en la propiedad =source=
+- Caso exitoso, un =Namespace= que tiene el código de una fuente válida en la propiedad =source=
+- Caso exitoso, un =Namespace= que tiene una fuente válida en la propiedad =podcast=
+- Caso exitoso, un =Namespace= que tiene una fuente válida en la propiedad =episode=
+- Un =Namespace= que no es un objeto =argparse.Namespace=
+- Un =Namespace= que no tiene la propiedad =source=
+- Un =Namespace= tiene una fuente desconocida en la propiedad =source=
+
+#+begin_src python :tangle cli/arguments/tests/examples_source_from_arguments.py
+from argparse import Namespace
+
+def arguments_with_valid_source_name():
+    args = Namespace()
+    args.source = "franceinter"
+    return args
+
+def arguments_with_valid_source_code():
+    args = Namespace()
+    args.source = "fri"
+    return args
+
+def arguments_with_valid_source_in_podcast():
+    args = Namespace()
+    args.podcast = "franceinter/politique-et-societe"
+    return args
+
+def arguments_with_valid_source_in_episode():
+    args = Namespace()
+    args.episode = "fri/politique-et-societe/2018-03-23"
+    return args
+
+def invalid_arguments():
+    args = 42
+    return args
+
+def arguments_without_source():
+    args = Namespace()
+    args.command = "list-podcasts"
+    return args
+    
+def arguments_with_unknown_source():
+    args = Namespace()
+    args.source = "next"
+    return args
+#+end_src
+
+***** 4. Boceto
+
+#+begin_src python
+def source_from_arguments(args):
+    # validar que args sea un Namespace
+    # verificar si hay una fuente en args.source
+    # verificar si hay una fuente en args.podcast
+    # verificar si hay una fuente en args.episode
+    # validar que la fuente sea conocida
+    return source
+#+end_src
+
+***** 5. Definición
+
+#+begin_src python :tangle cli/arguments/source_from_arguments.py
+import re
+from argparse import Namespace
+
+
+def source_from_arguments(args):
+    assert isinstance (args, Namespace), invalid_arguments(args)
+    source = False
+    if not source and hasattr(args, "source"):
+        source = args.source
+    if not source and hasattr(args, "podcast"):
+        source = source_from_podcast(args.podcast)
+    if not source and hasattr(args, "episode"):
+        source = source_from_episode(args.episode)
+    assert isinstance(source, str), missing_source(args)
+    assert source in known_sources(), unknown_source(source)
+    # actualmente hay una sola fuente
+    return "franceinter"
+
+
+def source_from_podcast(podcast):
+    source = False
+    match = re.search("^([a-z0-9-]+)/([a-z0-9-]+)$", podcast)
+    if match:
+        source = match.groups()[0]
+    return source
+
+
+def source_from_episode(episode):
+    source = False
+    match = re.search("^([a-z0-9-]+)/([a-z0-9-]+)/([a-z0-9-]+)$", episode)
+    if match:
+        source = match.groups()[0]
+    return source
+
+
+def invalid_arguments(args):
+    return "arguments parameter must be an argparse.Namespace, received %s instead" % type(args)
+
+
+def missing_source(args):
+    return "arguments parameter must have a source property, received %s" % args
+
+
+def unknown_source(source):
+    return "unknown source: %s" % source
+
+
+def known_sources():
+    return ["fri", "franceinter"]
+#+end_src
+
+***** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un =Namespace= que tiene el nombre de una fuente válida en la propiedad =source=, devuelve un =str= con el nombre de la fuente
+- Caso exitoso, cuando recibe un =Namespace= que tiene el código de una fuente válida en la propiedad =source=, devuelve un =str= con el nombre de la fuente
+- Caso exitoso, cuando recibe un =Namespace= que tiene una fuente válida en la propiedad =podcast=, devuelve un =str= con el nombre de la fuente
+- Caso exitoso, cuando recibe un =Namespace= que tiene una fuente válida en la propiedad =episode=, devuelve un =str= con el nombre de la fuente
+- Cuando recibe un =Namespace= que no es un objeto =argparse.Namespace=, lanza un =AssertionError=
+- Cuando recibe un =Namespace= que no tiene la propiedad =source=, lanza un =AssertionError=
+- Cuando recibe un =Namespace= tiene una fuente desconocida en la propiedad =source=, lanza un =AssertionError=
+
+#+begin_src python :tangle cli/arguments/tests/test_source_from_arguments.py
+from cli.arguments import source_from_arguments
+from cli.arguments.tests.examples_source_from_arguments import *
+
+def test_arguments_with_valid_source_name():
+    args = arguments_with_valid_source_name()
+    source = source_from_arguments(args)
+    assert source == "franceinter"
+
+def test_arguments_with_valid_source_code():
+    args = arguments_with_valid_source_code()
+    source = source_from_arguments(args)
+    assert source == "franceinter"
+
+def test_arguments_with_valid_source_in_podcast():
+    args = arguments_with_valid_source_in_podcast()
+    source = source_from_arguments(args)
+    assert source == "franceinter"
+
+def test_arguments_with_valid_source_in_episode():
+    args = arguments_with_valid_source_in_episode()
+    source = source_from_arguments(args)
+    assert source == "franceinter"
+
+def test_invalid_arguments():
+    args = invalid_arguments()
+    try:
+        source = source_from_arguments(args)
+    except:
+        assert True
+
+def test_arguments_without_source():
+    args = arguments_without_source()
+    try:
+        source = source_from_arguments(args)
+    except:
+        assert True
+
+def test_arguments_with_unknown_source():
+    args = arguments_with_unknown_source()
+    try:
+        source = source_from_arguments(args)
+    except:
+        assert True
+
+#+end_src
+
+****** Run tests
 **** TODO podcast_from_arguments
 **** TODO episode_from_arguments
 **** TODO keyword_from_arguments
