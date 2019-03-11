@@ -47,6 +47,7 @@
   - [[#gplv3][GPLv3]]
 - [[#apéndices][Apéndices]]
   - [[#prueba-de-concepto-podcast-id][Prueba de concepto: Podcast ID]]
+  - [[#implementación-de-referencia][Implementación de referencia]]
 
 * Motivación
 
@@ -7440,24 +7441,7 @@ print_identifier(podcasts)
 
 #+end_src
 
-*** listar podcasts
-
-#+begin_src python :python python-3.6 :results drawer
-import franceinter.podcasts_old as fr
-
-podcasts = fr.podcasts_from_file('./downloads/emissions.html')
-#podcasts = fr.podcasts_from_url('https://www.franceinter.fr/emissions')
-
-#return list(podcasts)[39]
-print(list(fr.podcast_search("darwin", podcasts)))
-#+end_src
-
-#+RESULTS:
-:results:
-[{'author': 'Jean Claude Ameisen', 'title': 'Sur les épaules de Darwin', 'url': 'https://franceinter.fr/emissions/sur-les-epaules-de-darwin'}]
-:end:
-
-*** implementación de referencia
+** Implementación de referencia
 
 #+begin_src python :python python-3.6 :results output
 from bs4 import BeautifulSoup
