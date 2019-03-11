@@ -46,6 +46,7 @@
 - [[#licencia][Licencia]]
   - [[#gplv3][GPLv3]]
 - [[#apéndices][Apéndices]]
+  - [[#prueba-de-concepto-podcast-id][Prueba de concepto: Podcast ID]]
 
 * Motivación
 
@@ -1111,7 +1112,7 @@ Sería mejor utilizar el título y el autor del podcast para generar un identifi
 - [X] Obtener el listado de los podcasts de France Inter
 - [X] Para cada podcast obtener el nombre, el url y el autor
 - [X] Filtrar el listado de podcasts por una palabra clave
-- [ ] Asignarle un identificador a cada podcast
+- [X] Asignarle un identificador a cada podcast
 
 **** Obtener el listado de los podcasts de France Inter
 
@@ -1215,161 +1216,12 @@ Podcast(title='Quand la musique donne (été 2012)', url='https://www.franceinte
 :end:
 
 **** Asignarle un identificador a cada podcast
-***** Prueba de concepto: Frecuencia de palabras en título + autor
 
-Realizamos una prueba de concepto para determinar si se puede utilizar la frecuencia de las palabras que componen el título y el autor para asignarle un identificador único a cada podcast que no sea un código difícil de recordar.
+Realizamos una [[#podcast-id-poc][prueba de concepto]] para determinar si se puede utilizar la frecuencia de las palabras que componen el título y el autor para asignarle un identificador único a cada podcast que no sea un código difícil de recordar. Encontramos que casi la mitad de los podcasts no tienen una palabra única que se pueda usar como identificador.
 
-Encontramos que, de los 973 podcasts de France Inter hay solamente 655 que tienen una palabra única en su título o autor que se pueda utilizar como identificador. Esto significa que no tendríamos un identificador único para los 318 podcasts restantes, por lo que *este método no nos sirve*.
+Pensando un poco encontramos una alternativa mejor, teniendo en cuenta que URL es una propiedad única de cada podcast, dado que dos podcasts no pueden tener el mismo URL. En el caso de France Inter, la parte única del URL de cada podcast es lo que le sigue a =https://www.franceinter.fr/emissions/=.
 
-Ejemplos:
-
-#+begin_src text
-Dans la playlist de France Inter - 
-id: playlist (4)
-
-
-Festival de Radio France  - Sylvie Chapelle
-id: radio (8)
-
-
-France Inter : 50 ans de science - Mathieu Vidard
-id: science (4)
-
-
-France Inter avec et pour les femmes - Stéphanie Duncan
-id: femmes (4)
-#+end_src
-
-#+begin_src python
-import re
-import itertools
-import requests
-import requests_cache
-from unidecode import unidecode
-from franceinter.podcasts import (
-    podcasts_from_url, 
-    podcasts_with_keyword
-)
-
-requests_cache.install_cache()
-
-def all_podcasts():
-    url = "https://www.franceinter.fr/emissions/"
-    podcasts = podcasts_from_url(url)
-    return podcasts
-
-def podcast_words(podcast):
-    words = re.split('\W+', podcast.title)
-    words+= re.split('\W+', podcast.author)
-    words = list(set(words))
-    words = map(lambda w: unidecode(w.lower()), words)
-    words = filter(lambda w: len(w)>0, words)
-    return list(words)
-
-def word_frequencies():
-    freq = {}
-    podcasts = all_podcasts()
-    for podcast in podcasts:
-        words = podcast_words(podcast)
-        for word in words:
-            if word not in freq:
-                freq[word]=0
-            freq[word]+=1
-    return freq
-
-def identifier(freqs, podcast):
-    words = podcast_words(podcast)
-    identifier = words[0]
-    for word in words:
-        if freqs[word] <= freqs[identifier]:
-            identifier = word
-    return identifier
-
-def podcasts_with_unique_id(podcasts):
-    frequencies = word_frequencies()
-    podcasts_with_id = map(lambda p: [p, identifier(frequencies, p)], podcasts)
-    uniques = filter(lambda item: frequencies[item[1]]==1, podcasts_with_id)
-    return map(lambda p: p[0], uniques)
-
-def podcasts_with_duplicate_id(podcasts):
-    frequencies = word_frequencies()
-    podcasts_with_id = map(lambda p: [p, identifier(frequencies, p)], podcasts)
-    duplicates = filter(lambda item: frequencies[item[1]]>1, podcasts_with_id)
-    return map(lambda p: p[0], duplicates)
-
-def unique_stats():
-    frequencies = word_frequencies()
-    unique_podcasts = podcasts_with_unique_id(all_podcasts())
-    print ("Unique ID: " + str(len(list(unique_podcasts))))
-    print ("Total: " + str(len(list(all_podcasts()))))
-
-def print_identifier(podcasts):
-    frequencies = word_frequencies()
-    for podcast in podcasts:
-        print("%s - %s" % (podcast.title, podcast.author))
-        podcast_id = identifier(frequencies, podcast)
-        print("id: %s (%s)" % (podcast_id, frequencies[podcast_id]))
-        print("\n")
-
-def podcast_slice(keyword, how_many):
-    podcasts_keyword = podcasts_with_keyword(all_podcasts(), keyword)
-    podcast_slice = itertools.islice(podcasts_keyword, how_many)
-    return podcast_slice
-
-def unique_podcasts(keyword, how_many):
-    podcasts = podcast_slice(keyword, how_many)
-    return podcasts_with_unique_id(podcasts)
-    
-def duplicated_podcasts(keyword, how_many):
-    podcasts = podcast_slice(keyword, how_many)
-    return podcasts_with_duplicate_id(podcasts)
-    
-
-#unique_stats()
-#podcasts = unique_podcasts("cheissoux", 200)
-#podcasts = podcast_slice("cheissoux", 200)
-podcasts = duplicated_podcasts("france", 15)
-print_identifier(podcasts)
-
-#+end_src
-
-#+RESULTS:
-:results:
-Dans la playlist de France Inter - 
-id: playlist (4)
-
-
-Festival de Radio France  - Sylvie Chapelle
-id: radio (8)
-
-
-France Inter : 50 ans de science - Mathieu Vidard
-id: science (4)
-
-
-France Inter avec et pour les femmes - Stéphanie Duncan
-id: femmes (4)
-
-
-France Inter et les 40 ans du Prix du Livre Inter - Eva Bettan
-id: prix (2)
-
-
-France Inter et le cinéma - Laurent Delmas
-id: cinema (6)
-
-
-France Inter et le jazz - Elsa Boublil
-id: jazz (3)
-
-
-:end:
-
-***** Otra alternativa: Usar la parte única del URL del podcast
-
-Vemos que el URL es una propiedad única de un podcast, dado que dos podcasts no pueden tener el mismo URL. En el caso de France Inter, la parte única del URL de cada podcast es lo que le sigue a =https://www.franceinter.fr/emissions/=.
-
-Podríamos usar la parte única del URL para identificar al podcast.
+Vamos a usar la parte única del URL para identificar al podcast, agregándole una propiedad =identifier= a la clase =franceinter.podcasts.Podcast= que extrae el identificador desde el URL.
 
 #+begin_src python
 import itertools
@@ -1386,6 +1238,7 @@ for podcast in first_five:
     print(" Podcast title: " + podcast.title)
     print("   Podcast URL: " + podcast.url)
     print("Podcast author: " + podcast.author)
+    print("    Podcast ID: " + podcast.identifier)
     print("\n")
 #+end_src
 
@@ -1394,26 +1247,31 @@ for podcast in first_five:
  Podcast title: 1001 mondes
    Podcast URL: https://www.franceinter.fr/emissions/mille-et-un-mondes
 Podcast author: Laura El Makki
+    Podcast ID: mille-et-un-mondes
 
 
  Podcast title: 116 rue Albert-Londres
    Podcast URL: https://www.franceinter.fr/emissions/116-rue-albert-londres
 Podcast author: Alexandre Héraud
+    Podcast ID: 116-rue-albert-londres
 
 
  Podcast title: 18 bis, boulevard Hache-Coeur
    Podcast URL: https://www.franceinter.fr/emissions/18-bis-boulevard-hache-coeur
 Podcast author: Frédéric Pommier
+    Podcast ID: 18-bis-boulevard-hache-coeur
 
 
  Podcast title: 1914/1918 : la grande guerre, cent ans après
    Podcast URL: https://www.franceinter.fr/emissions/1914-1918-la-grande-guerre-cent-ans-apres
 Podcast author: 
+    Podcast ID: 1914-1918-la-grande-guerre-cent-ans-apres
 
 
  Podcast title: 1918, un monde en révolutions
    Podcast URL: https://www.franceinter.fr/emissions/1918-un-monde-en-revolutions
 Podcast author: Ali Baddou
+    Podcast ID: 1918-un-monde-en-revolutions
 
 
 :end:
@@ -7461,6 +7319,127 @@ Public License instead of this License.  But first, please read
 #+end_src
 
 * Apéndices
+** Prueba de concepto: Podcast ID
+   :PROPERTIES:
+   :CUSTOM_ID: podcast-id-poc
+   :END:
+
+Realizamos una prueba de concepto para determinar si se puede utilizar la frecuencia de las palabras que componen el título y el autor para asignarle un identificador único a cada podcast que no sea un código difícil de recordar.
+
+Encontramos que, de los 973 podcasts de France Inter hay solamente 655 que tienen una palabra única en su título o autor que se pueda utilizar como identificador. Esto significa que no tendríamos un identificador único para los 318 podcasts restantes, por lo que *este método no nos sirve*.
+
+Ejemplos de podcasts con identificadores repetidos:
+
+#+begin_src text
+Dans la playlist de France Inter - 
+id: playlist (4)
+
+
+Festival de Radio France  - Sylvie Chapelle
+id: radio (8)
+
+
+France Inter : 50 ans de science - Mathieu Vidard
+id: science (4)
+
+
+France Inter avec et pour les femmes - Stéphanie Duncan
+id: femmes (4)
+#+end_src
+
+#+begin_src python
+import re
+import itertools
+import requests
+import requests_cache
+from unidecode import unidecode
+from franceinter.podcasts import (
+    podcasts_from_url, 
+    podcasts_with_keyword
+)
+
+requests_cache.install_cache()
+
+def all_podcasts():
+    url = "https://www.franceinter.fr/emissions/"
+    podcasts = podcasts_from_url(url)
+    return podcasts
+
+def podcast_words(podcast):
+    words = re.split('\W+', podcast.title)
+    words+= re.split('\W+', podcast.author)
+    words = list(set(words))
+    words = map(lambda w: unidecode(w.lower()), words)
+    words = filter(lambda w: len(w)>0, words)
+    return list(words)
+
+def word_frequencies():
+    freq = {}
+    podcasts = all_podcasts()
+    for podcast in podcasts:
+        words = podcast_words(podcast)
+        for word in words:
+            if word not in freq:
+                freq[word]=0
+            freq[word]+=1
+    return freq
+
+def identifier(freqs, podcast):
+    words = podcast_words(podcast)
+    identifier = words[0]
+    for word in words:
+        if freqs[word] <= freqs[identifier]:
+            identifier = word
+    return identifier
+
+def podcasts_with_unique_id(podcasts):
+    frequencies = word_frequencies()
+    podcasts_with_id = map(lambda p: [p, identifier(frequencies, p)], podcasts)
+    uniques = filter(lambda item: frequencies[item[1]]==1, podcasts_with_id)
+    return map(lambda p: p[0], uniques)
+
+def podcasts_with_duplicate_id(podcasts):
+    frequencies = word_frequencies()
+    podcasts_with_id = map(lambda p: [p, identifier(frequencies, p)], podcasts)
+    duplicates = filter(lambda item: frequencies[item[1]]>1, podcasts_with_id)
+    return map(lambda p: p[0], duplicates)
+
+def unique_stats():
+    frequencies = word_frequencies()
+    unique_podcasts = podcasts_with_unique_id(all_podcasts())
+    print ("Unique ID: " + str(len(list(unique_podcasts))))
+    print ("Total: " + str(len(list(all_podcasts()))))
+
+def print_identifier(podcasts):
+    frequencies = word_frequencies()
+    for podcast in podcasts:
+        print("%s - %s" % (podcast.title, podcast.author))
+        podcast_id = identifier(frequencies, podcast)
+        print("id: %s (%s)" % (podcast_id, frequencies[podcast_id]))
+        print("\n")
+
+def podcast_slice(keyword, how_many):
+    podcasts_keyword = podcasts_with_keyword(all_podcasts(), keyword)
+    podcast_slice = itertools.islice(podcasts_keyword, how_many)
+    return podcast_slice
+
+def unique_podcasts(keyword, how_many):
+    podcasts = podcast_slice(keyword, how_many)
+    return podcasts_with_unique_id(podcasts)
+    
+def duplicated_podcasts(keyword, how_many):
+    podcasts = podcast_slice(keyword, how_many)
+    return podcasts_with_duplicate_id(podcasts)
+    
+
+#unique_stats()
+#podcasts = unique_podcasts("cheissoux", 200)
+#podcasts = podcast_slice("cheissoux", 200)
+podcasts = duplicated_podcasts("france", 15)
+print_identifier(podcasts)
+
+#+end_src
+
 *** listar podcasts
 
 #+begin_src python :python python-3.6 :results drawer
