@@ -371,7 +371,6 @@ optional arguments:
 ***** Funciones
 
 #+begin_src python :tangle cli/arguments/__init__.py
-from cli.arguments.known_commands import known_commands
 from cli.arguments.argument_tuples import argument_tuples
 from cli.arguments.parser_from_tuples import parser_from_tuples
 from cli.arguments.command_from_arguments import command_from_arguments
@@ -386,60 +385,7 @@ from cli.arguments.episode_from_arguments import episode_from_arguments
 
 #+end_src
 
-**** known_commands
-***** 1. Objetivo
-
-Obtener el listado de comandos que acepta la aplicación
-
-***** 2. Firma
-
-La función no recibe argumentos y devuelve un =list= de =str=
-
-***** 3. Ejemplos
-
-Dado que la función no recibe argumentos, no es necesario confeccionar ejemplos
-
-***** 4. Boceto
-
-#+begin_src python
-def known_commands():
-    commands = []
-    # agregar los comandos a la lista
-    return commands
-#+end_src
-
-***** 5. Definición
-
-#+begin_src python :tangle cli/arguments/known_commands.py
-def known_commands():
-    commands = [
-        "list-sources", "list-podcasts", "list-episodes", 
-        "show-podcast", "show-episode"
-    ]
-    return commands
-#+end_src
-
-***** 6. Casos de prueba
-
-- Todos los comandos deben ser de tipo =str=
-
-#+begin_src python :tangle cli/arguments/tests/test_known_commands.py
-from cli.arguments import known_commands
-
-def test_known_commands():
-    commands = known_commands()
-    assert (len(commands) == 5)
-    for command in commands:
-        assert isinstance(command, str)
-
-#+end_src
-
-****** Run tests
-
-#+begin_src sh
-pytest ./cli/arguments/tests/test_known_commands.py
-#+end_src
-
+**** TODO parser
 **** argument_tuples
 ***** 1. Objetivo
 
@@ -470,7 +416,7 @@ def argument_tuples():
 ***** 5. Definición
 
 #+begin_src python :tangle cli/arguments/argument_tuples.py
-from cli.arguments import known_commands
+from cli.commands import known_commands
 
 def argument_tuples():
     tuples = []
@@ -737,7 +683,7 @@ La función recibe un objeto =argparse.Namespace= y devuelve un =str=
 - Caso exitoso, un =Namespace= que tiene un comando válido en la propiedad =command=
 - Un =Namespace= que no es un objeto =argparse.Namespace=
 - Un =Namespace= que no tiene la propiedad =command=
-- Un =Namespace= tiene un comando desconocido en la propiedad =command=
+- Un =Namespace= que tiene un comando desconocido en la propiedad =command=
 
 #+begin_src python :tangle cli/arguments/tests/examples_command_from_arguments.py
 from argparse import Namespace
@@ -781,7 +727,7 @@ def command_from_arguments(args):
 
 #+begin_src python :tangle cli/arguments/command_from_arguments.py
 from argparse import Namespace
-from cli.arguments import known_commands
+from cli.commands import known_commands
 
 def command_from_arguments(args):
     assert isinstance(args, Namespace), invalid_arguments(args)
@@ -1288,8 +1234,76 @@ pytest ./cli/arguments/tests/test_episode_from_arguments.py
 **** TODO keyword_from_arguments
 **** TODO year_from_arguments
 **** TODO month_from_arguments
+*** Commands
+**** =__init.py__=
+***** Funciones
+
+#+begin_src python :tangle cli/commands/__init__.py
+from cli.commands.known_commands import known_commands
+#+end_src
+
+***** Tests
+
+#+begin_src python :tangle cli/commands/tests/__init__.py
+
+#+end_src
+
+**** known_commands
+***** 1. Objetivo
+
+Obtener el listado de comandos que acepta la aplicación
+
+***** 2. Firma
+
+La función no recibe argumentos y devuelve un =list= de =str=
+
+***** 3. Ejemplos
+
+Dado que la función no recibe argumentos, no es necesario confeccionar ejemplos
+
+***** 4. Boceto
+
+#+begin_src python
+def known_commands():
+    commands = []
+    # agregar los comandos a la lista
+    return commands
+#+end_src
+
+***** 5. Definición
+
+#+begin_src python :tangle cli/commands/known_commands.py
+def known_commands():
+    commands = [
+        "list-sources", "list-podcasts", "list-episodes", 
+        "show-podcast", "show-episode"
+    ]
+    return commands
+#+end_src
+
+***** 6. Casos de prueba
+
+- Todos los comandos deben ser de tipo =str=
+
+#+begin_src python :tangle cli/commands/tests/test_known_commands.py
+from cli.commands import known_commands
+
+def test_known_commands():
+    commands = known_commands()
+    assert (len(commands) == 5)
+    for command in commands:
+        assert isinstance(command, str)
+
+#+end_src
+
+****** Run tests
+
+#+begin_src sh
+pytest ./cli/commands/tests/test_known_commands.py
+#+end_src
+
 **** TODO handlers_from_commands
-**** TODO output_from_arguments
+**** TODO output_from_command
 
 switch/case: https://stackoverflow.com/a/11479840
 
@@ -1395,8 +1409,6 @@ pytest sources/tests/test_list_sources.py
 
 * France Inter
 ** Módulos
-
-Vamos a organizar el código en paquetes (carpetas), lo que nos permite usar namespaces para importar las funcionalidades. Para ello, necesitamos crear un archivo =__init__.py= en cada carpeta para declarar los módulos que forman parte nuestro paquete y que Python pueda encontrarlos cuando los referenciamos en el =import=.
 
 El módulo actual es =franceinter=, y tiene los siguientes submódulos:
 
