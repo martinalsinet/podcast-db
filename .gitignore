@@ -5,9 +5,11 @@ __pycache__
 cache.sqlite
 cli
 coverage
+dist
 downloads
 franceinter
 podcast-db
+podcast-db.spec
 requirements.txt
 sources
 utils

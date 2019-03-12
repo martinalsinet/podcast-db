@@ -218,6 +218,7 @@ beautifulsoup4
 slugify
 requests
 requests-cache
+pyinstaller
 pytest
 pytest-cov
 validators
@@ -240,17 +241,24 @@ pip-3.6 install -r requirements.txt
 
 ** Generar el ejecutable
 
-- [ ] Usar [[https://www.pyinstaller.org][PyInstaller]] para generar un ejecutable en un solo archivo
+- [X] Usar [[https://www.pyinstaller.org][PyInstaller]] para generar un ejecutable en un solo archivo
+- [ ] Crear un Makefile con el proceso completo de build
 
-#+begin_quote
-pip install pyinstaller
+*** PyInstaller
 
-Go to your program’s directory and run:
+La versión 19.0.1 de pip [[https://github.com/pypa/pip/issues/6163][tiene un bug]] que causa que no se pueda instalar pyinstaller. Hay que actualizar a 19.0.3 o sino bajar a la versión 18.1. Sorteado ese problema, instalamos pyinstaller y ya podemos generar el ejecutable usando el comando =pyinstaller -F podcast-db=, que nos deja el archivo en la carpeta =./dist=
 
-pyinstaller yourprogram.py
+#+begin_src sh :eval never
+$ source ./venv/bin/activate
+$ pip install --upgrade pip
+$ pip install -r ./requirements.txt
+$ pip install pyinstaller
+$ pyinstaller -F ./podcast-db
+$ ls -alh ./dist/podcast-db
+$ ./dist/pocast-db --help
+#+end_src
 
-This will generate the bundle in a subdirectory called dist.
-#+end_quote
+*** TODO Makefile
 
 ** .gitignore
 
@@ -262,9 +270,11 @@ __pycache__
 cache.sqlite
 cli
 coverage
+dist
 downloads
 franceinter
 podcast-db
+podcast-db.spec
 requirements.txt
 sources
 utils
