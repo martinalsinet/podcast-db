@@ -251,7 +251,6 @@ La versión 19.0.1 de pip [[https://github.com/pypa/pip/issues/6163][tiene un bu
 #+begin_src sh :eval never
 $ source ./venv/bin/activate
 $ pip install --upgrade pip
-$ pip install -r ./requirements.txt
 $ pip install pyinstaller
 $ pyinstaller -F ./podcast-db
 $ ls -alh ./dist/podcast-db
@@ -259,6 +258,17 @@ $ ./dist/pocast-db --help
 #+end_src
 
 *** TODO Makefile
+
+El Makefile tiene que poder buildear la aplicación completa desde el archivo =podcast-db.org=. Esto implica realizar las siguientes tareas
+
+- [ ] Verificar que python esté instalado
+- [ ] Verificar que emacs esté instalado (o sino usar docker)
+- [ ] Generar los fuentes con =org-babel-tangle=
+- [ ] Instalar las dependencias
+- [ ] Ejecutar los casos de prueba
+- [ ] Generar el reporte de cobertura de tests
+- [ ] Generar el archivo ejecutable
+- [ ] Instalar el ejecutable en =/usr/local/bin=
 
 ** .gitignore
 
