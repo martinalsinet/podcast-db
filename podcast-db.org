@@ -1269,7 +1269,120 @@ def test_arguments_without_episode():
 pytest ./cli/arguments/tests/test_episode_from_arguments.py
 #+end_src
 
-**** TODO keyword_from_arguments
+**** keyword_from_arguments
+***** 1. Objetivo
+
+Obtener la palabra buscada para filtrar los resultados a partir de los argumentos recibidos
+
+***** 2. Firma
+
+La función recibe un objeto =argparse.Namespace= y devuelve un =str= con la palabra buscada
+
+***** 3. Ejemplos
+
+- Caso exitoso, un =Namespace= que tiene la palabra buscada en la propiedad =keyword=
+- Un =Namespace= que no es un objeto =argparse.Namespace=
+- Un =Namespace= que no tiene la propiedad =keyword=
+- Un =Namespace= que tiene un =str= vacío en la propiedad =keyword=
+
+#+begin_src python :tangle cli/arguments/tests/examples_keyword_from_arguments.py
+from argparse import Namespace
+
+def arguments_with_keyword(keyword):
+    args = Namespace()
+    args.keyword = keyword
+    return args
+
+def invalid_arguments():
+    args = 42
+    return args
+
+def arguments_without_keyword():
+    args = Namespace()
+    args.podcast = "l-histoire-africaine"
+    return args
+
+#+end_src
+
+***** 4. Boceto
+
+#+begin_src python
+def keyword_from_arguments(args):
+    # validar que args sea un argparse.Namespace
+    # verificar si hay un keyword en args.keyword
+    # validar que el keyword no esté vacío
+    return keyword
+#+end_src
+
+***** 5. Definición
+
+#+begin_src python :tangle cli/arguments/keyword_from_arguments.py
+import re
+from argparse import Namespace
+
+def keyword_from_arguments(args):
+    assert isinstance(args, Namespace), invalid_arguments(args)
+    assert hasattr(args, "keyword"), missing_keyword(args)
+    keyword = args.keyword
+    assert (len(keyword) >0), empty_keyword(args)
+    return keyword
+
+def invalid_arguments(args):
+    return "arguments parameter must be an argparse.Namespace, received %s instead" % type(args)
+
+def missing_keyword(args):
+    return "arguments parameter must have a keyword property, received %s" % args
+
+def empty_keyword(args):
+    return "keyword property cannot be empty, received %s" % args
+
+#+end_src
+
+***** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un =Namespace= que tiene la palabra buscada en la propiedad =keyword=, devuelve un =str= con esa palabra
+- Cuando recibe un =Namespace= que no es un objeto =argparse.Namespace=, lanza un =AssertionError=
+- Cuando recibe un =Namespace= que no tiene la propiedad =keyword=, lanza un =AssertionError=
+- Cuando recibe un =Namespace= que tiene un =str= vacío en la propiedad =keyword=, lanza un =AssertionError=
+
+#+begin_src python :tangle cli/arguments/tests/test_keyword_from_arguments.py
+from cli.arguments import keyword_from_arguments
+from cli.arguments.tests.examples_keyword_from_arguments import *
+
+def test_arguments_with_keyword():
+    args = arguments_with_keyword("theatre")
+    keyword = keyword_from_arguments(args)
+    assert (keyword == "theatre")
+
+def test_invalid_arguments():
+    args = invalid_arguments()
+    try:
+        keyword = keyword_from_arguments(args)
+    except AssertionError:
+        assert True
+
+def test_arguments_without_keyword():
+    args = arguments_without_keyword()
+    try:
+        keyword = keyword_from_arguments(args)
+    except AssertionError:
+        assert True
+
+def test_arguments_with_empty_keyword():
+    args = arguments_with_keyword("")
+    try:
+        keyword = keyword_from_arguments(args)
+    except AssertionError:
+        assert True
+
+#+end_src
+
+****** Run tests
+
+#+begin_src sh
+pytest ./cli/arguments/tests/test_keyword_from_arguments.py
+#+end_src
+
 **** TODO year_from_arguments
 **** TODO month_from_arguments
 *** Commands
