@@ -365,11 +365,9 @@ Generamos un script =./podcast-db= que será la interface desde línea de comand
 
 #+begin_src python :tangle podcast-db :tangle-mode (identity #o755)
 #!/usr/bin/env python-3.6
-from cli.arguments import argument_tuples, parser_from_tuples
+from cli.arguments import parser
 
-tuples = argument_tuples()
-parser = parser_from_tuples(tuples)
-parser.description = "Query podcasts and episodes from France Inter"
+parser = parser()
 args = parser.parse_args(["--help"])
 
 print(args)
@@ -409,6 +407,13 @@ from cli.arguments.command_from_arguments import command_from_arguments
 from cli.arguments.source_from_arguments import source_from_arguments
 from cli.arguments.podcast_from_arguments import podcast_from_arguments
 from cli.arguments.episode_from_arguments import episode_from_arguments
+from cli.arguments.keyword_from_arguments import keyword_from_arguments
+
+def parser():
+    tuples = argument_tuples()
+    parser = parser_from_tuples(tuples)
+    parser.description = "Query podcasts and episodes from France Inter"
+    return parser
 #+end_src
 
 ***** Tests
@@ -417,7 +422,6 @@ from cli.arguments.episode_from_arguments import episode_from_arguments
 
 #+end_src
 
-**** TODO parser
 **** argument_tuples
 ***** 1. Objetivo
 
@@ -704,7 +708,9 @@ pytest cli/arguments/tests/test_parser_from_tuples.py
 **** command_from_arguments
 ***** 1. Objetivo
 
-Obtener el comando a ejecutar a partir de los argumentos recibidos
+Obtener el comando a ejecutar a partir de los argumentos recibidos.
+
+El comando es un argumento obligatorio, por lo tanto la función debe lanzar un error si no se encuentra entre los argumentos recibidos.
 
 ***** 2. Firma
 
@@ -1080,7 +1086,7 @@ def podcast_from_arguments(args):
     return podcast
 
 def invalid_arguments(args):
-    return "arguments parameters must be an argparse.Namespace, received %s instead" % type(args)
+    return "arguments parameter must be an argparse.Namespace, received %s instead" % type(args)
 
 def podcast_from_attr(attr):
     podcast = attr
@@ -1215,7 +1221,7 @@ def episode_from_arguments(args):
     return episode
 
 def invalid_arguments(args):
-    return "arguments parameters must be an argparse.Namespace, received %s instead" % type(args)
+    return "arguments parameter must be an argparse.Namespace, received %s instead" % type(args)
 
 def missing_episode(args):
     return "arguments parameter must have an episode property, received %s" % args
