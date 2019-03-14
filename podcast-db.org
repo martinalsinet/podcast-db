@@ -22,7 +22,7 @@
   - [[#requirementstxt][requirements.txt]]
   - [[#instalar-las-dependencias][Instalar las dependencias]]
   - [[#generar-el-ejecutable][Generar el ejecutable]]
-  - [[#gitignore][.gitignore]]
+  - [[#gitignore][=.gitignore=]]
 - [[#interface-desde-línea-de-comandos][Interface desde línea de comandos]]
   - [[#diseño-1][Diseño]]
   - [[#wishlist][Wishlist]]
@@ -249,12 +249,12 @@ pip-3.6 install -r requirements.txt
 La versión 19.0.1 de pip [[https://github.com/pypa/pip/issues/6163][tiene un bug]] que causa que no se pueda instalar pyinstaller. Hay que actualizar a 19.0.3 o sino bajar a la versión 18.1. Sorteado ese problema, instalamos pyinstaller y ya podemos generar el ejecutable usando el comando =pyinstaller -F podcast-db=, que nos deja el archivo en la carpeta =./dist=
 
 #+begin_src sh :eval never
-$ source ./venv/bin/activate
-$ pip install --upgrade pip
-$ pip install pyinstaller
-$ pyinstaller -F ./podcast-db
-$ ls -alh ./dist/podcast-db
-$ ./dist/pocast-db --help
+source ./venv/bin/activate
+pip install --upgrade pip
+pip install pyinstaller
+pyinstaller -F ./podcast-db
+ls -alh ./dist/podcast-db
+./dist/pocast-db --help
 #+end_src
 
 *** TODO Makefile
@@ -264,13 +264,13 @@ El Makefile tiene que poder buildear la aplicación completa desde el archivo =p
 - [ ] Verificar que python esté instalado
 - [ ] Verificar que emacs esté instalado (o sino usar docker)
 - [ ] Generar los fuentes con =org-babel-tangle=
-- [ ] Instalar las dependencias
+- [ ] Inicializar el virtualenv e instalar las dependencias
 - [ ] Ejecutar los casos de prueba
 - [ ] Generar el reporte de cobertura de tests
 - [ ] Generar el archivo ejecutable
 - [ ] Instalar el ejecutable en =/usr/local/bin=
 
-** .gitignore
+** =.gitignore=
 
 #+begin_src text :tangle .gitignore
 .DS_Store
@@ -339,6 +339,18 @@ podcast-db show-episode --episode franceinter/darwin/2018-04-16
 ** Mejoras
 
 - [X] Corregir los imports :: Declarar las funciones que se exportan en cada módulo dentro del archivo =__init.py__=
+
+- [ ] =argument_tuples= :: Cambiarle el nombre a =known_arguments= porque la palabra /tuples/ indica un detalle de implementación que distrae en vez de ayudar.
+
+- [ ] =extract_argument= :: Encontramos un patrón de código que se repite en las funciones del módulo =cli.arguments=. Todas las funciones reciben un objeto =argparse.Namespace=, verifican su tipo y extraen de éste uno o más argumentos que deben existir. Hay que agregar una nueva función que implemente esas verificaciones.
+
+- [ ] =assert False= en tests: Hay que agregar un =assert False= casos de prueba que esperan una excepción para asegurarse de que realmente esté saliendo por el camino de la excepción.
+
+#+begin_src python
+def extract_argument(args, arg_name):
+    assert isinstance(args, Namespace), invalid_arguments(args)
+    assert hasattr(args, arg_name), missing_keyword(args)
+#+end_src
 
 ** Implementación
 *** =__init.py__=
