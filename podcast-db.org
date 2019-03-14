@@ -408,6 +408,7 @@ from cli.arguments.source_from_arguments import source_from_arguments
 from cli.arguments.podcast_from_arguments import podcast_from_arguments
 from cli.arguments.episode_from_arguments import episode_from_arguments
 from cli.arguments.keyword_from_arguments import keyword_from_arguments
+from cli.arguments.year_from_arguments import year_from_arguments
 
 def parser():
     tuples = argument_tuples()
@@ -1383,7 +1384,170 @@ def test_arguments_with_empty_keyword():
 pytest ./cli/arguments/tests/test_keyword_from_arguments.py
 #+end_src
 
-**** TODO year_from_arguments
+**** year_from_arguments
+***** 1. Objetivo
+
+Obtener el año para filtrar los resultados desde los argumentos recibidos
+
+Dado que son podcasts, vamos a considerar un año como válido cuando sea un =int= mayor a 1900. Podrían llegar a existir emisiones radiales de principios del siglo 20 que se publiquen como podcasts.
+
+***** 2. Firma
+
+La función recibe un =argparse.Namespace= y devuelve un =int= con el año
+
+***** 3. Ejemplos
+
+- Caso exitoso, un =Namespace= que tiene un año válido en la propiedad =year=
+- Caso exitoso, un =Namespace= que tiene un año válido en la propiedad =month=
+- Un =Namespace= que no es un objeto =argparse.Namespace=
+- Un =Namespace= que no tiene las propiedades =year= y =month=
+- Un =Namespace= que tiene un año menor a 1900 en la propiedad =year=
+- Un =Namespace= que tiene un año menor a 1900 en la propiedad =month=
+- Un =Namespace= que tiene valor que no se puede parsear como =int= en la propiedad =year=
+
+#+begin_src python :tangle cli/arguments/tests/examples_year_from_arguments.py
+from argparse import Namespace
+
+def arguments_with_year(year):
+    args = Namespace()
+    args.year = year
+    return args
+
+def arguments_with_year_in_month(year):
+    args = Namespace()
+    args.month = str(year) + "-23"
+    return args
+
+def invalid_arguments():
+    args = 42
+    return args
+
+def arguments_without_year():
+    args = Namespace()
+    args.podcast = "l-histoire-africaine"
+    return args
+
+#+end_src
+
+***** 4. Boceto
+
+#+begin_src python
+def year_from_arguments(args):
+    # validar que args sea un argparse.Namespace
+    # verificar si hay un año en args.year
+    # verificar si hay un año en args.month en formato YYYY-MM
+    # validar que el año sea mayor que 1900
+    return year
+#+end_src
+
+***** 5. Definición
+
+#+begin_src python :tangle cli/arguments/year_from_arguments.py
+import re
+from argparse import Namespace
+
+def year_from_arguments(args):
+    assert isinstance(args, Namespace), invalid_arguments(args)
+    year = False
+    if hasattr(args, "year"):
+        year = year_from_attribute(args.year)
+    if not year and hasattr(args, "month"):
+        year = year_from_month(args.month)
+    assert year, missing_year(args)
+    assert (year > 1900), invalid_year(args)
+    return year
+
+def invalid_arguments(args):
+    return "arguments parameter must be an argparse.Namespace, received %s instead" % type(args)
+
+def missing_year(args):
+    return "arguments parameter must have a year property, received %s" % args
+
+def invalid_year(args):
+    return "year property must be an int > 1900, received %s" % args
+
+def year_from_attribute(attr):
+    year = False
+    match = re.search("^([0-9]{4})$", str(attr))
+    if match:
+        year = int(match.groups()[0])
+    return year
+
+def year_from_month(month):
+    year = False
+    match = re.search("^([0-9]{4})-[0-9]{2}$", month)
+    if match:
+        year = int(match.groups()[0])
+    return year
+#+end_src
+
+***** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un =Namespace= que tiene un año válido en la propiedad =year=, devuelve un =int= con el año
+- Caso exitoso, cuando recibe un =Namespace= que tiene un año válido en la propiedad =month=, devuelve un =int= con el año
+- Cuando recibe un =Namespace= que no es un objeto =argparse.Namespace=, lanza un =AssertionError=
+- Cuando recibe un =Namespace= que no tiene las propiedades =year= ni =month=, lanza un =AssertionError=
+- Cuando recibe un =Namespace= que tiene un año menor a 1900 en la propiedad =year=, lanza un =AssertionError=
+- Cuando recibe un =Namespace= que tiene un año menor a 1900 en la propiedad =month=, lanza un =AssertionError=
+- Cuando recibe un =Namespace= que tiene valor que no se puede parsear como =int= en la propiedad =year=, lanza un =AssertionError=
+
+#+begin_src python :tangle cli/arguments/tests/test_year_from_arguments.py
+from cli.arguments import year_from_arguments
+from cli.arguments.tests.examples_year_from_arguments import *
+
+def test_arguments_with_year():
+    args = arguments_with_year(2018)
+    year = year_from_arguments(args)
+    assert (year == 2018)
+
+def test_arguments_with_year_in_month():
+    args = arguments_with_year_in_month(2018)
+    year = year_from_arguments(args)
+    assert (year == 2018)
+
+def test_invalid_arguments():
+    args = invalid_arguments()
+    try:
+        year = year_from_arguments(args)
+    except AssertionError:
+        assert True
+
+def test_arguments_without_year():
+    args = arguments_without_year()
+    try:
+        year = year_from_arguments(args)
+    except AssertionError:
+        assert True
+
+def test_invalid_year():
+    args = arguments_with_year(1816)
+    try:
+        year = year_from_arguments(args)
+    except AssertionError:
+        assert True
+
+def test_invalid_year_in_month():
+    args = arguments_with_year_in_month(1816)
+    try:
+        year = year_from_arguments(args)
+    except AssertionError:
+        assert True
+
+def test_arguments_with_alphabetic_year():
+    args = arguments_with_year("twenty-two")
+    try:
+        year = year_from_arguments(args)
+    except AssertionError:
+        assert True
+
+#+end_src
+
+****** Run tests
+
+#+begin_src sh
+pytest ./cli/arguments/tests/test_year_from_arguments.py
+#+end_src
+
 **** TODO month_from_arguments
 *** Commands
 **** =__init.py__=
