@@ -344,13 +344,13 @@ podcast-db show-episode --episode franceinter/darwin/2018-04-16
 
 - [ ] =extract_argument= :: Encontramos un patrón de código que se repite en las funciones del módulo =cli.arguments=. Todas las funciones reciben un objeto =argparse.Namespace=, verifican su tipo y extraen de éste uno o más argumentos que deben existir. Hay que agregar una nueva función que implemente esas verificaciones.
 
-- [ ] =assert False= en tests: Hay que agregar un =assert False= casos de prueba que esperan una excepción para asegurarse de que realmente esté saliendo por el camino de la excepción.
-
 #+begin_src python
 def extract_argument(args, arg_name):
     assert isinstance(args, Namespace), invalid_arguments(args)
     assert hasattr(args, arg_name), missing_keyword(args)
 #+end_src
+
+- [X] =assert False= en tests: Hay que agregar un =assert False= casos de prueba que esperan una excepción para asegurarse de que realmente esté saliendo por el camino de la excepción. Update: Luego de pensarlo un rato, recordé que quité los =assert False= porque como nunca pasa por esas líneas aparecen como faltantes en el reporte de cobertura.
 
 ** Implementación
 *** =__init.py__=
