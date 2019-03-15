@@ -1701,6 +1701,7 @@ pytest ./cli/arguments/tests/test_month_from_arguments.py
 
 #+begin_src python :tangle cli/commands/__init__.py
 from cli.commands.known_commands import known_commands
+from cli.commands.handlers_from_commands import handlers_from_commands
 #+end_src
 
 ***** Tests
@@ -1763,7 +1764,109 @@ def test_known_commands():
 pytest ./cli/commands/tests/test_known_commands.py
 #+end_src
 
-**** TODO handlers_from_commands
+**** handlers_from_commands
+***** 1. Objetivo
+
+Obtener un diccionario con los nombres de las funciones que procesan los comandos aceptados por la aplicación
+
+***** 2. Firma
+
+La función recibe un =list= con el nombre de los comandos y devuelve un =dict= con el nombre del comando como clave y el nombre de la función que lo procesa como valor
+
+***** 3. Ejemplos
+
+- Caso exitoso, un =list= de los comandos conocidos por la aplicación
+- Una lista de comandos que no es un =list=
+- Una lista de comandos que tiene un comando desconocido
+
+#+begin_src python :tangle cli/commands/tests/examples_handlers_from_commands.py
+from cli.commands import known_commands
+import random
+
+def invalid_commands():
+    return 42
+
+def list_with_unknown_command():
+    commands = known_commands()
+    commands.append("this-is-an-unknown-command")
+    random.shuffle(commands)
+    return commands
+
+#+end_src
+
+***** 4. Boceto
+
+#+begin_src python
+
+def handlers_from_commands(commands):
+    # validar que commands sea un list
+    # validar que los comandos sean conocidos
+    # generar el nombre de la función para cada comando
+    return handlers
+#+end_src
+
+***** 5. Definición
+
+#+begin_src python :tangle cli/commands/handlers_from_commands.py
+from cli.commands import known_commands
+
+def handlers_from_commands(commands):
+    assert isinstance(commands, list)
+    handlers = {}
+    for command in commands:
+        assert command in known_commands(), unknown_command(command)
+        handlers[command] = function_name(command)
+    return handlers
+
+def unknown_command(command):
+    return "unknown command: %s" % command
+
+def function_name(command):
+    return "output_from_" + command.replace("-", "_")
+#+end_src
+
+***** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un =list= con el nombre de los comandos aceptados por la aplicación, devuelve un =dict= con los nombres de las funciones que procesan cada comando
+- Cuando recibe una lista de comandos que no es un =list=, lanza un =AssertionError=
+- Cuando recibe una lista de comandos que tiene un comando desconocido, lanza un =AssertionError=
+
+#+begin_src python :tangle cli/commands/tests/test_handlers_from_commands.py
+from cli.commands import known_commands, handlers_from_commands
+from cli.commands.tests.examples_handlers_from_commands import *
+
+def test_handlers_from_commands():
+    commands = known_commands()
+    handlers = handlers_from_commands(commands)
+    for command, handler in handlers.items():
+        assert (handler == function_name(command))
+
+def function_name(command):
+    return "output_from_" + command.replace("-", "_")
+
+def test_invalid_commands():
+    commands = invalid_commands()
+    try:
+        handlers = handlers_from_commands(commands)
+    except AssertionError:
+        assert True
+
+def test_list_with_unknown_command():
+    commands = list_with_unknown_command()
+    try:
+        handlers = handlers_from_commands(commands)
+    except AssertionError:
+        assert True
+#+end_src
+
+****** Run tests
+
+#+begin_src sh
+pytest ./cli/commands/tests/test_handlers_from_commands.py
+#+end_src
+
+*** Output
+**** =__init.py__=
 **** TODO output_from_command
 
 switch/case: https://stackoverflow.com/a/11479840
