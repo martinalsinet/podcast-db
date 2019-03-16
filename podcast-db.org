@@ -1791,7 +1791,6 @@ def list_with_unknown_command():
     commands.append("this-is-an-unknown-command")
     random.shuffle(commands)
     return commands
-
 #+end_src
 
 ***** 4. Boceto
@@ -1883,7 +1882,6 @@ from cli.output.output_from_source_list import output_from_source_list
 
 switch/case: https://stackoverflow.com/a/11479840
 
-*** Query
 **** output_from_source_list
 ***** 1. Objetivo
 
@@ -1976,18 +1974,15 @@ def test_invalid_arguments():
 #+end_src
 
 ****** Run tests
-d
+
 #+begin_src sh
 pytest ./cli/output/tests/test_output_from_source_list.py
 #+end_src
 
-**** TODO output_from_podcast_list
 **** TODO output_from_podcast_details
 **** TODO output_from_episode_list
 **** TODO output_from_episode_details
 **** TODO output_from_version
-*** Storage
-*** Files
 * Sources
 ** Diseño
 
@@ -2021,9 +2016,10 @@ La función no recibe argumentos y devuelve una lista de objetos =sources.Source
 
 #+begin_src python :tangle sources/source.py
 class Source:
-    def __init__(self, name, code):
+    def __init__(self, name, code, url):
         self.name = name
         self.code = code
+        self.url = url
 
     def __repr__(self):
         return "Source(name='%s', code='%s')" % (self.name, self.code)
@@ -2049,9 +2045,14 @@ def list_sources():
 from sources.source import Source
 
 def list_sources():
-    franceinter = Source("franceinter", "fri")
-    sources = [franceinter]
+    sources = [franceinter()]
     return sources
+
+def franceinter():
+    name = "franceinter"
+    code = "fri"
+    url = "https://www.franceinter.fr/emissions"
+    return Source(name, code, url)
 #+end_src
 
 **** 6. Casos de prueba
