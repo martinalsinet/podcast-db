@@ -1867,12 +1867,120 @@ pytest ./cli/commands/tests/test_handlers_from_commands.py
 
 *** Output
 **** =__init.py__=
+***** Funciones
+
+#+begin_src python :tangle cli/output/__init__.py
+from cli.output.output_from_source_list import output_from_source_list
+#+end_src
+
+***** Tests
+
+#+begin_src python :tangle cli/output/tests/__init__.py
+
+#+end_src
+
 **** TODO output_from_command
 
 switch/case: https://stackoverflow.com/a/11479840
 
 *** Query
-**** TODO output_from_source_list
+**** output_from_source_list
+***** 1. Objetivo
+
+Obtener el texto de la salida del comando =source_list=
+
+***** 2. Firma
+
+La función recibe un objeto =argparse.Namespace= y devuelve un =str= con la salida de la función =sources.list_sources=
+
+***** 3. Ejemplos
+
+- Caso exitoso, un =Namespace= vacío
+- Un objeto que no es un =argparse.Namespace=
+
+#+begin_src python :tangle cli/output/tests/examples_output_from_source_list.py
+from argparse import Namespace
+
+def empty_arguments():
+    args = Namespace()
+    return args
+
+def invalid_arguments():
+    args = 42
+    return args
+#+end_src
+
+***** 4. Boceto
+
+#+begin_src python
+def output_from_source_list(args):
+    # Validar que args sea un argparse.Namespace
+    # Obtener las fuentes desde sources.list_sources
+    # Formatear la salida
+    return output
+#+end_src
+
+***** 5. Definición
+
+#+begin_src python :tangle cli/output/output_from_source_list.py
+from argparse import Namespace
+from sources import list_sources
+
+def output_from_source_list(args):
+    assert isinstance(args, Namespace), invalid_arguments(args)
+    lines = map(line_from_source, list_sources())
+    output = help_message() + "\n\n" + "\n".join(lines)
+    return output
+
+def invalid_arguments(args):
+    return "arguments parameter must be an argparse.Namespace, received %s instead" % type(args)
+
+def line_from_source(source):
+    return "- %s [%s]" % (source.name, source.code)
+
+def help_message():
+    return "Podcast source list"
+#+end_src
+
+#+RESULTS:
+:results:
+Podcast source list
+
+- franceinter [fri]
+:end:
+
+***** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un =Namespace= vacío devuelve un =str= con el listado de fuentes
+- Cuando recibe un objeto que no es un =argparse.Namespace=, lanza un =AssertionError=
+
+#+begin_src python :tangle cli/output/tests/test_output_from_source_list.py
+import re
+from sources import list_sources
+from cli.output import output_from_source_list
+from cli.output.tests.examples_output_from_source_list import *
+
+def test_emtpy_arguments():
+    args = empty_arguments()
+    output = output_from_source_list(args)
+    for source in list_sources():
+        assert re.search(source.code, output)
+        assert re.search(source.name, output)
+
+def test_invalid_arguments():
+    args = invalid_arguments()
+    try:
+        output = output_from_source_list(args)
+    except AssertionError:
+        assert True
+#+end_src
+
+****** Run tests
+d
+#+begin_src sh
+pytest ./cli/output/tests/test_output_from_source_list.py
+#+end_src
+
 **** TODO output_from_podcast_list
 **** TODO output_from_podcast_details
 **** TODO output_from_episode_list
