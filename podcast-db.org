@@ -336,7 +336,7 @@ podcast-db show-episode --episode franceinter/darwin/2018-04-16
 - [ ] Mostrar el mensaje de ayuda
 - [ ] Mostrar el mensaje con la versión
 
-** Mejoras
+** TODO Mejoras
 
 - [X] Corregir los imports :: Declarar las funciones que se exportan en cada módulo dentro del archivo =__init.py__=
 
@@ -1886,6 +1886,7 @@ En este módulo están las funciones que generan la salida de los comandos acept
 #+begin_src python :tangle cli/output/__init__.py
 from cli.output.output_from_source_list import output_from_source_list
 from cli.output.output_from_podcast_list import output_from_podcast_list
+from cli.output.output_from_podcast_details import output_from_podcast_details
 #+end_src
 
 ***** Tests
@@ -2037,7 +2038,6 @@ def arguments_with_unknown_source():
 
 #+begin_src python
 def output_from_podcast_list(args):
-    # Validar que args sea un argparse.Namespace
     # Obtener la fuente con source_from_arguments
     # Importar el módulo de la fuente
     # Obtener el listado de podcasts desde source.url
@@ -2058,7 +2058,6 @@ from franceinter.podcasts import podcasts_with_keyword
 
 
 def output_from_podcast_list(args):
-    assert isinstance(args, Namespace), invalid_arguments(args)
     source = source_from_arguments(args)
     import_from_source(source)
     podcasts = podcasts_from_url(source.url)
@@ -2068,10 +2067,6 @@ def output_from_podcast_list(args):
     lines = map(line_from_podcast, podcasts)
     output = help_message(source) + "\n\n" + "\n".join(lines)
     return output
-
-
-def invalid_arguments(args):
-    return "arguments parameter must be an argparse.Namespace, received %s instead" % type(args)
 
 
 def import_from_source(source):
@@ -2156,7 +2151,200 @@ def http_server():
 pytest ./cli/output/tests/test_output_from_podcast_list.py
 #+end_src
 
-**** TODO output_from_podcast_details
+**** output_from_podcast_details
+***** 1. Objetivo
+
+Obtener la salida del comando =podcast_details=
+
+***** 2. Firma
+
+La función recibe un =argparse.Namespace= que tiene que tener la propiedad =podcast= y devuelve un =str= con el detalle del podcast
+
+En la propiedad =podcast= se recibe el identificador del podcast buscado. Si la búsqueda devuelve más de un resultado, se muestra el listado de podcasts encontrados.
+
+***** 3. Ejemplos
+
+- Caso exitoso, un =Namespace= con un podcast válido en la propiedad =podcast= en formato =source/podcast-identifier=
+- Caso exitoso, un =Namespace= con un identificador de podcast válido en la propiedad =podcast= y la fuente en la propiedad =source=
+- Caso exitoso, un =Namespace= con un identificador de podcast que devuelva más de un resultado en la propiedad =podcast=
+- Un objeto que no es un =argparse.Namespace=
+- Un =Namespace= que no tiene la propiedad =podcast=
+- Un =Namespace= que tiene un podcast desconocido en la propiedad =podcast=
+
+#+begin_src python :tangle cli/output/tests/examples_output_from_podcast_details.py
+from argparse import Namespace
+
+def arguments_with_podcast(podcast):
+    args = Namespace()
+    args.podcast = podcast
+    return args
+
+def arguments_with_source_and_podcast(source, podcast):
+    args = Namespace()
+    args.source = source
+    args.podcast = podcast
+    return args
+
+def invalid_arguments():
+    args = 42
+    return args
+
+def arguments_without_podcast():
+    args = Namespace()
+    return args
+
+def arguments_with_unknown_podcast():
+    args = Namespace()
+    args.podcast = "testing/my-podcast"
+    return args
+#+end_src
+
+***** 4. Boceto
+
+#+begin_src python
+def output_from_podcast_details(args):
+    # Obtener la fuente con source_from_arguments
+    # Obtener el identificador del podcast con podcast_from_arguments
+    # Importar el módulo de la fuente
+    # Obtener el listado de podcasts desde source.url
+    # Filtrando el listado por keyword con el identificador del podcast
+    # Si el listado devuelve más de un resultado,
+    #    Formatear el listado como - identificador [autor]
+    # Sino
+    #    Formatear el detalle podcast
+    return output
+#+end_src
+
+***** 5. Definición
+
+#+begin_src python :tangle cli/output/output_from_podcast_details.py
+from cli.arguments import (
+    source_from_arguments,
+    podcast_from_arguments
+)
+from franceinter.podcasts import (
+    podcasts_from_url,
+    podcasts_with_keyword
+)
+
+
+def output_from_podcast_details(args):
+    source = source_from_arguments(args)
+    keyword = podcast_from_arguments(args)
+    import_from_source(source)
+    all_podcasts = podcasts_from_url(source.url)
+    podcasts = list(podcasts_with_keyword(all_podcasts, keyword))
+    if (len(podcasts) > 1):
+        lines = map(line_from_podcast, podcasts)
+        output = "Found multiple podcasts for [%s] identifier" % keyword + "\n\n" + "\n".join(lines)
+    elif (len(podcasts) == 1):
+        podcast = podcasts[0]
+        output = help_message(podcast) + podcast_details(podcast)
+    else:
+        output = "Podcast with identifier %s was not found" % keyword
+    return output
+
+
+def import_from_source(source):
+    return source.name
+    #if source.name == "local":
+    #    from franceinter.podcasts import podcasts_from_url
+    #    from franceinter.podcasts import podcasts_with_keyword
+    #else:
+    #    __import__(source.name).podcasts.podcasts_from_url
+    #    __import__(source.name).podcasts.podcasts_with_keyword
+
+
+def line_from_podcast(podcast):
+    return "- %s [%s]" % (podcast.identifier, podcast.author)
+
+
+def help_message(podcast):
+    return "Podcast details for: '%s'" % podcast.title
+
+
+def podcast_details(podcast):
+    return f'''
+
+identifier: {podcast.identifier}
+       URL: {podcast.url}
+    author: {podcast.author}'''
+#+end_src
+
+***** 6. Casos de prueba
+
+
+
+- Caso exitoso, un =Namespace= con un podcast válido en la propiedad =podcast= en formato =source/podcast-identifier=
+- Caso exitoso, un =Namespace= con un identificador de podcast válido en la propiedad =podcast= y la fuente en la propiedad =source=
+- Caso exitoso, un =Namespace= con un identificador en la propiedad =podcast= que devuelva más de un resultado
+- Un objeto que no es un =argparse.Namespace=
+- Un =Namespace= que no tiene la propiedad =podcast=
+- Un =Namespace= que tiene un podcast desconocido en la propiedad =podcast=
+
+#+begin_src python :tangle cli/output/tests/test_output_from_podcast_details.py
+import pytest, threading
+from utils.http_server import LocalFolderHTTPServer as HTTPServer
+from cli.output import output_from_podcast_details
+from cli.output.tests.examples_output_from_podcast_details import *
+
+def test_arguments_with_podcast(http_server):
+    podcast = "testing/mille-et-un-mondes"
+    args = arguments_with_podcast(podcast)
+    output = output_from_podcast_details(args)
+    assert "mille-et-un-mondes" in output
+
+
+def test_arguments_with_source_and_podcast(http_server):
+    source = "testing"
+    podcast = "mille-et-un-mondes"
+    args = arguments_with_source_and_podcast(source, podcast)
+    output = output_from_podcast_details(args)
+    assert "mille-et-un-mondes" in output
+
+
+def test_output_with_multiple_podcasts(http_server):
+    podcast = "testing/monde"
+    args = arguments_with_podcast(podcast)
+    output = output_from_podcast_details(args)
+    assert "multiple podcasts" in output
+
+
+def test_invalid_arguments():
+    args = invalid_arguments()
+    try:
+        output = output_from_podcast_details(args)
+    except AssertionError:
+        assert True
+
+def test_arguments_without_podcast():
+    args = arguments_without_podcast()
+    try:
+        output = output_from_podcast_details(args)
+    except AssertionError:
+        assert True
+
+def test_output_with_unknown_podcast(http_server):
+    args = arguments_with_unknown_podcast()
+    output = output_from_podcast_details(args)
+    assert "not found" in output
+
+
+@pytest.fixture(scope="module")
+def http_server():
+    web_dir = './franceinter/html'
+    httpd = HTTPServer(web_dir, ("", 3000))
+    threading.Thread(target=httpd.serve_forever).start()
+    yield httpd
+    httpd.shutdown()
+#+end_src
+
+****** Run tests
+
+#+begin_src sh
+pytest ./cli/output/tests/test_output_from_podcast_details.py
+#+end_src
+
 **** TODO output_from_episode_list
 **** TODO output_from_episode_details
 **** TODO output_from_version
@@ -2168,7 +2356,7 @@ pytest ./cli/output/tests/test_output_from_podcast_list.py
 Por el momento, la única fuente disponible es FranceInter
 
 ** Implementación
-*** Submódulos
+*** =__init.py__=
 **** Funciones
 
 #+begin_src python :tangle sources/__init__.py
