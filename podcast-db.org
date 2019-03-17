@@ -843,7 +843,7 @@ Obtener la fuente de podcasts a partir de los argumentos recibidos
 
 ***** 2. Firma
 
-La función recibe un objeto =argparse.Namespace= y devuelve un =str= con el nombre de la fuente
+La función recibe un objeto =argparse.Namespace= con el nombre o el código de una fuente y devuelve un objeto =sources.Source= con la fuente recibida
 
 ***** 3. Ejemplos
 
@@ -910,7 +910,7 @@ def source_from_arguments(args):
 #+begin_src python :tangle cli/arguments/source_from_arguments.py
 import re
 from argparse import Namespace
-
+from sources import list_sources
 
 def source_from_arguments(args):
     assert isinstance (args, Namespace), invalid_arguments(args)
@@ -922,9 +922,9 @@ def source_from_arguments(args):
     if not source and hasattr(args, "episode"):
         source = source_from_episode(args.episode)
     assert isinstance(source, str), missing_source(args)
-    assert source in known_sources(), unknown_source(source)
-    # actualmente hay una sola fuente
-    return "franceinter"
+    source = source_from_attribute(source)
+    assert source, unknown_source(source)
+    return source
 
 
 def source_from_podcast(podcast):
@@ -955,8 +955,12 @@ def unknown_source(source):
     return "unknown source: %s" % source
 
 
-def known_sources():
-    return ["fri", "franceinter"]
+def source_from_attribute(attribute):
+    source = False
+    for src in list_sources():
+        if attribute in [src.name, src.code]:
+            source = src
+    return source
 #+end_src
 
 ***** 6. Casos de prueba
@@ -976,22 +980,22 @@ from cli.arguments.tests.examples_source_from_arguments import *
 def test_arguments_with_valid_source_name():
     args = arguments_with_valid_source_name()
     source = source_from_arguments(args)
-    assert source == "franceinter"
+    assert source.name == "franceinter"
 
 def test_arguments_with_valid_source_code():
     args = arguments_with_valid_source_code()
     source = source_from_arguments(args)
-    assert source == "franceinter"
+    assert source.name == "franceinter"
 
 def test_arguments_with_valid_source_in_podcast():
     args = arguments_with_valid_source_in_podcast()
     source = source_from_arguments(args)
-    assert source == "franceinter"
+    assert source.name == "franceinter"
 
 def test_arguments_with_valid_source_in_episode():
     args = arguments_with_valid_source_in_episode()
     source = source_from_arguments(args)
-    assert source == "franceinter"
+    assert source.name == "franceinter"
 
 def test_invalid_arguments():
     args = invalid_arguments()
