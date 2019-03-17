@@ -326,10 +326,10 @@ podcast-db show-episode --episode franceinter/darwin/2018-04-16
 
 ** Wishlist
 
-- [ ] Validar los argumentos recibidos
-- [ ] Generar el comando a ejecutar a partir de los argumentos
-- [ ] Listar las fuentes de podcasts
-- [ ] Listar los podcasts de una fuente
+- [X] Validar los argumentos recibidos
+- [X] Generar el comando a ejecutar a partir de los argumentos
+- [X] Listar las fuentes de podcasts
+- [X] Listar los podcasts de una fuente
 - [ ] Mostrar el detalle de un podcast
 - [ ] Listar los episodios de un podcast
 - [ ] Mostrar el detalle de un episodio
@@ -399,6 +399,9 @@ optional arguments:
 :end:
 
 *** Arguments
+
+En este módulo se encuentran las funciones que se encargan de procesar los argumentos que recibe la aplicación. Básicamente, hay un solo argumento posicional obligatorio (=command=) y el resto son argumentos opcionales que indican la entidad buscada y los filtros que se desean aplicar.
+
 **** =__init.py__=
 ***** Funciones
 
@@ -1701,8 +1704,10 @@ def test_arguments_with_alphabetic_month():
 pytest ./cli/arguments/tests/test_month_from_arguments.py
 #+end_src
 
-**** TODO filters_from_arguments
 *** Commands
+
+En este módulo hay solamente dos funciones, por un lado =known_commands= que tiene el listado de comandos válidos aceptados por la aplicación, y por el otro =handlers_from_commands= que devuelve el nombre de la función encargada de procesar cada comando.
+
 **** =__init.py__=
 ***** Funciones
 
@@ -1872,6 +1877,9 @@ pytest ./cli/commands/tests/test_handlers_from_commands.py
 #+end_src
 
 *** Output
+
+En este módulo están las funciones que generan la salida de los comandos aceptados por la aplicación. La función =output_from_command= es la que se encarga de determinar qué función ejecutar. El resto de las funciones devuelven un =str= con la salida del comando correspondiente.
+
 **** =__init.py__=
 ***** Funciones
 
@@ -1893,7 +1901,7 @@ switch/case: https://stackoverflow.com/a/11479840
 **** output_from_source_list
 ***** 1. Objetivo
 
-Obtener el texto de la salida del comando =source_list=
+Obtener la salida del comando =source_list=
 
 ***** 2. Firma
 
@@ -1983,7 +1991,7 @@ pytest ./cli/output/tests/test_output_from_source_list.py
 **** output_from_podcast_list
 ***** 1. Objetivo
 
-Obtener el texto de la salida del comando =podcast_list=
+Obtener la salida del comando =podcast_list=
 
 ***** 2. Firma
 
