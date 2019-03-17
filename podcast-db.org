@@ -2236,12 +2236,12 @@ def output_from_podcast_details(args):
     podcasts = list(podcasts_with_keyword(all_podcasts, keyword))
     if (len(podcasts) > 1):
         lines = map(line_from_podcast, podcasts)
-        output = "Found multiple podcasts for [%s] identifier" % keyword + "\n\n" + "\n".join(lines)
+        output = "Found multiple podcasts with identifier '%s'" % keyword + "\n\n" + "\n".join(lines)
     elif (len(podcasts) == 1):
         podcast = podcasts[0]
         output = help_message(podcast) + podcast_details(podcast)
     else:
-        output = "Podcast with identifier %s was not found" % keyword
+        output = "No podcast was found with identifier '%s'" % keyword
     return output
 
 
@@ -2327,7 +2327,7 @@ def test_arguments_without_podcast():
 def test_output_with_unknown_podcast(http_server):
     args = arguments_with_unknown_podcast()
     output = output_from_podcast_details(args)
-    assert "not found" in output
+    assert "No podcast was found" in output
 
 
 @pytest.fixture(scope="module")
