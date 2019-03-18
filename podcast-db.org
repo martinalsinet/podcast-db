@@ -42,6 +42,7 @@
 - [[#tests][Tests]]
   - [[#ejecutar-los-casos-de-prueba][Ejecutar los casos de prueba]]
   - [[#generar-el-reporte-de-cobertura][Generar el reporte de cobertura]]
+  - [[#generar-el-reporte-de-complejidad-ciclomática][Generar el reporte de complejidad ciclomática]]
   - [[#integración-continua][Integración continua]]
 - [[#licencia][Licencia]]
   - [[#gplv3][GPLv3]]
@@ -214,6 +215,7 @@ Vamos a usar las siguientes bibliotecas
 - slugify :: Para generar el nombre del archivo a descargar
 - pytest :: Para ejecutar los casos de prueba
 - pytest-cov :: Para generar el reporte de cobertura de tests
+- radon :: Para generar el reporte de complejidad de código
 - validators :: Para validar URLs
 - unidecode :: Para comparar strings sin los acentos (á == a)
 
@@ -243,6 +245,7 @@ requests-cache
 pyinstaller
 pytest
 pytest-cov
+radon
 validators
 unidecode
 #+end_src
@@ -8015,6 +8018,68 @@ Para visualizar el reporte se debe abrir el archivo =./coverage/index.html= con 
 
 #+begin_src sh
 firefox --new-tab ./coverage/index.html
+#+end_src
+
+** Generar el reporte de complejidad ciclomática
+
+Una herramienta interesante para analizar la complejidad del código es [[https://radon.readthedocs.io/en/latest/][Radon]]. 
+
+- Documentación :: https://radon.readthedocs.io/en/latest/
+- GitHub :: https://github.com/rubik/radon
+
+Permite generar un reporte que le asigna a cada unidad de código (función, método o clase) una calificación que va de A (complejidad baja) hasta F (complejidad alta).
+
+|----------+------+-----------------------------------------|
+| CC score | Rank | Risk                                    |
+|----------+------+-----------------------------------------|
+| 1 - 5    | A    | low - simple block                      |
+| 6 - 10   | B    | low - well structured and stable block  |
+| 11 - 20  | C    | moderate - slightly complex block       |
+| 21 - 30  | D    | more than moderate - more complex block |
+| 31 - 40  | E    | high - complex block, alarming          |
+| 41+      | F    | very high - error-prone, unstable block |
+|----------+------+-----------------------------------------|
+
+Podríamos incorporar el análisis de complejidad al procedimiento de integración continua (cuando haya):
+
+- Se crea un issue de rediseño para cada función cuya calificación sea C
+- Se falla el build si se encuentran funciones con calificación D o mayor
+- Se rechaza un pull request si tiene funciones con calificación D o mayor
+
+*** Reporte de complejidad ciclomática
+
+Es interesante obtener el reporte para revisar las funciones complejas y ver si es posible simplificarlas o refactorizar parte de esa complejidad en nuevas funciones.
+
+De todas maneras, el reporte de Radon nos da una muy buena calificación, dado que todas las funciones tuvieron una calificación A (bloque simple), excepto por las siguientes 12 funciones, que tuvieron B (bloque estable y bien estructurado)
+
+#+begin_src sh :eval never
+$ pip install radon
+
+$ radon cc --min B ./cli/ ./franceinter/ ./sources/ ./utils/
+cli/arguments/source_from_arguments.py
+    F 5:0 source_from_arguments - B
+cli/arguments/year_from_arguments.py
+    F 4:0 year_from_arguments - B
+cli/arguments/podcast_from_arguments.py
+    F 4:0 podcast_from_arguments - B
+cli/arguments/parser_from_tuples.py
+    F 3:0 parser_from_tuples - B
+franceinter/episodes/url_from_tag.py
+    F 3:0 url_from_tag - B
+franceinter/episodes/episodes_from_day.py
+    F 3:0 episodes_from_day - B
+franceinter/episodes/title_from_tag.py
+    F 3:0 title_from_tag - B
+franceinter/episodes/episode_from_tag.py
+    F 12:0 episode_from_tag - B
+franceinter/episodes/date_from_tag.py
+    F 5:0 date_from_tag - B
+franceinter/episodes/duration_from_tag.py
+    F 3:0 duration_from_tag - B
+franceinter/podcasts/tests/test_podcast_from_tag.py
+    F 4:0 test_podcast_ok - B
+sources/tests/test_list_sources.py
+    F 4:0 test_sources_ok - B
 #+end_src
 
 ** TODO Integración continua
