@@ -127,15 +127,15 @@ En este caso, vamos a desarrollar nuestra aplicación en el lenguaje [[https://p
 
 Quiero que mi base de datos pueda consultar las siguientes fuentes de podcasts:
 
-- FranceInter
-- FranceCulture
-- RFI
-- Youtube
-- PBS
-- BBC
-- Team Human
-- Radiolab
-- RSS feeds
+- [X] FranceInter
+- [ ] FranceCulture
+- [ ] RFI
+- [ ] Youtube
+- [ ] PBS
+- [ ] BBC
+- [ ] Team Human
+- [ ] Radiolab
+- [ ] RSS feeds
 
 ** Funcionalidades
 *** Consulta de podcasts y episodios
@@ -164,22 +164,44 @@ Quiero que mi base de datos pueda consultar las siguientes fuentes de podcasts:
 *** 0.1.0 - 2019-03-01
 
 - Versión inicial
+- Consulta de fuentes disponibles
 - Consulta de podcasts y episodios
 - Fuente FranceInter
 
 ** Roadmap
 *** 0.2.0
 
-- Consulta de fuentes disponibles
-- Consulta de podcasts y episodios de FranceInter
 - Interface desde línea de comandos (CLI)
+- Generar un ejecutable en un solo archivo
+
+*** 0.3.0
+
+- Agregar fuente France Culture
+- Agregar fuente RSS (Team Human)
+
+*** 0.4.0
+
+- Agregar fuente YouTube
+- Agregar fuente RadioLab
+
+*** 0.5.0
+
+- Guardar las fuentes, los podcasts y sus episodios en una base de datos local
+
+*** 0.6.0
+
+- Generar una playlist o feed RSS a partir de un listado de episodios
+- Crear una cola de descarga a partir de una playlist
+- Procesar los archivos descargados (p.ej, cambiar el bitrate a 64k)
+
+*** 0.9.0
+
+- Interface Web
 
 *** 1.0.0
 
-- Consulta de podcasts y episodios de una fuente (FranceInter)
-- Guardar las fuentes, los podcasts y sus episodios en una base de datos local
-- Interface desde línea de comandos (CLI)
-- Generar un ejecutable en un solo archivo
+- Makefile
+- Integración continua
 
 * Setup
 ** Dependencias
