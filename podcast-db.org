@@ -2378,7 +2378,10 @@ pytest ./cli/output/tests/test_output_from_podcast_details.py
 
 - [X] Listar las fuentes de podcasts disponibles
 
-Por el momento, la única fuente disponible es FranceInter
+Hay dos fuentes disponibles:
+
+- France Inter
+- Testing (podcasts France Inter desde archivos locales)
 
 ** Implementación
 *** =__init.py__=
@@ -7683,7 +7686,7 @@ def date_from_tag(tag):
         and "data-diffusion-path" in tag.attrs):
 
         attr = tag.attrs["data-diffusion-path"]
-        match = re.search("([0-9]{2})-([a-z]+)-([0-9]{4})$", attr)
+        match = re.search("([0-9]{2})-([a-z]+)-([0-9]{4})(-[0-9])*$", attr)
         if match:
             try:
                 date = datetime.date(
@@ -7781,6 +7784,39 @@ def test_invalid_day():
 
 #+begin_src sh
 pytest ./franceinter/episodes/tests/test_date_from_tag.py
+#+end_src
+
+**** 7. Bugfixes
+
+- Encontré un podcast que tiene la propiedad =data-diffusion-path= con la fecha pero que la expresión regular de =date_from_tag= no logra parsear porque tiene un sufijo (=-0=)
+
+#+begin_src html
+E       AssertionError: received tag does not have an episode publication date
+E        <button class="replay-button playable" 
+data-broadcast-type="replay" 
+data-clip-type="réécoute" 
+data-diffusion-path="/emissions/3d-le-journal/3d-le-journal-24-mai-2015-0" 
+data-diffusion-title="En direct de St-Malo pour le Festival Etonnants Voyageurs" 
+data-...
+#+end_src
+
+#+begin_src python :tangle franceinter/episodes/tests/test_bugfixes_date_from_tag.py
+import datetime
+from bs4 import BeautifulSoup
+from franceinter.episodes import date_from_tag
+
+def test_tag_with_date_and_suffix():
+    tag = tag_with_date_and_suffix()
+    assert (datetime.date(2015, 5, 24) == date_from_tag(tag))
+
+
+def tag_with_date_and_suffix():
+    html = '''<button class="replay-button" 
+data-diffusion-path="/emissions/3d-le-journal/3d-le-journal-24-mai-2015-0">
+</button>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.button
+    return tag
 #+end_src
 
 *** duration_from_tag
