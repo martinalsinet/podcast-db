@@ -100,7 +100,7 @@ docker pull silex/emacs:26-alpine
 docker run --rm -i -v $(pwd):/app -w /app silex/emacs:26-alpine emacs --batch -l org podcast-db.org -f org-babel-tangle
 #+end_src
 
-Vemos que los fuentes se generan en la carpeta =franceinter=
+Vemos que los fuentes se generan en las carpetas =cli=, =franceinter=, =sources= y =utils=
 
 #+begin_src sh :eval never
 find ./franceinter
@@ -182,12 +182,12 @@ Quiero que mi base de datos pueda consultar las siguientes fuentes de podcasts:
 
 *** 0.4.0
 
-- Agregar fuente YouTube
-- Agregar fuente RadioLab
+- Guardar las fuentes, los podcasts y sus episodios en una base de datos local
 
 *** 0.5.0
 
-- Guardar las fuentes, los podcasts y sus episodios en una base de datos local
+- Agregar fuente YouTube
+- Agregar fuente RadioLab
 
 *** 0.6.0
 
