@@ -355,29 +355,35 @@ podcast-db show-episode --episode franceinter/darwin/2018-04-16
 - [X] Generar el comando a ejecutar a partir de los argumentos
 - [X] Listar las fuentes de podcasts
 - [X] Listar los podcasts de una fuente
-- [ ] Mostrar el detalle de un podcast
+- [X] Mostrar el detalle de un podcast
 - [ ] Listar los episodios de un podcast
 - [ ] Mostrar el detalle de un episodio
-- [ ] Mostrar el mensaje de ayuda
+- [X] Mostrar el mensaje de ayuda
 - [ ] Mostrar el mensaje con la versión
 
 ** TODO Mejoras
 
 - [X] Corregir los imports :: Declarar las funciones que se exportan en cada módulo dentro del archivo =__init.py__=
 
-- [X] =assert False= en tests: Hay que agregar un =assert False= casos de prueba que esperan una excepción para asegurarse de que realmente esté saliendo por el camino de la excepción. Update: Luego de pensarlo un rato, recordé que quité los =assert False= porque como nunca pasa por esas líneas aparecen como faltantes en el reporte de cobertura.
+- [X] =assert False= en tests :: Hay que agregar un =assert False= casos de prueba que esperan una excepción para asegurarse de que realmente esté saliendo por el camino de la excepción. *Update:* Luego de pensarlo un rato, recordé que quité los =assert False= porque cuando el test es exitoso nunca se llegan a ejecutar esos asserts dado que siempre sale por la excepción, y entonces aparecen como líneas no ejecutadas en el reporte de cobertura.
 
-- [ ] =argument_tuples= :: Cambiarle el nombre a =known_arguments= porque la palabra /tuples/ indica un detalle de implementación que distrae en vez de ayudar.
+- [ ] =argument_tuples= :: Cambiarle el nombre a =known_arguments= porque la palabra /tuples/ indica un detalle de implementación que distrae en vez de aclarar las cosas.
 
 - [ ] =extract_argument= :: Encontramos un patrón de código que se repite en las funciones del módulo =cli.arguments=. Todas las funciones reciben un objeto =argparse.Namespace=, verifican su tipo y extraen de éste uno o más argumentos que deben existir. Hay que agregar una nueva función que implemente esas verificaciones.
 
 #+begin_src python
-def extract_argument(args, arg_name):
+def extract_required_argument(args, arg_name):
     assert isinstance(args, Namespace), invalid_arguments(args)
     assert hasattr(args, arg_name), missing_keyword(args)
 #+end_src
 
-- [ ] =output_from_podcast_list= :: Está devolviendo mal los caracteres acentuados y hay que resolver el tema de los import dinámicos según la fuente
+- [ ] =output_from_podcast_list= :: Está devolviendo mal los caracteres acentuados
+
+- [ ] Import de podcasts y episodios :: Hay que crear dos funciones en el módulo =sources= que permitan importar las funciones de podcasts y episodios del módulo correspondiente a una fuente determinada. Podrían llamarse =import_podcasts_from_source= e =import_episodes_from_source=
+
+- [ ] Inyectar el base URL de la fuente en los podcasts :: La función =episodes_from_podcast= utiliza el URL del podcast para ir a buscar los episodios. El problema es que el base URL de los podcasts de France Inter (=https://www.franceinter.fr/=) está harcodeado en la función =url_from_tag= del módulo =franceinter.podcasts= y eso nos causa problemas en las pruebas unitarias de =output_from_episode_list=. El objetivo de las pruebas unitarias es que no realicen ninguna petición HTTP a servicios externos, pero con ese URL fijo dentro del podcast se hace difícil evitarlo. Como solución provisoria se agregó un =if= que modifica el base URL del podcast si la fuente es =testing=, pero esa no es la manera correcta de hacerlo. Se podría agregar en la clase =Podcast= un método para reemplazar el base URL o para agregar la fuente.
+
+- [ ] Rediseño de  =output_from_episode_list= :: Es demasiado compleja, hay que extraer bloques en funciones más sencillas. Habría que reemplazar los =if len(podcasts)...= por algo mejor, que también se podría usar en =output_from_podcast_list=
 
 ** Implementación
 *** =__init.py__=
@@ -388,7 +394,7 @@ def extract_argument(args, arg_name):
 
 *** CLI script
 
-Generamos un script =./podcast-db= que será la interface desde línea de comandos con la aplicación, parseando los parámetros recibidos y ejecutando las acciones correspondientes.
+Generamos el script =./podcast-db= que será la interface desde línea de comandos de la aplicación, parseando los parámetros recibidos y ejecutando las acciones correspondientes.
 
 #+begin_src python :tangle podcast-db :tangle-mode (identity #o755)
 #!/usr/bin/env python-3.6
@@ -400,8 +406,7 @@ args = parser.parse_args(["--help"])
 print(args)
 #+end_src
 
-#+RESULTS:
-:results:
+#+begin_src text
 usage:  [-h] [-v] [--source SOURCE] [--podcast PODCAST] [--episode EPISODE]
         [--keyword KEYWORD] [--year YEAR] [--month MONTH]
         command
@@ -421,7 +426,7 @@ optional arguments:
   --keyword KEYWORD  filter list by keyword ('musique')
   --year YEAR        filter list by year ('2018')
   --month MONTH      filter list by month ('2018-03')
-:end:
+#+end_src
 
 *** Arguments
 
@@ -1903,7 +1908,7 @@ pytest ./cli/commands/tests/test_handlers_from_commands.py
 
 *** Output
 
-En este módulo están las funciones que generan la salida de los comandos aceptados por la aplicación. La función =output_from_command= es la que se encarga de determinar qué función ejecutar. El resto de las funciones devuelven un =str= con la salida del comando correspondiente.
+En este módulo están las funciones que generan la salida de los comandos aceptados por la aplicación. La función =output_from_command= es la que se encarga de determinar qué función ejecutar a partir del comando recibido. El resto de las funciones devuelven un =str= con la salida del comando correspondiente.
 
 **** =__init.py__=
 ***** Funciones
