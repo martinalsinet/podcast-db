@@ -1917,6 +1917,7 @@ En este módulo están las funciones que generan la salida de los comandos acept
 from cli.output.output_from_source_list import output_from_source_list
 from cli.output.output_from_podcast_list import output_from_podcast_list
 from cli.output.output_from_podcast_details import output_from_podcast_details
+from cli.output.output_from_episode_list import output_from_episode_list
 #+end_src
 
 ***** Tests
@@ -2196,7 +2197,7 @@ En la propiedad =podcast= se recibe el identificador del podcast buscado. Si la 
 
 - Caso exitoso, un =Namespace= con un podcast válido en la propiedad =podcast= en formato =source/podcast-identifier=
 - Caso exitoso, un =Namespace= con un identificador de podcast válido en la propiedad =podcast= y la fuente en la propiedad =source=
-- Caso exitoso, un =Namespace= con un identificador de podcast que devuelva más de un resultado en la propiedad =podcast=
+- Un =Namespace= con un identificador de podcast que devuelva más de un resultado en la propiedad =podcast=
 - Un objeto que no es un =argparse.Namespace=
 - Un =Namespace= que no tiene la propiedad =podcast=
 - Un =Namespace= que tiene un podcast desconocido en la propiedad =podcast=
@@ -2303,14 +2304,12 @@ identifier: {podcast.identifier}
 
 ***** 6. Casos de prueba
 
-
-
-- Caso exitoso, un =Namespace= con un podcast válido en la propiedad =podcast= en formato =source/podcast-identifier=
-- Caso exitoso, un =Namespace= con un identificador de podcast válido en la propiedad =podcast= y la fuente en la propiedad =source=
-- Caso exitoso, un =Namespace= con un identificador en la propiedad =podcast= que devuelva más de un resultado
-- Un objeto que no es un =argparse.Namespace=
-- Un =Namespace= que no tiene la propiedad =podcast=
-- Un =Namespace= que tiene un podcast desconocido en la propiedad =podcast=
+- Caso exitoso, cuando recibe un =Namespace= con un podcast válido en la propiedad =podcast= en formato =source/podcast-identifier=, devuelve un =str= con el detalle del podcast
+- Caso exitoso, cuando recibe un =Namespace= con un identificador de podcast válido en la propiedad =podcast= y la fuente en la propiedad =source=, devuelve un =str= con el detalle del podcast
+- Cuando recibe un =Namespace= con un identificador en la propiedad =podcast= que devuelve más de un resultado, devuelve un =str= con el mensaje "multiple podcasts" y el listado de los podcasts encontrados
+- Cuando recibe un objeto que no es un =argparse.Namespace=, lanza un =AssertionError=
+- Cuando recibe un =Namespace= que no tiene la propiedad =podcast=, lanza un =AssertionError=
+- Cuando recibe un =Namespace= que tiene un podcast desconocido en la propiedad =podcast=, devuelve un =str= con el mensaje "No podcast was found"
 
 #+begin_src python :tangle cli/output/tests/test_output_from_podcast_details.py
 import pytest, threading
@@ -2375,7 +2374,236 @@ def http_server():
 pytest ./cli/output/tests/test_output_from_podcast_details.py
 #+end_src
 
-**** TODO output_from_episode_list
+**** DOING output_from_episode_list
+***** 1. Objetivo
+
+Obtener la salida del comando =episode-list=
+
+***** 2. Firma
+
+La función recibe un =argparse.Namespace= que tiene que tener la propiedad =podcast= y devuelve un =str= con el listado de sus episodios.
+
+En la propiedad =podcast= debe estar el identificador del podcast buscado. Si al buscar los podcasts por el identificador se encuentra más de un resultado, la función devuelve el listado de los podcasts encontrados.
+
+Opcionalmente, en el =Namespace= pueden venir las siguientes propiedades:
+
+- =keyword= :: filtra el listado por palabra clave
+- =year= :: filtra el listado por año
+- =month= :: filtra el listado por mes
+
+***** 3. Ejemplos
+
+- Caso exitoso, un =Namespace= con un podcast válido en la propiedad =podcast= en formato =source/podcast-identifier=
+- Caso exitoso, un =Namespace= con un identificador de podcast válido en la propiedad =podcast= y la fuente en la propiedad =source=
+- Un =Namespace= con un identificador de podcast que devuelva más de un resultado en la propiedad =podcast=
+- Un =Namespace= con el identificador en la propiedad =podcast= y la propiedad =keyword= para filtrar los episodios por palabra clave
+- Un =Namespace= con el identificador en la propiedad =podcast= y la propiedad =year= para filtrar los episodios por año
+- Un =Namespace= con el identificador en la propiedad =podcast= y la propiedad =month= para filtrar los episodios por mes
+- Un objeto que no es un =argparse.Namespace=
+- Un =Namespace= que no tiene la propiedad =podcast=
+- Un =Namespace= que tiene un podcast desconocido en la propiedad =podcast=
+
+#+begin_src python :tangle cli/output/tests/examples_output_from_episode_list.py
+from argparse import Namespace
+
+def arguments_with_podcast(podcast):
+    args = Namespace()
+    args.podcast = podcast
+    return args
+
+def arguments_with_podcast_and_source(podcast, source):
+    args = Namespace()
+    args.podcast = podcast
+    args.source = source
+    return args
+
+def arguments_with_podcast_and_keyword(podcast, keyword):
+    args = Namespace()
+    args.podcast = podcast
+    args.keyword = keyword
+    return args
+
+def arguments_with_podcast_and_year(podcast, year):
+    args = Namespace()
+    args.podcast = podcast
+    args.year = year
+    return args
+
+def arguments_with_podcast_and_month(podcast, month):
+    args = Namespace()
+    args.podcast = podcast
+    args.month = month
+    return args
+
+def invalid_arguments():
+    args = 42
+    return args
+
+def arguments_without_podcast():
+    args = Namespace()
+    return args
+
+def arguments_with_unknown_podcast():
+    args = Namespace()
+    args.podcast = "testing/my-podcast"
+    return args
+#+end_src
+
+***** 4. Boceto
+
+#+begin_src python
+def output_from_episode_list(args):
+    # Obtener la fuente con source_from_arguments
+    # Obtener el identificador del podcast con podcast_from_arguments
+    # Importar el módulo de la fuente
+    # Obtener el listado de podcasts desde source.url
+    # Filtrar el listado por keyword con el identificador del podcast
+    # Si el listado devuelve más de un resultado,
+    #    Mensaje de múltiples podcasts encontrados
+    #    Formatear el listado como - identificador [autor]
+    # Si el listado no devuelve ningún resultado,
+    #    Formatear el mensaje de podcast no encontrado
+    # Si el listado devuelve un único resultado,
+    #    Obtener el listado de episodios desde podcast.url
+    #    Aplicar el filtro por keyword
+    #    Aplicar el filtro por año
+    #    Aplicar el filtro por mes
+    #    Formatear el listado como identificador [título]
+    return output
+#+end_src
+
+***** 5. Definición
+
+#+begin_src python :tangle cli/output/output_from_episode_list.py
+from cli.arguments import (
+    source_from_arguments,
+    podcast_from_arguments,
+    keyword_from_arguments,
+    year_from_arguments,
+    month_from_arguments
+)
+from franceinter.podcasts import (
+    podcasts_from_url,
+    podcasts_with_keyword
+)
+from franceinter.episodes import (
+    episodes_from_podcast,
+    episodes_with_keyword,
+    episodes_from_year,
+    episodes_from_month
+)
+
+
+def output_from_episode_list(args):
+    source = source_from_arguments(args)
+    identifier = podcast_from_arguments(args)
+    import_from_source(source)
+    all_podcasts = podcasts_from_url(source.url)
+    podcasts = list(podcasts_with_keyword(all_podcasts, identifier))
+    output = ""
+    if (len(podcasts) > 1):
+        lines = map(line_from_podcast, podcasts)
+        output = "Found multiple podcasts with identifier '%s'" % identifier + "\n\n" + "\n".join(lines)
+    elif (len(podcasts) < 1):
+        output = "No podcast was found with identifier '%s'" % identifier
+    else:
+        podcast = podcasts[0]
+        if (source.name == "testing"):
+            podcast.url = podcast.url.replace(
+                "https://www.franceinter.fr/", 
+                "http://localhost:3000/"
+            )
+        episodes = episodes_from_podcast(podcast)
+        (keyword, year, month) = filters_from_arguments(args)
+        if keyword:
+            episodes = episodes_with_keyword(episodes, keyword)
+        if year:
+            episodes = episodes_from_year(episodes, year)
+        if month:
+            episodes = episodes_from_month(episodes, year, month)
+        lines = map(line_from_episode, episodes)
+        output = help_message(podcast) + "\n\n" + "\n".join(lines)
+    return output
+
+
+def filters_from_arguments(args):
+    keyword = False
+    year = False
+    month = False
+    if hasattr(args, "keyword"):
+        keyword = keyword_from_arguments(args)
+    if hasattr(args, "year"):
+        year = year_from_arguments(args)
+    if hasattr(args, "month"):
+        (year, month) = month_from_arguments(args)
+    return (keyword, year, month)
+
+
+def import_from_source(source):
+    return source.name
+
+
+def line_from_podcast(podcast):
+    return "- %s [%s]" % (podcast.identifier, podcast.author)
+
+
+def line_from_episode(episode):
+    return "- %s [%s]" % (episode.identifier, episode.title)
+
+
+def help_message(podcast):
+    return "Episode list for podcast: %s" % podcast.title
+#+end_src
+
+***** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un =Namespace= con un podcast válido en la propiedad =podcast= en formato =source/podcast-identifier=, devuelve un =str= con el listado de los episodios de ese podcast
+- Caso exitoso, cuando recibe un =Namespace= con un identificador de podcast válido en la propiedad =podcast= y la fuente en la propiedad =source=, devuelve un =str= con el listado de los episodios de ese podcast
+- Cuando recibe un =Namespace= con un identificador de podcast que devuelva más de un resultado en la propiedad =podcast=, devuelve un =str= con un mensaje "multiple podcasts" y el listado de podcasts encontrados
+- Cuando recibe un =Namespace= con el identificador en la propiedad =podcast= y la propiedad =keyword= para filtrar los episodios por palabra clave, devuelve un =str= con el listado de los episodios que tienen esa palabra clave
+- Cuando recibe un =Namespace= con el identificador en la propiedad =podcast= y la propiedad =year= para filtrar los episodios por año, devuelve un =str= con el listado de los episodios que son de ese año
+- Cuando recibe un =Namespace= con el identificador en la propiedad =podcast= y la propiedad =month= para filtrar los episodios por mes, devuelve un =str= con el listado de los episodios que son de ese mes
+- Cuando recibe un objeto que no es un =argparse.Namespace=, lanza un =AssertionError=
+- Cuando recibe un =Namespace= que no tiene la propiedad =podcast=, lanza un =AssertionError=
+- Cuando recibe =Namespace= que tiene un podcast desconocido en la propiedad =podcast=, devuelve un =str= con el mensaje "No podcast was found"
+
+#+begin_src python :tangle cli/output/tests/test_output_from_episode_list.py
+import pytest, threading
+from utils.http_server import LocalFolderHTTPServer as HTTPServer
+from cli.output import output_from_episode_list
+from cli.output.tests.examples_output_from_episode_list import *
+
+
+def test_arguments_with_podcast(http_server):
+    podcast = "testing/3d-le-journal"
+    args = arguments_with_podcast(podcast)
+    output = output_from_episode_list(args)
+    assert "2019-03-02" in output
+
+
+def test_arguments_with_podcast_and_source(http_server):
+    source = "testing"
+    podcast = "3d-le-journal"
+    args = arguments_with_podcast_and_source(podcast, source)
+    output = output_from_episode_list(args)
+    assert "2019-02-23" in output
+
+
+@pytest.fixture(scope="module")
+def http_server():
+    web_dir = './franceinter/html'
+    httpd = HTTPServer(web_dir, ("", 3000))
+    threading.Thread(target=httpd.serve_forever).start()
+    yield httpd
+    httpd.shutdown()
+#+end_src
+
+****** Run tests
+
+#+begin_src 
+pytest ./cli/output/tests/test_output_from_episode_list.py
+#+end_src
+
 **** TODO output_from_episode_details
 **** TODO output_from_version
 * Sources
@@ -7989,18 +8217,22 @@ mkdir -p ./franceinter/html
 curl -o ./franceinter/html/podcast-list.html https://www.franceinter.fr/emissions
 head -n 1000 ./franceinter/html/podcast-list.html > franceinter/html/podcast-list-short.html
 curl -o ./franceinter/html/episode-list.html https://www.franceinter.fr/emissions/sur-les-epaules-de-darwin
+head -n 1000 ./franceinter/html/episode-list.html > franceinter/html/episode-list-short.html
 curl -o ./franceinter/html/wrong-page.html https://www.pagina12.com.ar
 ls -alh ./franceinter/html
 #+end_src
 
 #+RESULTS:
 :results:
-total 10968
-drwxr-xr-x  5 martin  staff   160B Feb  8 17:18 .
-drwxr-xr-x  7 martin  staff   224B Feb  8 17:18 ..
--rw-r--r--  1 martin  staff   276K Feb  8 17:18 episode-list.html
--rw-r--r--  1 martin  staff   4.1M Feb  8 17:18 podcast-list.html
--rw-r--r--  1 martin  staff    20K Feb  8 17:18 wrong-page.html
+total 11568
+drwxr-xr-x   8 martin  staff   256B Mar 18 23:57 .
+drwxr-xr-x   7 martin  staff   224B Mar 19 00:52 ..
+drwxr-xr-x  11 martin  staff   352B Mar 19 00:02 emissions
+-rw-r--r--   1 martin  staff    82K Mar 19 01:05 episode-list-short.html
+-rw-r--r--   1 martin  staff   275K Mar 19 01:05 episode-list.html
+-rw-r--r--   1 martin  staff    85K Mar 19 01:05 podcast-list-short.html
+-rw-r--r--   1 martin  staff   4.1M Mar 19 01:05 podcast-list.html
+-rw-r--r--   1 martin  staff    20K Mar 19 01:05 wrong-page.html
 :end:
 
 * Herramientas
