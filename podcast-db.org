@@ -6059,7 +6059,8 @@ optional arguments:
 
 *** Arguments
 
-En este módulo se encuentran las funciones que se encargan de procesar los argumentos que recibe la aplicación. Básicamente, hay un solo argumento posicional obligatorio (=command=) y el resto son argumentos opcionales que indican la entidad buscada y los filtros que se desean aplicar.
+En este módulo se encuentran las funciones que se encargan de procesar los argumentos
+que recibe la aplicación. Básicamente, hay un solo argumento posicional obligatorio (=command=) y el resto son argumentos opcionales que indican la entidad buscada (=--source=, =--podcast=, =--episode=) y los filtros que se desean aplicar (=--keyword=, =--year=, =--month=).
 
 **** =__init.py__=
 ***** Funciones
@@ -7093,12 +7094,7 @@ from cli.arguments import argument_from_namespace
 
 def keyword_from_arguments(args):
     keyword = argument_from_namespace(args, "keyword", is_required=True)
-    assert (len(keyword)>0), empty_keyword(args)
     return keyword
-
-
-def empty_keyword(args):
-    return "keyword property cannot be empty, received %s" % args
 #+end_src
 
 ***** 6. Casos de prueba
@@ -7137,7 +7133,6 @@ def test_arguments_with_empty_keyword():
         keyword = keyword_from_arguments(args)
     except AssertionError:
         assert True
-
 #+end_src
 
 ****** Run tests
@@ -8314,6 +8309,59 @@ def test_arguments_with_podcast_and_source(http_server):
     assert "2019-02-23" in output
 
 
+def test_arguments_with_multiple_podcasts(http_server):
+    podcast = "testing/monde"
+    args = arguments_with_podcast(podcast)
+    output = output_from_episode_list(args)
+    assert "Found multiple podcasts" in output
+
+
+def test_arguments_with_podcast_and_keyword(http_server):
+    podcast = "testing/3d-le-journal"
+    keyword = "recherche"
+    args = arguments_with_podcast_and_keyword(podcast, keyword)
+    output = output_from_episode_list(args)
+    assert "recherche de la longitude" in output
+
+
+def test_arguments_with_podcast_and_year(http_server):
+    podcast = "testing/3d-le-journal"
+    year = "2019"
+    args = arguments_with_podcast_and_year(podcast, year)
+    output = output_from_episode_list(args)
+    assert "2019-03-09" in output
+
+
+def test_arguments_with_podcast_and_month(http_server):
+    podcast = "testing/3d-le-journal"
+    month = "2019-02"
+    args = arguments_with_podcast_and_month(podcast, month)
+    output = output_from_episode_list(args)
+    assert "2019-02-23" in output
+
+
+def test_invalid_arguments():
+    args = invalid_arguments()
+    try:
+        output = output_from_episode_list(args)
+    except AssertionError:
+        assert True
+
+
+def test_arguments_without_podcast():
+    args = arguments_without_podcast()
+    try:
+        output = output_from_episode_list(args)
+    except AssertionError:
+        assert True
+
+
+def test_arguments_with_unknown_podcast(http_server):
+    args = arguments_with_unknown_podcast()
+    output = output_from_episode_list(args)
+    assert "No podcast was found" in output
+
+
 @pytest.fixture(scope="module")
 def http_server():
     web_dir = './franceinter/html'
@@ -8325,7 +8373,7 @@ def http_server():
 
 ****** Run tests
 
-#+begin_src 
+#+begin_src sh
 pytest ./cli/output/tests/test_output_from_episode_list.py
 #+end_src
 
