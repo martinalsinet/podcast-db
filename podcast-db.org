@@ -5998,12 +5998,12 @@ podcast-db show-episode --episode franceinter/darwin/2018-04-16
 
 - [X] =argument_tuples= :: Cambiarle el nombre a =known_arguments= porque la palabra /tuples/ indica un detalle de implementación que distrae en vez de aclarar las cosas.
 
-- [ ] =extract_argument= :: Encontramos un patrón de código que se repite en las funciones del módulo =cli.arguments=. Todas las funciones reciben un objeto =argparse.Namespace=, verifican su tipo y extraen de éste uno o más argumentos que deben existir. Hay que agregar una nueva función que implemente esas verificaciones.
+- [X] =argument_from_namespace= :: Encontramos un patrón de código que se repite en las funciones del módulo =cli.arguments=. Todas las funciones reciben un objeto =argparse.Namespace=, verifican su tipo y extraen de éste uno o más argumentos que pueden ser obligatorios u opcionales. Hay que agregar una nueva función que implemente esas verificaciones.
 
 #+begin_src python
-def extract_required_argument(args, arg_name):
+def argument_from_namespace(args, arg_name, is_required):
     assert isinstance(args, Namespace), invalid_arguments(args)
-    assert hasattr(args, arg_name), missing_keyword(args)
+    assert hasattr(args, arg_name), missing_argument(args, arg_name)
 #+end_src
 
 - [ ] =output_from_podcast_list= :: Está devolviendo mal los caracteres acentuados
@@ -6067,6 +6067,7 @@ En este módulo se encuentran las funciones que se encargan de procesar los argu
 #+begin_src python :tangle cli/arguments/__init__.py
 from cli.arguments.known_arguments import known_arguments
 from cli.arguments.parser_from_arguments import parser_from_arguments
+from cli.arguments.argument_from_namespace import argument_from_namespace
 from cli.arguments.command_from_arguments import command_from_arguments
 from cli.arguments.source_from_arguments import source_from_arguments
 from cli.arguments.podcast_from_arguments import podcast_from_arguments
@@ -6371,6 +6372,128 @@ def test_argument_list_without_dict_as_second():
 pytest cli/arguments/tests/test_parser_from_arguments.py
 #+end_src
 
+**** argument_from_namespace
+***** 1. Objetivo
+
+Verificar la existencia de un argumento recibido por la aplicación y obtener su valor.
+
+***** 2. Firma
+
+La función recibe un objeto =argparse.Namespace= con los argumentos recibidos, un =str= con el nombre del argumento buscado, y un =bool= que indica si el argumento es obligatorio o no, y devuelve un =str= con el valor del argumento buscado, si existe.
+
+***** 3. Ejemplos
+
+- Caso exitoso, un =Namespace= que tiene un argumento válido
+- Un =Namespace= que no es un objeto =argparse.Namespace=
+- Un =Namespace= vacío
+
+#+begin_src python :tangle cli/arguments/tests/examples_argument_from_namespace.py
+from argparse import Namespace
+
+
+def namespace_with_argument(name, value):
+    args = Namespace()
+    setattr(args, name, value)
+    return args
+
+
+def invalid_namespace():
+    args = 42
+    return args
+
+
+def empty_namespace():
+    args = Namespace()
+    return args
+#+end_src
+
+***** 4. Boceto
+
+#+begin_src python
+def argument_from_namespace(ns, argument, is_required):
+    # validar que args sea un Namespace
+    # si is_required es True, 
+    #       validar que namespace tenga la propiedad argument
+    return ns[argument]
+#+end_src
+
+***** 5. Definición
+
+#+begin_src python :tangle cli/arguments/argument_from_namespace.py
+from argparse import Namespace
+
+
+def argument_from_namespace(ns, argument, is_required=False):
+    assert isinstance(ns, Namespace), invalid_namespace(ns)
+    value = False
+    if hasattr(ns, argument):
+        value = getattr(ns, argument)
+    if is_required:
+        assert value, required_argument(ns, argument)
+    return value
+
+
+def invalid_namespace(ns):
+    return "ns parameter must be an argparse.Namespace, received %s instead" % type(ns)
+
+
+def required_argument(ns, argument):
+    return "%s argument is required, but not present in received namespace [%s]" % (argument, ns)
+#+end_src
+
+***** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un =Namespace= que tiene el argumento obligatorio buscado, devuelve el valor del argumento
+- Caso exitoso, cuando recibe un =Namespace= que tiene el argumento opcional buscado, devuelve el valor del argumento
+- Cuando recibe un =Namespace= que no es un objeto =argparse.Namespace=, lanza un =AssertionError=
+- Cuando recibe un =Namespace= que no tiene el argumento obligatorio buscado, lanza un =AssertionError=
+- Cuando recibe un =Namespace= que no tiene el argumento opcional buscado, devuelve =False=
+
+#+begin_src python :tangle cli/arguments/tests/test_argument_from_namespace.py
+from cli.arguments import argument_from_namespace
+from cli.arguments.tests.examples_argument_from_namespace import *
+
+
+def test_required_argument():
+    ns = namespace_with_argument("keyword", "episode")
+    keyword = argument_from_namespace(ns, "keyword", is_required=True)
+    assert (keyword == "episode")
+
+
+def test_optional_argument():
+    ns = namespace_with_argument("keyword", "episode")
+    keyword = argument_from_namespace(ns, "keyword")
+    assert (keyword == "episode")
+
+
+def test_invalid_namespace():
+    ns = invalid_namespace()
+    try:
+        keyword = argument_from_namespace(ns, "keyword")
+    except AssertionError:
+        assert True
+
+
+def test_missing_required_argument():
+    ns = empty_namespace()
+    try:
+        keyword = argument_from_namespace(ns, "keyword", is_required=True)
+    except AssertionError:
+        assert True
+
+
+def test_missing_optional_argument():
+    ns = empty_namespace()
+    keyword = argument_from_namespace(ns, "keyword")
+    assert keyword == False
+#+end_src
+
+****** Run tests
+
+#+begin_src sh
+pytest ./cli/arguments/tests/test_argument_from_namespace.py
+#+end_src
+
 **** command_from_arguments
 ***** 1. Objetivo
 
@@ -6449,7 +6572,7 @@ def missing_command(args):
 
 
 def unknown_command(command):
-    return "unknown command: " % command
+    return "unknown command: %s" % command
 #+end_src
 
 ***** 6. Casos de prueba
@@ -6474,7 +6597,7 @@ def test_invalid_arguments():
     args = invalid_arguments()
     try:
         command = command_from_arguments(args)
-    except:
+    except AssertionError:
         assert True
 
 
@@ -6482,7 +6605,7 @@ def test_arguments_without_command():
     args = arguments_without_command()
     try:
         command = command_from_arguments(args)
-    except:
+    except AssertionError:
         assert True
     
 
@@ -6490,7 +6613,7 @@ def test_arguments_with_unknown_command():
     args = arguments_with_unknown_command()
     try:
         command = command_from_arguments(args)
-    except:
+    except AssertionError:
         assert True
 #+end_src
 
@@ -6665,23 +6788,22 @@ def test_invalid_arguments():
     args = invalid_arguments()
     try:
         source = source_from_arguments(args)
-    except:
+    except AssertionError:
         assert True
 
 def test_arguments_without_source():
     args = arguments_without_source()
     try:
         source = source_from_arguments(args)
-    except:
+    except AssertionError:
         assert True
 
 def test_arguments_with_unknown_source():
     args = arguments_with_unknown_source()
     try:
         source = source_from_arguments(args)
-    except:
+    except AssertionError:
         assert True
-
 #+end_src
 
 ****** Run tests
@@ -6994,7 +7116,7 @@ def keyword_from_arguments(args):
     assert isinstance(args, Namespace), invalid_arguments(args)
     assert hasattr(args, "keyword"), missing_keyword(args)
     keyword = args.keyword
-    assert (len(keyword) >0), empty_keyword(args)
+    assert (len(keyword)>0), empty_keyword(args)
     return keyword
 
 def invalid_arguments(args):
