@@ -6553,22 +6553,13 @@ def command_from_arguments(args):
 ***** 5. Definición
 
 #+begin_src python :tangle cli/arguments/command_from_arguments.py
-from argparse import Namespace
+from cli.arguments import argument_from_namespace
 from cli.commands import known_commands
 
 def command_from_arguments(args):
-    assert isinstance(args, Namespace), invalid_arguments(args)
-    assert "command" in args, missing_command(args)
-    assert args.command in known_commands(), unknown_command(args.command)
-    return args.command
-
-
-def invalid_arguments(args):
-    return "arguments parameter must be an argparse.Namespace, received %s instead" % type(args)
-
-
-def missing_command(args):
-    return "arguments parameter must have a command property, received %s" % args
+    command = argument_from_namespace(args, "command", is_required=True)
+    assert command in known_commands(), unknown_command(args.command)
+    return command
 
 
 def unknown_command(command):
@@ -6696,18 +6687,17 @@ def source_from_arguments(args):
 
 #+begin_src python :tangle cli/arguments/source_from_arguments.py
 import re
-from argparse import Namespace
+from cli.arguments import argument_from_namespace
 from sources import list_sources
 
 def source_from_arguments(args):
-    assert isinstance (args, Namespace), invalid_arguments(args)
-    source = False
-    if hasattr(args, "source"):
-        source = args.source
-    if not source and hasattr(args, "podcast"):
-        source = source_from_podcast(args.podcast)
-    if not source and hasattr(args, "episode"):
-        source = source_from_episode(args.episode)
+    source = argument_from_namespace(args, "source")
+    podcast = argument_from_namespace(args, "podcast")
+    if not source and podcast:
+        source = source_from_podcast(podcast)
+    episode = argument_from_namespace(args, "episode")
+    if not source and episode:
+        source = source_from_episode(episode)
     assert isinstance(source, str), missing_source(args)
     source = source_from_attribute(source)
     assert source, unknown_source(source)
@@ -6728,10 +6718,6 @@ def source_from_episode(episode):
     if match:
         source = match.groups()[0]
     return source
-
-
-def invalid_arguments(args):
-    return "arguments parameter must be an argparse.Namespace, received %s instead" % type(args)
 
 
 def missing_source(args):
@@ -6865,20 +6851,19 @@ def podcast_from_arguments(args):
 
 #+begin_src python :tangle cli/arguments/podcast_from_arguments.py
 import re
-from argparse import Namespace
+from cli.arguments import argument_from_namespace
 
 def podcast_from_arguments(args):
-    assert isinstance(args, Namespace), invalid_arguments(args)
     podcast = False
-    if hasattr(args, "podcast"):
-        podcast = podcast_from_attr(args.podcast)
-    if not podcast and hasattr(args, "episode"):
-        podcast = podcast_from_episode(args.episode)
+    attr = argument_from_namespace(args, "podcast")
+    if attr:
+        podcast = podcast_from_attr(attr)
+    episode = argument_from_namespace(args, "episode")
+    if not podcast and episode:
+        podcast = podcast_from_episode(episode)
     assert isinstance(podcast, str), missing_podcast(args)
     return podcast
 
-def invalid_arguments(args):
-    return "arguments parameter must be an argparse.Namespace, received %s instead" % type(args)
 
 def podcast_from_attr(attr):
     podcast = attr
@@ -6886,6 +6871,7 @@ def podcast_from_attr(attr):
     if match:
         podcast = match.groups()[1]
     return podcast
+
     
 def podcast_from_episode(episode):
     podcast = False
@@ -6894,10 +6880,9 @@ def podcast_from_episode(episode):
         podcast = match.groups()[1]
     return podcast
 
+
 def missing_podcast(args):
     return "arguments parameter must have a podcast property, received %s" % args
-
-
 #+end_src
 
 ***** 6. Casos de prueba
@@ -7001,22 +6986,15 @@ def episode_from_arguments(args):
 
 #+begin_src python :tangle cli/arguments/episode_from_arguments.py
 import re
-from argparse import Namespace
+from cli.arguments import argument_from_namespace
+
 
 def episode_from_arguments(args):
-    assert isinstance(args, Namespace), invalid_arguments(args)
-    assert hasattr(args, "episode"), missing_episode(args)
-    episode = args.episode
+    episode = argument_from_namespace(args, "episode", is_required=True)
     match = re.search("^([a-z0-9-]+)/([a-z0-9-]+)/([a-z0-9-]+)$", episode)
     if match:
         episode = match.groups()[2]
     return episode
-
-def invalid_arguments(args):
-    return "arguments parameter must be an argparse.Namespace, received %s instead" % type(args)
-
-def missing_episode(args):
-    return "arguments parameter must have an episode property, received %s" % args
 #+end_src
 
 ***** 6. Casos de prueba
@@ -7110,24 +7088,17 @@ def keyword_from_arguments(args):
 
 #+begin_src python :tangle cli/arguments/keyword_from_arguments.py
 import re
-from argparse import Namespace
+from cli.arguments import argument_from_namespace
+
 
 def keyword_from_arguments(args):
-    assert isinstance(args, Namespace), invalid_arguments(args)
-    assert hasattr(args, "keyword"), missing_keyword(args)
-    keyword = args.keyword
+    keyword = argument_from_namespace(args, "keyword", is_required=True)
     assert (len(keyword)>0), empty_keyword(args)
     return keyword
 
-def invalid_arguments(args):
-    return "arguments parameter must be an argparse.Namespace, received %s instead" % type(args)
-
-def missing_keyword(args):
-    return "arguments parameter must have a keyword property, received %s" % args
 
 def empty_keyword(args):
     return "keyword property cannot be empty, received %s" % args
-
 #+end_src
 
 ***** 6. Casos de prueba
@@ -7235,27 +7206,29 @@ def year_from_arguments(args):
 
 #+begin_src python :tangle cli/arguments/year_from_arguments.py
 import re
-from argparse import Namespace
+from cli.arguments import argument_from_namespace
+
 
 def year_from_arguments(args):
-    assert isinstance(args, Namespace), invalid_arguments(args)
     year = False
-    if hasattr(args, "year"):
-        year = year_from_attribute(args.year)
-    if not year and hasattr(args, "month"):
-        year = year_from_month(args.month)
+    attr = argument_from_namespace(args, "year")
+    if attr:
+        year = year_from_attribute(attr)
+    month = argument_from_namespace(args, "month")
+    if not year and month:
+        year = year_from_month(month)
     assert year, missing_year(args)
     assert (year > 1900), invalid_year(args)
     return year
 
-def invalid_arguments(args):
-    return "arguments parameter must be an argparse.Namespace, received %s instead" % type(args)
 
 def missing_year(args):
     return "arguments parameter must have a year property, received %s" % args
 
+
 def invalid_year(args):
     return "year property must be an int > 1900, received %s" % args
+
 
 def year_from_attribute(attr):
     year = False
@@ -7263,6 +7236,7 @@ def year_from_attribute(attr):
     if match:
         year = int(match.groups()[0])
     return year
+
 
 def year_from_month(month):
     year = False
@@ -7391,26 +7365,27 @@ def month_from_arguments(args):
 
 #+begin_src python :tangle cli/arguments/month_from_arguments.py
 import re
-from argparse import Namespace
+from cli.arguments import argument_from_namespace
+
 
 def month_from_arguments(args):
-    assert isinstance(args, Namespace), invalid_arguments(args)
     year = False
     month = False
-    if hasattr(args, "month"):
-        (year, month) = month_from_attribute(args.month)
+    attr = argument_from_namespace(args, "month", is_required=True)
+    if attr:
+        (year, month) = month_from_attribute(attr)
     assert year and month, missing_month(args)
     assert (0 < month) and (month < 13), invalid_month(args.month)
     return (year, month)
 
-def invalid_arguments(args):
-    return "arguments parameter must be an argparse.Namespace, received %s instead" % type(args)
 
 def missing_month(args):
     return "arguments parameter must have a month property, received %s" % args
 
+
 def invalid_month(args):
     return "year property must be an int between 1 and 12, received %s" % args
+
 
 def month_from_attribute(attr):
     year = False
@@ -7420,7 +7395,6 @@ def month_from_attribute(attr):
         year = int(match.groups()[0])
         month= int(match.groups()[1])
     return (year, month)
-
 #+end_src
 
 ***** 6. Casos de prueba
