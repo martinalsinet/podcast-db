@@ -8092,7 +8092,7 @@ def http_server():
 pytest ./cli/output/tests/test_output_from_podcast_details.py
 #+end_src
 
-**** DOING output_from_episode_list
+**** output_from_episode_list
 ***** 1. Objetivo
 
 Obtener la salida del comando =episode-list=
@@ -8231,18 +8231,23 @@ def output_from_episode_list(args):
                 "https://www.franceinter.fr/", 
                 "http://localhost:3000/"
             )
-        episodes = episodes_from_podcast(podcast)
-        (keyword, year, month) = filters_from_arguments(args)
-        if keyword:
-            episodes = episodes_with_keyword(episodes, keyword)
-        if year:
-            episodes = episodes_from_year(episodes, year)
-        if month:
-            episodes = episodes_from_month(episodes, year, month)
+        all_episodes = episodes_from_podcast(podcast)
+        episodes = filter_episodes(all_episodes, args)
         lines = map(line_from_episode, episodes)
         output = help_message(podcast) + "\n\n" + "\n".join(lines)
     return output
 
+
+def filter_episodes(episodes, args):
+    (keyword, year, month) = filters_from_arguments(args)
+    if keyword:
+        episodes = episodes_with_keyword(episodes, keyword)
+    if year:
+        episodes = episodes_from_year(episodes, year)
+    if month:
+        episodes = episodes_from_month(episodes, year, month)
+    return episodes
+    
 
 def filters_from_arguments(args):
     keyword = False
