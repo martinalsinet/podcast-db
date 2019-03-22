@@ -7635,7 +7635,7 @@ from cli.output.output_from_source_list import output_from_source_list
 from cli.output.output_from_podcast_list import output_from_podcast_list
 from cli.output.output_from_podcast_details import output_from_podcast_details
 from cli.output.output_from_episode_list import output_from_episode_list
-#from cli.output.output_from_episode_details import output_from_episode_details
+from cli.output.output_from_episode_details import output_from_episode_details
 #+end_src
 
 ***** Tests
@@ -8380,7 +8380,263 @@ def http_server():
 pytest ./cli/output/tests/test_output_from_episode_list.py
 #+end_src
 
-**** TODO output_from_episode_details
+**** output_from_episode_details
+***** 1. Objetivo
+
+Obtener la salida del comando =episode_details=
+
+***** 2. Firma
+
+La función recibe un =argparse.Namespace= que tiene que tener la propiedad =episode= y devuelve un =str= con el detalle del episodio
+
+En la propiedad =episode= se recibe el identificador del podcast buscado. Si la búsqueda devuelve más de un resultado, se muestra el listado de episodios encontrados. Si la búsqueda no devuelve ningún resultado, se muestra el mensaje "No episode found".
+
+***** 3. Ejemplos
+
+- Caso exitoso, un =Namespace= con un podcast válido en la propiedad =episode= en formato =source/podcast-identifier/episode=
+- Caso exitoso, un =Namespace= con un identificador de episodio en la propiedad =episode=, un identificador de podcast en la propiedad =podcast= y la fuente en la propiedad =source=
+- Un =Namespace= con un identificador de episodio en la propiedad =episode= que devuelva más de un resultado
+- Un objeto que no es un =argparse.Namespace=
+- Un =Namespace= que no tiene la propiedad =episode=
+- Un =Namespace= que no tiene la propiedad =podcast=
+- Un =Namespace= que tiene un podcast desconocido en la propiedad =podcast=
+- Un =Namespace= que tiene un episodio desconocido en la propiedad =episode=
+
+#+begin_src python :tangle cli/output/tests/examples_output_from_episode_details.py
+from argparse import Namespace
+
+def arguments_with_episode(episode):
+    args = Namespace()
+    args.episode = episode
+    return args
+
+def arguments_with_source_podcast_episode(source, podcast, episode):
+    args = Namespace()
+    args.source = source
+    args.podcast = podcast
+    args.episode = episode
+    return args
+
+def invalid_arguments():
+    args = 42
+    return args
+
+def arguments_without_podcast():
+    args = Namespace()
+    args.episode = "2019-03-09"
+    return args
+
+def arguments_without_episode():
+    args = Namespace()
+    args.podcast = "testing/3d-le-journal"
+    return args
+
+def arguments_with_unknown_podcast():
+    args = Namespace()
+    args.podcast = "testing/my-podcast"
+    return args
+
+def arguments_with_unknown_episode():
+    args = Namespace()
+    args.episode = "testing/3d-le-journal/unknown-episode"
+    return args
+#+end_src
+
+***** 4. Boceto
+
+#+begin_src python
+def output_from_episode_details(args):
+    # Obtener la fuente con source_from_arguments
+    # Obtener el identificador del podcast con podcast_from_arguments
+    # Obtener el identificador del episodio con episode_from_arguments
+    # Importar el módulo de la fuente
+    # Obtener el listado de podcasts desde source.url
+    # Filtrando el listado por keyword con el identificador del podcast
+    # Si el listado devuelve más de un resultado,
+    #    Mensaje "multiple podcasts found"
+    # Si el listado devuelve solamente un resultado
+    #    Mensaje "no podcast found"
+    # Obtener el listado de episodios con episodes_from_url
+    # Si el listado devuelve más de un resultado,
+    #    Mensaje "multiple episodes found"
+    # Si el listado devuelve solamente un resultado
+    #    Mensaje "no episode found"
+    # Formatear el detalle del episodio
+    return output
+#+end_src
+
+***** 5. Definición
+
+#+begin_src python :tangle cli/output/output_from_episode_details.py
+from cli.output import output_from_non_unique_record
+from cli.arguments import (
+    source_from_arguments,
+    podcast_from_arguments,
+    episode_from_arguments
+)
+from franceinter.podcasts import (
+    podcasts_from_url,
+    podcasts_with_keyword
+)
+from franceinter.episodes import (
+    episodes_from_podcast,
+    episodes_with_keyword
+)
+
+
+def output_from_episode_details(args):
+    source = source_from_arguments(args)
+    podcast_id = podcast_from_arguments(args)
+    import_from_source(source)
+    all_podcasts = podcasts_from_url(source.url)
+    podcasts = list(podcasts_with_keyword(all_podcasts, podcast_id))
+    output = output_from_non_unique_record(podcasts, podcast_id)
+    if not output:
+        podcast = podcasts[0]
+        if (source.name == "testing"):
+            podcast.url = podcast.url.replace(
+                "https://www.franceinter.fr/", 
+                "http://localhost:3000/"
+            )
+        output = help_message(podcast) + podcast_details(podcast)
+        episode_id = episode_from_arguments(args)
+        all_episodes = episodes_from_podcast(podcast)
+        episodes = list(episodes_with_keyword(all_episodes, episode_id))
+        output = output_from_non_unique_record(episodes, episode_id)
+        if not output:
+            episode = episodes[0]
+            output = help_message(episode) + episode_details(episode)
+    return output
+
+
+def import_from_source(source):
+    return source.name
+    #if source.name == "local":
+    #    from franceinter.podcasts import podcasts_from_url
+    #    from franceinter.podcasts import podcasts_with_keyword
+    #else:
+    #    __import__(source.name).podcasts.podcasts_from_url
+    #    __import__(source.name).podcasts.podcasts_with_keyword
+
+
+def help_message(episode):
+    return "Episode details for: '%s'" % episode.title
+
+
+def podcast_details(podcast):
+    return f'''
+
+identifier: {podcast.identifier}
+       URL: {podcast.url}
+    author: {podcast.author}'''
+
+
+def episode_details(episode):
+    return f'''
+
+ date: {episode.date}
+title: {episode.title}'''
+#+end_src
+
+***** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un =Namespace= con un podcast válido en la propiedad =episode= en formato =source/podcast-identifier/episode=, devuelve un =str= con el detalle del episodio
+- Caso exitoso, cuando recibe un =Namespace= con un identificador de episodio en la propiedad =episode=, un identificador de podcast en la propiedad =podcast= y la fuente en la propiedad =source=, devuelve un =str= con el detalle del episodio
+- Cuando recibe un =Namespace= con un identificador de podcast en la propiedad =podcast= que devuelva más de un resultado, devuelve un =str= con el mensaje "Multiple records found"
+- Cuando recibe un =Namespace= con un identificador de episodio en la propiedad =episode= que devuelva más de un resultado, devuelve un =str= con el mensaje "Multiple records found"
+- Cuando recibe un objeto que no es un =argparse.Namespace=, lanza un =AssertionError=
+- Cuando recibe un =Namespace= que no tiene la propiedad =episode=, lanza un =AssertionError=
+- Cuando recibe un =Namespace= que tiene un podcast desconocido en la propiedad =podcast=, devuelve un =str= con el mensaje "No records found"
+- Cuando recibe un =Namespace= que tiene un episodio desconocido en la propiedad =episode=, devuelve un =str= con el mensaje "No records found"
+
+#+begin_src python :tangle cli/output/tests/test_output_from_episode_details.py
+import pytest, threading
+from utils.http_server import LocalFolderHTTPServer as HTTPServer
+from cli.output import output_from_episode_details
+from cli.output.tests.examples_output_from_episode_details import *
+
+
+def test_arguments_with_episode(http_server):
+    episode = "testing/mille-et-un-mondes/2019-03-09"
+    args = arguments_with_episode(episode)
+    output = output_from_episode_details(args)
+    assert "2019-03-09" in output
+
+
+def test_arguments_with_source_podcast_episode(http_server):
+    source = "testing"
+    podcast = "mille-et-un-mondes"
+    episode = "2019-03-09"
+    args = arguments_with_source_podcast_episode(source, podcast, episode)
+    output = output_from_episode_details(args)
+    assert "2019-03-09" in output
+
+
+def test_output_with_multiple_podcasts(http_server):
+    episode = "testing/monde/2019-03-09"
+    args = arguments_with_episode(episode)
+    output = output_from_episode_details(args)
+    assert "Found multiple records" in output
+
+
+def test_output_with_multiple_episodes(http_server):
+    episode = "testing/3d-le-journal/de"
+    args = arguments_with_episode(episode)
+    output = output_from_episode_details(args)
+    assert "Found multiple records" in output
+
+
+def test_invalid_arguments():
+    args = invalid_arguments()
+    try:
+        output = output_from_episode_details(args)
+    except AssertionError:
+        assert True
+
+
+def test_arguments_without_podcast():
+    args = arguments_without_podcast()
+    try:
+        output = output_from_episode_details(args)
+    except AssertionError:
+        assert True
+
+
+def test_arguments_without_episode():
+    args = arguments_without_episode()
+    try:
+        output = output_from_episode_details(args)
+    except AssertionError:
+        assert True
+
+
+def test_output_with_unknown_podcast(http_server):
+    args = arguments_with_unknown_podcast()
+    output = output_from_episode_details(args)
+    assert "No record was found" in output
+
+
+def test_output_with_unknown_episode(http_server):
+    args = arguments_with_unknown_episode()
+    output = output_from_episode_details(args)
+    assert "No record was found" in output
+
+
+@pytest.fixture(scope="module")
+def http_server():
+    web_dir = './franceinter/html'
+    httpd = HTTPServer(web_dir, ("", 3000))
+    threading.Thread(target=httpd.serve_forever).start()
+    yield httpd
+    httpd.shutdown()
+#+end_src
+
+****** Run tests
+
+#+begin_src sh
+pytest ./cli/output/tests/test_output_from_episode_details.py
+#+end_src
+
 **** output_from_non_unique_record
 ***** 1. Objetivo
 
