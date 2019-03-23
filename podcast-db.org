@@ -7625,6 +7625,7 @@ from cli.output.output_from_podcast_list import output_from_podcast_list
 from cli.output.output_from_podcast_details import output_from_podcast_details
 from cli.output.output_from_episode_list import output_from_episode_list
 from cli.output.output_from_episode_details import output_from_episode_details
+from cli.output.output_from_version import output_from_version
 #+end_src
 
 ***** Tests
@@ -8765,7 +8766,109 @@ def test_list_with_only_one_record():
 pytest ./cli/output/tests/test_output_from_non_unique_record.py
 #+end_src
 
-**** TODO output_from_version
+**** output_from_version
+***** 1. Objetivo
+
+Obtener la salida del comando =--version=
+
+***** 2. Firma
+
+La función recibe un =argparse.Namespace= que tiene que tener la propiedad =version= y devuelve un =str= con la versión de la aplicación
+
+***** 3. Ejemplos
+
+- Caso exitoso, un =Namespace= con la propiedad =version=
+- Un objeto que no es un =argparse.Namespace=
+- Un =Namespace= que no tiene la propiedad =version=
+
+#+begin_src python :tangle cli/output/tests/examples_output_from_version.py
+from argparse import Namespace
+
+
+def arguments_with_version():
+    args = Namespace()
+    args.version = ""
+    return args
+
+def invalid_arguments():
+    args = 42
+    return args
+
+def arguments_without_version():
+    args = Namespace()
+    return args
+#+end_src
+
+***** 4. Boceto
+
+#+begin_src python
+def output_from_version(args):
+    # Validar que args sea un argparse.Namespace
+    # Validar que args tenga la propiedad version
+    # Devolver la versión
+    return output
+#+end_src
+
+***** 5. Definición
+
+#+begin_src python :tangle cli/output/output_from_version.py
+from argparse import Namespace
+
+
+def output_from_version(args):
+    assert isinstance(args, Namespace), invalid_arguments(args)
+    assert hasattr(args, "version"), missing_version(args)
+    output = "0.2.0"
+    return output
+
+
+def invalid_arguments(args):
+    return "args parameter must be an argparse.Namespace, %s received instead" % type(args)
+
+
+def missing_version(args):
+    return "args parameter must have a version property, received: %s" % args
+#+end_src
+
+***** 6. Casos de prueba
+
+- Caso exitoso, un =Namespace= con la propiedad =version=
+- Un objeto que no es un =argparse.Namespace=
+- Un =Namespace= que no tiene la propiedad =version=
+
+#+begin_src python :tangle cli/output/tests/test_output_from_version.py
+from cli.output import output_from_version
+from cli.output.tests.examples_output_from_version import *
+
+
+def test_arguments_with_version():
+    args = arguments_with_version()
+    output = output_from_version(args)
+    assert "0.2.0" in output
+
+
+def test_invalid_arguments():
+    args = invalid_arguments()
+    try:
+        output = output_from_version(args)
+    except AssertionError:
+        assert True
+
+
+def test_arguments_without_version():
+    args = arguments_without_version()
+    try:
+        output = output_from_version(args)
+    except AssertionError:
+        assert True
+#+end_src
+
+****** Run tests
+
+#+begin_src sh
+pytest ./cli/output/tests/test_output_from_version.py
+#+end_src
+
 * Herramientas
 ** Módulos
 *** =__init.py__=
@@ -8815,7 +8918,7 @@ pytest
 ** Generar el reporte de cobertura
 
 #+begin_src sh
-pytest --cov-report html:coverage --cov ./franceinter/ --cov ./sources/
+pytest --cov-report html:coverage --cov ./franceinter/ --cov ./sources/ --cov ./cli/
 #+end_src
 
 Para visualizar el reporte se debe abrir el archivo =./coverage/index.html= con el navegador
