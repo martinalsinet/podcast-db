@@ -7954,6 +7954,7 @@ def output_from_podcast_details(args):
 ***** 5. Definición
 
 #+begin_src python :tangle cli/output/output_from_podcast_details.py
+from cli.output import output_from_non_unique_record
 from cli.arguments import (
     source_from_arguments,
     podcast_from_arguments
@@ -7970,14 +7971,10 @@ def output_from_podcast_details(args):
     import_from_source(source)
     all_podcasts = podcasts_from_url(source.url)
     podcasts = list(podcasts_with_keyword(all_podcasts, keyword))
-    if (len(podcasts) > 1):
-        lines = map(line_from_podcast, podcasts)
-        output = "Found multiple podcasts with identifier '%s'" % keyword + "\n\n" + "\n".join(lines)
-    elif (len(podcasts) == 1):
+    output = output_from_non_unique_record(podcasts, keyword)
+    if not output:
         podcast = podcasts[0]
         output = help_message(podcast) + podcast_details(podcast)
-    else:
-        output = "No podcast was found with identifier '%s'" % keyword
     return output
 
 
@@ -7989,10 +7986,6 @@ def import_from_source(source):
     #else:
     #    __import__(source.name).podcasts.podcasts_from_url
     #    __import__(source.name).podcasts.podcasts_with_keyword
-
-
-def line_from_podcast(podcast):
-    return "- %s [%s]" % (podcast.identifier, podcast.author)
 
 
 def help_message(podcast):
@@ -8041,7 +8034,7 @@ def test_output_with_multiple_podcasts(http_server):
     podcast = "testing/monde"
     args = arguments_with_podcast(podcast)
     output = output_from_podcast_details(args)
-    assert "multiple podcasts" in output
+    assert "Found multiple records" in output
 
 
 def test_invalid_arguments():
@@ -8061,7 +8054,7 @@ def test_arguments_without_podcast():
 def test_output_with_unknown_podcast(http_server):
     args = arguments_with_unknown_podcast()
     output = output_from_podcast_details(args)
-    assert "No podcast was found" in output
+    assert "No record was found" in output
 
 
 @pytest.fixture(scope="module")
@@ -8180,6 +8173,7 @@ def output_from_episode_list(args):
 ***** 5. Definición
 
 #+begin_src python :tangle cli/output/output_from_episode_list.py
+from cli.output import output_from_non_unique_record
 from cli.arguments import (
     source_from_arguments,
     podcast_from_arguments,
@@ -8201,17 +8195,12 @@ from franceinter.episodes import (
 
 def output_from_episode_list(args):
     source = source_from_arguments(args)
-    identifier = podcast_from_arguments(args)
+    podcast_id = podcast_from_arguments(args)
     import_from_source(source)
     all_podcasts = podcasts_from_url(source.url)
-    podcasts = list(podcasts_with_keyword(all_podcasts, identifier))
-    output = ""
-    if (len(podcasts) > 1):
-        lines = map(line_from_podcast, podcasts)
-        output = "Found multiple podcasts with identifier '%s'" % identifier + "\n\n" + "\n".join(lines)
-    elif (len(podcasts) < 1):
-        output = "No podcast was found with identifier '%s'" % identifier
-    else:
+    podcasts = list(podcasts_with_keyword(all_podcasts, podcast_id))
+    output = output_from_non_unique_record(podcasts, podcast_id)
+    if not output:
         podcast = podcasts[0]
         if (source.name == "testing"):
             podcast.url = podcast.url.replace(
@@ -8251,10 +8240,6 @@ def filters_from_arguments(args):
 
 def import_from_source(source):
     return source.name
-
-
-def line_from_podcast(podcast):
-    return "- %s [%s]" % (podcast.identifier, podcast.author)
 
 
 def line_from_episode(episode):
@@ -8303,7 +8288,7 @@ def test_arguments_with_multiple_podcasts(http_server):
     podcast = "testing/monde"
     args = arguments_with_podcast(podcast)
     output = output_from_episode_list(args)
-    assert "Found multiple podcasts" in output
+    assert "Found multiple records" in output
 
 
 def test_arguments_with_podcast_and_keyword(http_server):
@@ -8349,7 +8334,7 @@ def test_arguments_without_podcast():
 def test_arguments_with_unknown_podcast(http_server):
     args = arguments_with_unknown_podcast()
     output = output_from_episode_list(args)
-    assert "No podcast was found" in output
+    assert "No record was found" in output
 
 
 @pytest.fixture(scope="module")
@@ -8440,14 +8425,14 @@ def output_from_episode_details(args):
     # Obtener el listado de podcasts desde source.url
     # Filtrando el listado por keyword con el identificador del podcast
     # Si el listado devuelve más de un resultado,
-    #    Mensaje "multiple podcasts found"
+    #    Mensaje "multiple records found"
     # Si el listado devuelve solamente un resultado
-    #    Mensaje "no podcast found"
+    #    Mensaje "no record found"
     # Obtener el listado de episodios con episodes_from_url
     # Si el listado devuelve más de un resultado,
-    #    Mensaje "multiple episodes found"
+    #    Mensaje "multiple records found"
     # Si el listado devuelve solamente un resultado
-    #    Mensaje "no episode found"
+    #    Mensaje "no record found"
     # Formatear el detalle del episodio
     return output
 #+end_src
