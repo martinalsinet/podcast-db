@@ -5985,22 +5985,12 @@ podcast-db show-episode --episode franceinter/darwin/2018-04-16
 - [X] Listar las fuentes de podcasts
 - [X] Listar los podcasts de una fuente
 - [X] Mostrar el detalle de un podcast
-- [ ] Listar los episodios de un podcast
-- [ ] Mostrar el detalle de un episodio
+- [X] Listar los episodios de un podcast
+- [X] Mostrar el detalle de un episodio
 - [X] Mostrar el mensaje de ayuda
 - [ ] Mostrar el mensaje con la versión
 
 ** TODO Mejoras
-
-- [X] Corregir los imports :: Declarar las funciones que se exportan en cada módulo dentro del archivo =__init.py__=
-
-- [X] =assert False= en tests :: Hay que agregar un =assert False= casos de prueba que esperan una excepción para asegurarse de que realmente esté saliendo por el camino de la excepción. *Update:* Luego de pensarlo un rato, recordé que quité los =assert False= porque cuando el test es exitoso nunca se llegan a ejecutar esos asserts dado que siempre sale por la excepción, y entonces aparecen como líneas no ejecutadas en el reporte de cobertura.
-
-- [X] =argument_tuples= :: Cambiarle el nombre a =known_arguments= porque la palabra /tuples/ indica un detalle de implementación que distrae en vez de aclarar las cosas.
-
-- [X] =argument_from_namespace= :: Encontramos un patrón de código que se repite en las funciones del módulo =cli.arguments=. Todas las funciones reciben un objeto =argparse.Namespace=, verifican su tipo y extraen de éste uno o más argumentos que pueden ser obligatorios u opcionales. Hay que agregar una nueva función que implemente esas verificaciones.
-
-- [X] Búsqueda de podcast o episodio :: Dentro del módulo =cli.output= están las funciones que muestran el detalle de un podcast o episodio. Estas funciones reciben el identificador del registro buscado, y puede suceder que cuando se realice la búsqueda se encuentre más de un resultado (o ninguno). En ese caso es necesario mostrar un mensaje de error ("Multiple/No records found"). Hay que crear una función =output_from_non_unique_record= que reciba un listado de resultados y devuelva un =str= con el mensaje correspondiente.
 
 - [ ] =output_from_podcast_list= :: Está devolviendo mal los caracteres acentuados
 
@@ -6008,7 +5998,7 @@ podcast-db show-episode --episode franceinter/darwin/2018-04-16
 
 - [ ] Inyectar el base URL de la fuente en los podcasts :: La función =episodes_from_podcast= utiliza el URL del podcast para ir a buscar los episodios. El problema es que el base URL de los podcasts de France Inter (=https://www.franceinter.fr/=) está harcodeado en la función =url_from_tag= del módulo =franceinter.podcasts= y eso nos causa problemas en las pruebas unitarias de =output_from_episode_list=. El objetivo de las pruebas unitarias es que no realicen ninguna petición HTTP a servicios externos, pero con ese URL fijo dentro del podcast se hace difícil evitarlo. Como solución provisoria se agregó un =if= que modifica el base URL del podcast si la fuente es =testing=, pero esa no es la manera correcta de hacerlo. Se podría agregar en la clase =Podcast= un método para reemplazar el base URL o para agregar la fuente.
 
-- [ ] Rediseño de =output_from_episode_list= :: Es demasiado compleja, hay que extraer bloques en funciones más sencillas. Habría que reemplazar los =if len(podcasts)...= por algo mejor, que también se podría usar en =output_from_podcast_list=
+- [ ] Argumentos opcionales --year y --month :: Actualmente las funciones =year_from_arguments= y =month_from_arguments= lanzan un =AssertionError= si no existe la propiedad =year= y =month= respectivamente. Esto obliga a preguntar si existe el atributo antes de usarlas, para no disparar la excepción, lo cual complica el código innecesariamente. Hay que modificar estas funciones para que devuelvan =False= si la propiedad necesaria no está presente en los argumentos.
 
 ** Implementación
 *** =__init.py__=
