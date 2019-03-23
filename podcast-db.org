@@ -7079,7 +7079,10 @@ from cli.arguments import argument_from_namespace
 
 
 def keyword_from_arguments(args):
-    keyword = argument_from_namespace(args, "keyword", is_required=True)
+    keyword = False 
+    attr = argument_from_namespace(args, "keyword")
+    if attr:
+        keyword = attr
     return keyword
 #+end_src
 
@@ -7087,7 +7090,7 @@ def keyword_from_arguments(args):
 
 - Caso exitoso, cuando recibe un =Namespace= que tiene la palabra buscada en la propiedad =keyword=, devuelve un =str= con esa palabra
 - Cuando recibe un =Namespace= que no es un objeto =argparse.Namespace=, lanza un =AssertionError=
-- Cuando recibe un =Namespace= que no tiene la propiedad =keyword=, lanza un =AssertionError=
+- Cuando recibe un =Namespace= que no tiene la propiedad =keyword=, devuelve =False=
 - Cuando recibe un =Namespace= que tiene un =str= vacío en la propiedad =keyword=, lanza un =AssertionError=
 
 #+begin_src python :tangle cli/arguments/tests/test_keyword_from_arguments.py
@@ -7108,17 +7111,13 @@ def test_invalid_arguments():
 
 def test_arguments_without_keyword():
     args = arguments_without_keyword()
-    try:
-        keyword = keyword_from_arguments(args)
-    except AssertionError:
-        assert True
+    keyword = keyword_from_arguments(args)
+    assert (keyword == False)
 
 def test_arguments_with_empty_keyword():
     args = arguments_with_keyword("")
-    try:
-        keyword = keyword_from_arguments(args)
-    except AssertionError:
-        assert True
+    keyword = keyword_from_arguments(args)
+    assert (keyword == False)
 #+end_src
 
 ****** Run tests
@@ -7789,8 +7788,6 @@ def output_from_podcast_list(args):
 ***** 5. Definición
 
 #+begin_src python :tangle cli/output/output_from_podcast_list.py
-from argparse import Namespace
-from sources import list_sources
 from cli.arguments import source_from_arguments, keyword_from_arguments
 from franceinter.podcasts import podcasts_from_url
 from franceinter.podcasts import podcasts_with_keyword
@@ -7800,8 +7797,8 @@ def output_from_podcast_list(args):
     source = source_from_arguments(args)
     import_from_source(source)
     podcasts = podcasts_from_url(source.url)
-    if hasattr(args, "keyword"):
-        keyword = keyword_from_arguments(args)
+    keyword = keyword_from_arguments(args)
+    if keyword:
         podcasts = podcasts_with_keyword(podcasts, keyword)
     lines = map(line_from_podcast, podcasts)
     output = help_message(source) + "\n\n" + "\n".join(lines)
