@@ -5984,6 +5984,18 @@ podcast-db show-episode --episode franceinter/darwin/2018-04-16
 
 - [ ] Argumentos opcionales --year y --month :: Actualmente las funciones =year_from_arguments= y =month_from_arguments= lanzan un =AssertionError= si no existe la propiedad =year= y =month= respectivamente. Esto obliga a preguntar si existe el atributo antes de usarlas, para no disparar la excepción, lo cual complica el código innecesariamente. Hay que modificar estas funciones para que devuelvan =False= si la propiedad necesaria no está presente en los argumentos.
 
+- [ ] Entender el import circular en =handler_from_command= :: Si se ponen los imports de las funciones =output_from_*= al inicio de =handler_from_command= fallan los tests de la mayoría de las funciones =cli/arguments/*_from_arguments=. El error que devuelven es =TypeError: 'module' object is not callable=, que por lo que entiendo se produce por un import circular.
+
+#+begin_src python :eval never
+from cli.output import (
+    output_from_source_list,
+    output_from_podcast_list,
+    output_from_episode_list,
+    output_from_podcast_details,
+    output_from_episode_details
+)
+#+end_src
+
 ** Implementación
 *** =__init.py__=
 
@@ -7432,7 +7444,7 @@ En este módulo hay solamente dos funciones, por un lado =known_commands= que ti
 
 #+begin_src python :tangle cli/commands/__init__.py
 from cli.commands.known_commands import known_commands
-from cli.commands.handlers_from_commands import handlers_from_commands
+from cli.commands.handler_from_command import handler_from_command
 #+end_src
 
 ***** Tests
@@ -7495,96 +7507,101 @@ def test_known_commands():
 pytest ./cli/commands/tests/test_known_commands.py
 #+end_src
 
-**** handlers_from_commands
+**** handler_from_command
 ***** 1. Objetivo
 
-Obtener un diccionario con los nombres de las funciones que procesan los comandos aceptados por la aplicación
+Obtener la función que procesa un comando aceptado por la aplicación
 
 ***** 2. Firma
 
-La función recibe un =list= con el nombre de los comandos y devuelve un =dict= con el nombre del comando como clave y el nombre de la función que lo procesa como valor
+La función recibe un =str= con el nombre del comando y devuelve un =function= con la función que se encarga de procesarlo
 
 ***** 3. Ejemplos
 
-- Caso exitoso, un =list= de los comandos conocidos por la aplicación
-- Una lista de comandos que no es un =list=
-- Una lista de comandos que tiene un comando desconocido
+- Caso exitoso, un comando conocido por la aplicación
+- Un comando que no es un =str=
+- Un comando desconocido
 
-#+begin_src python :tangle cli/commands/tests/examples_handlers_from_commands.py
+#+begin_src python :tangle cli/commands/tests/examples_handler_from_command.py
 from cli.commands import known_commands
 import random
 
-def invalid_commands():
+def invalid_command():
     return 42
 
-def list_with_unknown_command():
-    commands = known_commands()
-    commands.append("this-is-an-unknown-command")
-    random.shuffle(commands)
-    return commands
+def unknown_command():
+    command = "this-is-an-unknown-command"
+    return command
 #+end_src
 
 ***** 4. Boceto
 
 #+begin_src python
 
-def handlers_from_commands(commands):
-    # validar que commands sea un list
-    # validar que los comandos sean conocidos
-    # generar el nombre de la función para cada comando
-    return handlers
+def handler_from_command(command):
+    # validar que command sea un str
+    # validar que el comando sea conocido
+    # devolver la función correspondiente
+    return handler
 #+end_src
 
 ***** 5. Definición
 
-#+begin_src python :tangle cli/commands/handlers_from_commands.py
+#+begin_src python :tangle cli/commands/handler_from_command.py
 from cli.commands import known_commands
 
-def handlers_from_commands(commands):
-    assert isinstance(commands, list)
-    handlers = {}
-    for command in commands:
-        assert command in known_commands(), unknown_command(command)
-        handlers[command] = function_name(command)
-    return handlers
+def handler_from_command(command):
+    assert isinstance(command, str)
+    assert command in known_commands(), unknown_command(command)
+    handler = handlers()[command]
+    return handler
 
 def unknown_command(command):
     return "unknown command: %s" % command
 
-def function_name(command):
-    return "output_from_" + command.replace("-", "_")
+def handlers():
+    from cli.output import (
+        output_from_source_list,
+        output_from_podcast_list,
+        output_from_episode_list,
+        output_from_podcast_details,
+        output_from_episode_details
+    )
+    return {
+        "list-sources": output_from_source_list, 
+        "list-podcasts": output_from_podcast_list,
+        "list-episodes": output_from_episode_list, 
+        "show-podcast": output_from_podcast_details, 
+        "show-episode": output_from_episode_details
+    }
 #+end_src
 
 ***** 6. Casos de prueba
 
-- Caso exitoso, cuando recibe un =list= con el nombre de los comandos aceptados por la aplicación, devuelve un =dict= con los nombres de las funciones que procesan cada comando
-- Cuando recibe una lista de comandos que no es un =list=, lanza un =AssertionError=
-- Cuando recibe una lista de comandos que tiene un comando desconocido, lanza un =AssertionError=
+- Caso exitoso, cuando recibe un comando conocido por la aplicación, devuelve la =function= que devuelve su salida
+- Cuando recibe un comando que no es un =str=, lanza un =AssertionError=
+- Cuando recibe un comando desconocido, lanza un =AssertionError=
 
-#+begin_src python :tangle cli/commands/tests/test_handlers_from_commands.py
-from cli.commands import known_commands, handlers_from_commands
-from cli.commands.tests.examples_handlers_from_commands import *
+#+begin_src python :tangle cli/commands/tests/test_handler_from_command.py
+from cli.commands import known_commands, handler_from_command
+from cli.commands.tests.examples_handler_from_command import *
 
-def test_handlers_from_commands():
-    commands = known_commands()
-    handlers = handlers_from_commands(commands)
-    for command, handler in handlers.items():
-        assert (handler == function_name(command))
+def test_known_command():
+    for command in known_commands():
+        handler = handler_from_command(command)
+        assert callable(handler)
 
-def function_name(command):
-    return "output_from_" + command.replace("-", "_")
-
-def test_invalid_commands():
-    commands = invalid_commands()
+def test_invalid_command():
+    command = invalid_command()
     try:
-        handlers = handlers_from_commands(commands)
+        handler = handler_from_command(command)
     except AssertionError:
         assert True
 
-def test_list_with_unknown_command():
-    commands = list_with_unknown_command()
+def test_unknown_command():
+    command = unknown_command()
     try:
-        handlers = handlers_from_commands(commands)
+        handler = handler_from_command(command)
     except AssertionError:
         assert True
 #+end_src
@@ -7592,7 +7609,7 @@ def test_list_with_unknown_command():
 ****** Run tests
 
 #+begin_src sh
-pytest ./cli/commands/tests/test_handlers_from_commands.py
+pytest ./cli/commands/tests/test_handler_from_command.py
 #+end_src
 
 *** Output
