@@ -6011,12 +6011,24 @@ Generamos el script =./podcast-db= que será la interface desde línea de comand
 
 #+begin_src python :tangle podcast-db :tangle-mode (identity #o755)
 #!/usr/bin/env python-3.6
+import requests
+import requests_cache
 from cli.arguments import parser
+from cli.output import output_from_command
 
+requests_cache.install_cache()
 parser = parser()
-args = parser.parse_args(["--help"])
+args = parser.parse_args()
+if args.version:
+    output = output_from_version(args)
+if args.command:
+    try:
+        output = output_from_command(args)
+    except AssertionError as ex:
+        output = str(ex)
 
-print(args)
+print(output)
+print("")
 #+end_src
 
 #+begin_src text
@@ -8217,29 +8229,42 @@ from argparse import Namespace
 def arguments_with_podcast(podcast):
     args = Namespace()
     args.podcast = podcast
+    args.keyword = None
+    args.year = None
+    args.month = None
     return args
 
 def arguments_with_podcast_and_source(podcast, source):
     args = Namespace()
     args.podcast = podcast
     args.source = source
+    args.keyword = None
+    args.year = None
+    args.month = None
     return args
 
 def arguments_with_podcast_and_keyword(podcast, keyword):
     args = Namespace()
     args.podcast = podcast
     args.keyword = keyword
+    args.keyword = None
+    args.year = None
+    args.month = None
     return args
 
 def arguments_with_podcast_and_year(podcast, year):
     args = Namespace()
     args.podcast = podcast
+    args.keyword = None
     args.year = year
+    args.month = None
     return args
 
 def arguments_with_podcast_and_month(podcast, month):
     args = Namespace()
     args.podcast = podcast
+    args.keyword = None
+    args.year = None
     args.month = month
     return args
 
@@ -8339,11 +8364,11 @@ def filters_from_arguments(args):
     keyword = False
     year = False
     month = False
-    if hasattr(args, "keyword"):
+    if args.keyword:
         keyword = keyword_from_arguments(args)
-    if hasattr(args, "year"):
+    if args.year:
         year = year_from_arguments(args)
-    if hasattr(args, "month"):
+    if args.month:
         (year, month) = month_from_arguments(args)
     return (keyword, year, month)
 
