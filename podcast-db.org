@@ -1,11 +1,11 @@
-#+TITLE: Podcast Database
-#+AUTHOR: Martín Alsinet
-#+DATE: 2019
-#+OPTIONS: ^:nil num:nil ':t
-#+LANGUAGE: es
-#+PROPERTY: header-args:python :python python-3.6 :results output drawer :mkdirp yes
-#+PROPERTY: header-args:sh :results raw drawer
-#+TODO: TODO DOING | DONE
+#+title: Podcast Database
+#+author: Martín Alsinet
+#+date: 2019
+#+options: ^:nil num:nil ':t
+#+language: es
+#+property: header-args:python :python python-3.6 :results output drawer :mkdirp yes
+#+property: header-args:sh :results raw drawer
+#+todo: TODO DOING | DONE
 
 * Indice                                                                :TOC:
 - [[#motivación][Motivación]]
