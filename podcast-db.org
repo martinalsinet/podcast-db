@@ -3123,50 +3123,43 @@ def episodes_from_month(episodes, year, month):
 **** 5. Definición
 
 #+begin_src python :tangle franceinter/episodes/episodes_from_month.py
-from franceinter.episodes import Episode
+from calendar import monthrange
+from datetime import date as Date
+from franceinter.episodes import Episode, episodes_between_dates
+
 
 def episodes_from_month(episodes, year, month):
     try:
         it = iter(episodes)
     except TypeError:
         assert False, invalid_episodes(episodes)
-    assert isinstance(year, int), invalid_year(year)
-    assert month_is_valid(month), invalid_month(month)
+    try:
+        (first_day, last_day) = monthrange(year, month)
+        starting_at = Date(year, month, first_day)
+        ending_at = Date(year, month, last_day)
+    except:
+        starting_at = False
+        ending_at = False
+    assert starting_at and ending_at, invalid_month(year, month)
     valid_episodes = filter(is_episode, episodes)
-    is_from_month = month_filter(year, month)
-    return filter(is_from_month, valid_episodes)
+    return episodes_between_dates(valid_episodes, starting_at, ending_at)
+
 
 def is_episode(episode):
     assert isinstance(episode, Episode), invalid_episode(episode)
     return True
     
-def month_filter(year, month):
-    def matcher(episode):
-        return (
-            (episode.date.year == year)
-            and (episode.date.month == month)
-        )
-    return matcher
-    
-def month_is_valid(month):
-    return (
-        isinstance(month, int) 
-        and (month > 0)
-        and (month < 13)
-    )
-    
+
 def invalid_episodes(episodes):
     return "episodes parameter must be iterable, received %s instead" % type(episodes)
 
-def invalid_year(year):
-    return "year parameter must be an int, received %s instead" % type(year)
 
-def invalid_month(month):
-    return "month parameter must be an int bewtween 1 and 12, received %s instead" % str(month)
+def invalid_month(year, month):
+    return "year and month parameters must contain valid month, received %s-%s instead" % (year, month)
+
 
 def invalid_episode(episode):
     return "episode parameter must be an Episode, received %s instead" % type(episode)
-
 #+end_src
 
 **** 6. Casos de prueba
@@ -3237,9 +3230,10 @@ def test_negative_year():
     month = 4
     episodes = episodes_with_month(5, year, month)
     neg_year = -998
-    result = episodes_from_month(episodes, neg_year, month)
-    assert isinstance(result, filter)
-    assert (len(list(result)) == 0)
+    try:
+        result = episodes_from_month(episodes, neg_year, month)
+    except AssertionError:
+        assert True
 
 def test_invalid_month():
     year = 1987
