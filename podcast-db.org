@@ -3362,62 +3362,41 @@ def episodes_from_day(episodes, year, month, day):
 **** 5. Definición
 
 #+begin_src python :tangle franceinter/episodes/episodes_from_day.py
-from franceinter.episodes import Episode
+import datetime
+from datetime import date as Date
+from franceinter.episodes import Episode, episodes_between_dates
+
 
 def episodes_from_day(episodes, year, month, day):
     try:
         it = iter(episodes)
     except TypeError:
         assert False, invalid_episodes(episodes)
-    assert isinstance(year, int), invalid_year(year)
-    assert month_is_valid(month), invalid_month(month)
-    assert day_is_valid(day), invalid_day(day)
+    try:
+        episode_day = Date(year, month, day)
+    except:
+        episode_day = False
+    assert episode_day, invalid_date(year, month, day)
+      
     valid_episodes = filter(is_episode, episodes)
-    is_from_day = day_filter(year, month, day)
-    return filter(is_from_day, valid_episodes)
+    return episodes_between_dates(valid_episodes, episode_day, episode_day)
+
 
 def is_episode(episode):
     assert isinstance(episode, Episode), invalid_episode(episode)
     return True
     
-def day_filter(year, month, day):
-    def matcher(episode):
-        return (
-            (episode.date.year == year)
-            and (episode.date.month == month)
-            and (episode.date.day == day)
-        )
-    return matcher
-    
-def month_is_valid(month):
-    return (
-        isinstance(month, int) 
-        and (month > 0)
-        and (month < 13)
-    )
 
-def day_is_valid(day):
-    return (
-        isinstance(day, int) 
-        and (day > 0)
-        and (day < 32)
-    )
-    
 def invalid_episodes(episodes):
     return "episodes parameter must be iterable, received %s instead" % type(episodes)
 
-def invalid_year(year):
-    return "year parameter must be an int, received %s instead" % type(year)
 
-def invalid_month(month):
-    return "month parameter must be an int bewtween 1 and 12, received %s instead" % str(month)
+def invalid_date(year, month, day):
+    return "invalid date received: %s-%s-%s [Y-m-d]" % (year, month, day)
 
-def invalid_day(day):
-    return "day parameter must be an int bewtween 1 and 31, received %s instead" % str(day)
 
 def invalid_episode(episode):
     return "episode parameter must be an Episode, received %s instead" % type(episode)
-
 #+end_src
 
 **** 6. Casos de prueba
@@ -3496,9 +3475,10 @@ def test_negative_year():
     day = 7
     episodes = episodes_with_day(5, year, month, day)
     neg_year = -998
-    result = episodes_from_day(episodes, neg_year, month, day)
-    assert isinstance(result, filter)
-    assert (len(list(result)) == 0)
+    try:
+        result = episodes_from_day(episodes, neg_year, month, day)
+    except AssertionError:
+        assert True
 
 def test_invalid_month():
     year = 1987
@@ -3654,7 +3634,7 @@ def episodes_between_dates(episodes, starting_at, ending_at):
 **** 5. Definición
 
 #+begin_src python :tangle franceinter/episodes/episodes_between_dates.py
-from datetime import date as Date, datetime as DateTime
+from datetime import date as Date
 from franceinter.episodes import Episode
 
 def episodes_between_dates(episodes, starting_at, ending_at):
