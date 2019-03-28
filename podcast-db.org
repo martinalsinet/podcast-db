@@ -2503,7 +2503,7 @@ AssertionError: received tag has an invalid episode URL
  <button class="replay-button playable" data-clip-type="reecoute" data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-25-juin-2011" data-diffusion-title='"Entendre leurs voix" avec Florence Aubenas' data-diffusion-uuid="136e81f2-a7b2-11e0-b8ee-842b2b72cd1d" data-duration="54 min" data-duration-seconds="3241" data-emission-business-reference="16177" data-emission-title="Sur les épaules de Darwin" data-emission-uuid="6f540125-eb9f-11e1-a7b7-782bcb76618d" data-end-time="1551032275" data-extract-id="" data-extract-title="" data-is-aod="1" data-next-media-info="/get_next_audio/136e81f2-a7b2-11e0-b8ee-842b2b72cd1d" data-start-time="1551029034" data-theme="" data-theme-uuid="" data-url="https://s3-eu-west-1.amazonaws.com/cruiser-production/static/inter/sons/2011/07/s27/carrefour (2).mp3" data-uuid="0962e356-a7b2-11e0-b8ee-842b2b72cd1d" data-xiti-action="C" data-xiti-id="0962e356" data-xiti-level="4" data-xiti-libelle='Reecouter::Sur les épaules de Darwin-"Entendre leurs voix" avec Florence Aubenas-0962e356' data-xiti-trackable="true" data-xiti-type="A" title='réecouter "Entendre leurs voix" avec Florence Aubenas'><svg class="icon replay-button-icon icon-play-player"><use xlink:href="#icon_player-play" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg><svg class="icon replay-button-icon icon-pause-player"><use xlink:href="#icon_player-pause" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg><svg class="icon replay-button-icon icon-play"><use xlink:href="#icon_play" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg><svg class="icon replay-button-icon icon-pause"><use xlink:href="#icon_pause" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg><svg class="icon replay-button-icon icon-play-disabled"><use xlink:href="#icon_playdisabled" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg><svg class="icon replay-button-icon icon-direct-audio"><use xlink:href="#icon_direct-audio" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg></button>
 #+end_src
 
-- [ ] Refactor :: Refactor de =episodes_from_year=, =episodes_from_month= y =episodes_from_day= para que usen =episodes_between_dates=
+- [X] Refactor :: Refactor de =episodes_from_year=, =episodes_from_month= y =episodes_from_day= para que usen =episodes_between_dates=
 
 - [ ] =autopep8= :: Aplicar el estándar PEP8 a todas las funciones
 
@@ -2943,7 +2943,9 @@ def episodes_from_year(episodes, year):
 **** 5. Definición
 
 #+begin_src python :tangle franceinter/episodes/episodes_from_year.py
-from franceinter.episodes import Episode
+from datetime import date as Date
+from franceinter.episodes import Episode, episodes_between_dates
+
 
 def episodes_from_year(episodes, year):
     try:
@@ -2951,28 +2953,32 @@ def episodes_from_year(episodes, year):
     except TypeError:
         assert False, invalid_episodes(episodes)
     assert isinstance(year, int), invalid_year(year)
+    try:
+        starting_at = Date(year, 1, 1)
+        ending_at = Date(year, 12, 31)
+    except:
+        starting_at = False
+        ending_at = False
+    assert starting_at and ending_at, invalid_year(year)
     valid_episodes = filter(is_episode, episodes)
-    is_from_year = year_filter(year)
-    return filter(is_from_year, valid_episodes)
+    return episodes_between_dates(valid_episodes, starting_at, ending_at)
+
 
 def is_episode(episode):
     assert isinstance(episode, Episode), invalid_episode(episode)
     return True
-    
-def year_filter(year):
-    def matcher(episode):
-        return (episode.date.year == year)
-    return matcher
+
     
 def invalid_episodes(episodes):
     return "episodes parameter must be iterable, received %s instead" % type(episodes)
 
+
 def invalid_year(year):
     return "year parameter must be a date, received %s instead" % type(year)
 
+
 def invalid_episode(episode):
     return "episode parameter must be an Episode, received %s instead" % type(episode)
-
 #+end_src
 
 **** 6. Casos de prueba
@@ -2989,6 +2995,7 @@ import types
 from datetime import date as Date, timedelta as TimeDelta
 from franceinter.episodes import episodes_from_year
 from franceinter.episodes.tests.examples_episodes_from_year import *
+
 
 def test_episodes_from_year():
     year = 1987
@@ -3035,10 +3042,10 @@ def test_negative_year():
     year = 1987
     episodes = episodes_with_year(5, year)
     neg_year = negative_year()
-    result = episodes_from_year(episodes, neg_year)
-    assert isinstance(result, filter)
-    assert (len(list(result)) == 0)
-
+    try:
+        result = episodes_from_year(episodes, neg_year)
+    except AssertionError:
+        assert True
 #+end_src
 
 ***** Run tests
