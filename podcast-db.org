@@ -6008,6 +6008,16 @@ from cli.output import (
 
 - [ ] Agregar tests para el resto de los comandos en =output_from_command= :: Solamente se está testeando el comando =list-sources=, porque para testear el resto hay que levantar el servidor http y probar los comandos de listado y detalle de podcasts y episodios usando la fuente de testing.
 
+- [ ] Múltiples podcasts en list-episodes :: Cuando se desean ver los episodios del podcast "La Tête au carré", el comando devuelve un error por resultados múltiples debido a que hay dos podcasts que tienen la misma frase. Dado que el título del podcast "La revue de presse de la tête au carré" contiene el título completo del podcast "La Tête au carré", no existe un keyword que devuelva solamente éste último y no ambos. Hay que modificar el comando para que, en ese caso, devuelva un solo resultado si el keyword coincide exactamente con el identificador del podcast.
+
+#+begin_src text
+root@0fd889236ded:/app/dist# ./podcast-db list-episodes --podcast=fri/la-tete-au-carre
+Found multiple records with identifier 'la-tete-au-carre'
+
+- la-revue-de-presse-de-la-tete-au-carre [La revue de presse de la tête au carré]
+- la-tete-au-carre [La Tête au carré]
+#+end_src
+
 ** Implementación
 *** =__init.py__=
 
