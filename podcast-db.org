@@ -2497,7 +2497,7 @@ Episode(title='Le plomb et l'argent', date='2018-06-02')
 
 *** TODO Mejoras
 
-- [ ] URL inválido en episodios :: Revisar el listado de episodios de "Sur les épaules de Darwin" porque está dando URL inválido para un episodio de 2011. Aparentemente el error es porque el URL tiene un espacio (=.../carrefour (2).mp3=).
+- [X] URL inválido en episodios :: Revisar el listado de episodios de "Sur les épaules de Darwin" porque está dando URL inválido para un episodio de 2011. Aparentemente el error es porque el URL tiene un espacio (=.../carrefour (2).mp3=).
 
 #+begin_src txt
 AssertionError: received tag has an invalid episode URL
@@ -5413,6 +5413,7 @@ def url_from_tag(tag):
 
 #+begin_src python :tangle franceinter/episodes/url_from_tag.py
 import bs4
+from requests.utils import requote_uri
 
 def url_from_tag(tag):
     assert isinstance(tag, bs4.element.Tag), invalid_tag(tag)
@@ -5422,6 +5423,8 @@ def url_from_tag(tag):
         and "replay-button" in tag.attrs["class"]
         and "data-url" in tag.attrs):
         url = tag.attrs["data-url"]
+        if " " in url:
+            url = requote_uri(url)
     return url
 
 def invalid_tag(tag):
@@ -5468,6 +5471,30 @@ def test_url_not_found():
 
 #+begin_src sh
 pytest ./franceinter/episodes/tests/test_url_from_tag.py
+#+end_src
+
+**** 7. Bugfixes
+
+- Cuando recibe un tag que tiene un url con espacios en el atributo =data-url=, devuelve el url escapado reemplazando los espacios por =%20=
+
+#+begin_src python :tangle franceinter/episodes/tests/test_bugfixes_url_from_tag.py
+from bs4 import BeautifulSoup
+from franceinter.episodes import url_from_tag
+
+
+def test_tag_with_space_in_url():
+    tag = tag_with_space_in_url()
+    url = url_from_tag(tag)
+    assert "%20" in url
+
+
+def tag_with_space_in_url():
+    html = '''<button class="replay-button" 
+    data-url="https://s3-eu-west-1.amazonaws.com/cruiser-production/static/inter/sons/2011/07/s27/carrefour (2).mp3">
+</button>'''
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.button
+    return tag
 #+end_src
 
 *** date_from_tag
