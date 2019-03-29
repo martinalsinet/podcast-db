@@ -617,11 +617,11 @@ Podcast author: Ali Baddou
 
 *** TODO Mejoras
 
+- [X] Tests condicionales :: Estamos ignorando los tests de fallas en la conexión de red porque tardan más de 10 segundos en dar timeout. Hay que usar =@pytest.mark.skipif= para agregar una variable de entorno que permita saltearlos en desarrollo. Ver [[https://stackoverflow.com/questions/22603562/how-to-check-a-member-variable-with-py-test-skipif][esta pregunta]] de StackOverflow que tiene un ejemplo similar.
+
 - [ ] =autopep8= :: Aplicar el estándar PEP8 a todas las funciones
 
 - [ ] =podcasts_from_filename= :: Se podrían matchear los errores de lectura del archivo con los códigos de la respuesta HTTP (404 si no se encuentra, 500 si hubo un error de I/O, etc)
-
-- [ ] Tests condicionales :: Estamos ignorando los tests de fallas en la conexión de red porque tardan más de 10 segundos en dar timeout. Hay que usar =@pytest.mark.skipif= para agregar una variable de entorno que permita saltearlos en desarrollo. Ver [[https://stackoverflow.com/questions/22603562/how-to-check-a-member-variable-with-py-test-skipif][esta pregunta]] de StackOverflow que tiene un ejemplo similar.
 
 *** =__init.py__=
 **** Funciones
@@ -743,6 +743,7 @@ Nótese en el código del fixture =http_server= que se levanta el servidor HTTP 
 - Cuando recibe un URL inválido, lanza un =AssertionError=
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_url.py
+import os
 import pytest
 import threading
 import types
@@ -769,7 +770,7 @@ def test_not_found_url(http_server):
     podcasts = list(podcasts_from_url(url))
     assert (len(podcasts) == 0)
 
-@pytest.mark.skip(reason="Slow test (~10 sec) waiting for DNS error")
+@pytest.mark.skipif(os.environ.get('ENV') == 'DEV', reason="Slow test (~10 sec) waiting for DNS error")
 def test_wrong_site_url(http_server):
     url = wrong_site_url()
     try:
@@ -3846,6 +3847,7 @@ def connection_error(url):
 - Cuando recibe un URL inválido, lanza un =AssertionError=
 
 #+begin_src python :tangle franceinter/episodes/tests/test_episodes_from_url.py
+import os
 import pytest
 import threading
 import types
@@ -3872,7 +3874,7 @@ def test_not_found_url(http_server):
     episodes = list(episodes_from_url(url))
     assert (len(episodes) == 0)
 
-@pytest.mark.skip(reason="Slow test (~10 sec) waiting for DNS error")
+@pytest.mark.skipif(os.environ.get('ENV') == 'DEV', reason="Slow test (~10 sec) waiting for DNS error")
 def test_wrong_site_url(http_server):
     url = wrong_site_url()
     try:
@@ -4649,6 +4651,7 @@ def connection_error(url):
 - Cuando recibe un URL válido pero cuya página, devuelve un =str= vacío
 
 #+begin_src python :tangle franceinter/episodes/tests/test_html_from_url.py
+import os
 import re
 import pytest
 import threading
@@ -4681,7 +4684,7 @@ def test_not_found_url(http_server):
     html = html_from_url(url)
     assert re.search("NOT_FOUND", html)
 
-@pytest.mark.skip(reason="Slow test (~10 sec) waiting for DNS error")
+@pytest.mark.skipif(os.environ.get('ENV') == 'DEV', reason="Slow test (~10 sec) waiting for DNS error")
 def test_wrong_site_url(http_server):
     url = connection_error_url()
     try:
@@ -4696,7 +4699,6 @@ def http_server():
     threading.Thread(target=httpd.serve_forever).start()
     yield httpd
     httpd.shutdown()
-
 #+end_src
 
 ***** Run tests
@@ -9027,6 +9029,15 @@ class LocalFolderHTTPServer(BaseHTTPServer):
 ** Ejecutar los casos de prueba
 
 #+begin_src sh
+pytest
+#+end_src
+
+*** Variables de entorno
+
+Hay tres pruebas unitarias que requieren esperar cerca de 10 segundos para que falle una petición DNS, y que mientras estamos trabajando en el entorno de desarrollo preferimos saltearlas para agilizar la mecánica de trabajo. Para ello usamos la variable de entorno ~ENV='DEV'~ que se verifica en los tests de conexión fallida.
+
+#+begin_src sh
+export ENV='DEV'
 pytest
 #+end_src
 
