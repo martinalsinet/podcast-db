@@ -49,6 +49,7 @@
 - [[#apéndices][Apéndices]]
   - [[#prueba-de-concepto-podcast-id][Prueba de concepto: Podcast ID]]
   - [[#implementación-de-referencia][Implementación de referencia]]
+  - [[#historial-de-mejoras-y-correcciones][Historial de mejoras y correcciones]]
 
 * Motivación
 
@@ -616,8 +617,6 @@ Podcast author: Ali Baddou
 :end:
 
 *** TODO Mejoras
-
-- [X] Tests condicionales :: Estamos ignorando los tests de fallas en la conexión de red porque tardan más de 10 segundos en dar timeout. Hay que usar =@pytest.mark.skipif= para agregar una variable de entorno que permita saltearlos en desarrollo. Ver [[https://stackoverflow.com/questions/22603562/how-to-check-a-member-variable-with-py-test-skipif][esta pregunta]] de StackOverflow que tiene un ejemplo similar.
 
 - [ ] =autopep8= :: Aplicar el estándar PEP8 a todas las funciones
 
@@ -2496,15 +2495,6 @@ Episode(title='Le plomb et l'argent', date='2018-06-02')
 :end:
 
 *** TODO Mejoras
-
-- [X] URL inválido en episodios :: Revisar el listado de episodios de "Sur les épaules de Darwin" porque está dando URL inválido para un episodio de 2011. Aparentemente el error es porque el URL tiene un espacio (=.../carrefour (2).mp3=).
-
-#+begin_src txt
-AssertionError: received tag has an invalid episode URL
- <button class="replay-button playable" data-clip-type="reecoute" data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-25-juin-2011" data-diffusion-title='"Entendre leurs voix" avec Florence Aubenas' data-diffusion-uuid="136e81f2-a7b2-11e0-b8ee-842b2b72cd1d" data-duration="54 min" data-duration-seconds="3241" data-emission-business-reference="16177" data-emission-title="Sur les épaules de Darwin" data-emission-uuid="6f540125-eb9f-11e1-a7b7-782bcb76618d" data-end-time="1551032275" data-extract-id="" data-extract-title="" data-is-aod="1" data-next-media-info="/get_next_audio/136e81f2-a7b2-11e0-b8ee-842b2b72cd1d" data-start-time="1551029034" data-theme="" data-theme-uuid="" data-url="https://s3-eu-west-1.amazonaws.com/cruiser-production/static/inter/sons/2011/07/s27/carrefour (2).mp3" data-uuid="0962e356-a7b2-11e0-b8ee-842b2b72cd1d" data-xiti-action="C" data-xiti-id="0962e356" data-xiti-level="4" data-xiti-libelle='Reecouter::Sur les épaules de Darwin-"Entendre leurs voix" avec Florence Aubenas-0962e356' data-xiti-trackable="true" data-xiti-type="A" title='réecouter "Entendre leurs voix" avec Florence Aubenas'><svg class="icon replay-button-icon icon-play-player"><use xlink:href="#icon_player-play" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg><svg class="icon replay-button-icon icon-pause-player"><use xlink:href="#icon_player-pause" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg><svg class="icon replay-button-icon icon-play"><use xlink:href="#icon_play" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg><svg class="icon replay-button-icon icon-pause"><use xlink:href="#icon_pause" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg><svg class="icon replay-button-icon icon-play-disabled"><use xlink:href="#icon_playdisabled" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg><svg class="icon replay-button-icon icon-direct-audio"><use xlink:href="#icon_direct-audio" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg></button>
-#+end_src
-
-- [X] Refactor :: Refactor de =episodes_from_year=, =episodes_from_month= y =episodes_from_day= para que usen =episodes_between_dates=
 
 - [ ] =autopep8= :: Aplicar el estándar PEP8 a todas las funciones
 
@@ -9156,6 +9146,7 @@ sources/tests/test_list_sources.py
 
 - Evaluar [[https://travis-ci.com/plans][Travis CI]]
 - Evaluar [[https://circleci.com/open-source/][Circle CI]]
+- Evaluar [[https://azure.microsoft.com/en-us/services/devops/pipelines/][Azure Pipelines]]
 - Evaluar [[https://jenkins.io/][Jenkins]] para limitar la dependencia de servicios externos
 
 Lo ideal sería tener un único proceso de generación de build + testing que se pueda utilizar en cualquiera de las soluciones de integración continua.
@@ -10021,3 +10012,47 @@ for button in buttons:
 :results:
 :end:
 
+** Historial de mejoras y correcciones
+*** France Inter
+**** Podcasts
+
+- [X] =podcasts_from_query= :: Analizar el cambio de nombre por =podcasts_matching_query=, que expresa mejor que la función es un filtro de podcasts usando una palabra clave. Pensándolo bien, el nombre de que mejor expresa lo que hace la función es =podcasts_with_keyword= (4bea0e6)
+
+- [X] =podcasts_with_keyword= :: Agregar que no distinga entre los caracteres acentuados (á vs a) al buscar. Por ejemplo, si la palabra buscada es =té= debería devolver los podcasts que contengan tanto =té= como =te= (a907f39)
+
+- [X] =identifier= :: Agregar un método =identifier()= a la clase Podcast que devuelva la parte única del URL. Modificar la función =podcasts-with-keyword= para que también busque la palabra clave en el identificador. (d5edc9f)
+
+- [X] Corregir los imports :: Declarar las funciones que se exportan en cada módulo dentro del archivo =__init.py__= (8b0f132)
+
+**** Episodes
+
+- [X] =Episode.date= :: Cambiar el tipo de dato de la fecha del episodio =Episode.date= para que sea un =datetime.date= (3a2904b)
+
+- [X] =episodes_with_keyword= :: Agregar que no distinga entre los caracteres acentuados (á vs a) al buscar. Por ejemplo, si la palabra buscada es =té= debería devolver los podcasts que contengan tanto =té= como =te= (a907f39)
+
+- [X] =identifier= :: Agregar un método =identifier()= a la clase Episode que devuelva la fecha de publicación del episodio en formato =YYYY-MM-DD=. Modificar la función =episodes-with-keyword= para que también busque la palabra clave en el identificador. (36597bd)
+
+- [X] Corregir los imports :: Declarar las funciones que se exportan en cada módulo dentro del archivo =__init.py__= (fdfc35b)
+
+- [X] Tests condicionales :: Estamos ignorando los tests de fallas en la conexión de red porque tardan más de 10 segundos en dar timeout. Hay que usar =@pytest.mark.skipif= para agregar una variable de entorno que permita saltearlos en desarrollo. Ver [[https://stackoverflow.com/questions/22603562/how-to-check-a-member-variable-with-py-test-skipif][esta pregunta]] de StackOverflow que tiene un ejemplo similar. (f7936dd)
+
+- [X] URL inválido en episodios :: Revisar el listado de episodios de "Sur les épaules de Darwin" porque está dando URL inválido para un episodio de 2011. Aparentemente el error es porque el URL tiene un espacio (=.../carrefour (2).mp3=). (17cbd03)
+
+#+begin_src txt
+AssertionError: received tag has an invalid episode URL
+ <button class="replay-button playable" data-clip-type="reecoute" data-diffusion-path="/emissions/sur-les-epaules-de-darwin/sur-les-epaules-de-darwin-25-juin-2011" data-diffusion-title='"Entendre leurs voix" avec Florence Aubenas' data-diffusion-uuid="136e81f2-a7b2-11e0-b8ee-842b2b72cd1d" data-duration="54 min" data-duration-seconds="3241" data-emission-business-reference="16177" data-emission-title="Sur les épaules de Darwin" data-emission-uuid="6f540125-eb9f-11e1-a7b7-782bcb76618d" data-end-time="1551032275" data-extract-id="" data-extract-title="" data-is-aod="1" data-next-media-info="/get_next_audio/136e81f2-a7b2-11e0-b8ee-842b2b72cd1d" data-start-time="1551029034" data-theme="" data-theme-uuid="" data-url="https://s3-eu-west-1.amazonaws.com/cruiser-production/static/inter/sons/2011/07/s27/carrefour (2).mp3" data-uuid="0962e356-a7b2-11e0-b8ee-842b2b72cd1d" data-xiti-action="C" data-xiti-id="0962e356" data-xiti-level="4" data-xiti-libelle='Reecouter::Sur les épaules de Darwin-"Entendre leurs voix" avec Florence Aubenas-0962e356' data-xiti-trackable="true" data-xiti-type="A" title='réecouter "Entendre leurs voix" avec Florence Aubenas'><svg class="icon replay-button-icon icon-play-player"><use xlink:href="#icon_player-play" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg><svg class="icon replay-button-icon icon-pause-player"><use xlink:href="#icon_player-pause" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg><svg class="icon replay-button-icon icon-play"><use xlink:href="#icon_play" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg><svg class="icon replay-button-icon icon-pause"><use xlink:href="#icon_pause" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg><svg class="icon replay-button-icon icon-play-disabled"><use xlink:href="#icon_playdisabled" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg><svg class="icon replay-button-icon icon-direct-audio"><use xlink:href="#icon_direct-audio" xmlns:xlink="http://www.w3.org/1999/xlink"></use></svg></button>
+#+end_src
+
+- [X] Refactor :: Refactor de =episodes_from_year=, =episodes_from_month= y =episodes_from_day= para que usen =episodes_between_dates= (f4dacab, 8f4d980, e547e44)
+
+*** CLI
+
+- [X] Corregir los imports :: Declarar las funciones que se exportan en cada módulo dentro del archivo =__init.py__= (d79cf61)
+
+- [X] =assert False= en tests :: Hay que agregar un =assert False= casos de prueba que esperan una excepción para asegurarse de que realmente esté saliendo por el camino de la excepción. *Update:* Luego de pensarlo un rato, recordé que quité los =assert False= porque cuando el test es exitoso nunca se llegan a ejecutar esos asserts dado que siempre sale por la excepción, y entonces aparecen como líneas no ejecutadas en el reporte de cobertura.
+
+- [X] =argument_tuples= :: Cambiarle el nombre a =known_arguments= porque la palabra /tuples/ indica un detalle de implementación que distrae en vez de aclarar las cosas. (72f1921)
+
+- [X] =argument_from_namespace= :: Encontramos un patrón de código que se repite en las funciones del módulo =cli.arguments=. Todas las funciones reciben un objeto =argparse.Namespace=, verifican su tipo y extraen de éste uno o más argumentos que pueden ser obligatorios u opcionales. Hay que agregar una nueva función que implemente esas verificaciones. (50dc9b1)
+
+- [X] Búsqueda de podcast o episodio :: Dentro del módulo =cli.output= están las funciones que muestran el detalle de un podcast o episodio. Estas funciones reciben el identificador del registro buscado, y puede suceder que cuando se realice la búsqueda se encuentre más de un resultado (o ninguno). En ese caso es necesario mostrar un mensaje de error ("Multiple/No records found"). Hay que crear una función =output_from_non_unique_record= que reciba un listado de resultados y devuelva un =str= con el mensaje correspondiente. (19f31e6)
