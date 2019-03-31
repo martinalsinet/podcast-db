@@ -158,7 +158,7 @@ Quiero que mi base de datos pueda consultar las siguientes fuentes de podcasts:
 
 *** Interfaces de usuario
 
-- [ ] Linea de comandos (CLI)
+- [X] Linea de comandos (CLI)
 - [ ] Interface web
 
 * Versionado
@@ -5972,7 +5972,7 @@ podcast-db show-episode --episode franceinter/darwin/2018-04-16
 - [X] Listar los episodios de un podcast
 - [X] Mostrar el detalle de un episodio
 - [X] Mostrar el mensaje de ayuda
-- [ ] Mostrar el mensaje con la versión
+- [X] Mostrar el mensaje con la versión
 
 ** TODO Mejoras
 
@@ -6012,7 +6012,7 @@ Found multiple records with identifier 'la-tete-au-carre'
 *** =__init.py__=
 
 #+begin_src python :tangle cli/__init__.py
-
+__version__ = "0.2.0"
 #+end_src
 
 *** CLI script
@@ -6029,8 +6029,6 @@ from cli.output import output_from_command
 requests_cache.install_cache()
 parser = parser()
 args = parser.parse_args()
-if args.version:
-    output = output_from_version(args)
 if args.command:
     try:
         output = output_from_command(args)
@@ -6126,6 +6124,7 @@ def known_arguments():
 ***** 5. Definición
 
 #+begin_src python :tangle cli/arguments/known_arguments.py
+import cli
 from cli.commands import known_commands
 
 def known_arguments():
@@ -6140,7 +6139,7 @@ def known_arguments():
     ))
     args.append((
         ["-v", "--version"], 
-        {"help": "show version", "metavar": ""}
+        {"help": "show version", "action": "version", "version": cli.__version__}
     ))
     args.append((
         ["--source"], 
@@ -7640,7 +7639,6 @@ from cli.output.output_from_podcast_list import output_from_podcast_list
 from cli.output.output_from_podcast_details import output_from_podcast_details
 from cli.output.output_from_episode_list import output_from_episode_list
 from cli.output.output_from_episode_details import output_from_episode_details
-from cli.output.output_from_version import output_from_version
 #+end_src
 
 ***** Tests
@@ -8898,109 +8896,6 @@ def test_list_with_only_one_record():
 
 #+begin_src sh
 pytest ./cli/output/tests/test_output_from_non_unique_record.py
-#+end_src
-
-**** output_from_version
-***** 1. Objetivo
-
-Obtener la salida del comando =--version=
-
-***** 2. Firma
-
-La función recibe un =argparse.Namespace= que tiene que tener la propiedad =version= y devuelve un =str= con la versión de la aplicación
-
-***** 3. Ejemplos
-
-- Caso exitoso, un =Namespace= con la propiedad =version=
-- Un objeto que no es un =argparse.Namespace=
-- Un =Namespace= que no tiene la propiedad =version=
-
-#+begin_src python :tangle cli/output/tests/examples_output_from_version.py
-from argparse import Namespace
-
-
-def arguments_with_version():
-    args = Namespace()
-    args.version = ""
-    return args
-
-def invalid_arguments():
-    args = 42
-    return args
-
-def arguments_without_version():
-    args = Namespace()
-    return args
-#+end_src
-
-***** 4. Boceto
-
-#+begin_src python
-def output_from_version(args):
-    # Validar que args sea un argparse.Namespace
-    # Validar que args tenga la propiedad version
-    # Devolver la versión
-    return output
-#+end_src
-
-***** 5. Definición
-
-#+begin_src python :tangle cli/output/output_from_version.py
-from argparse import Namespace
-
-
-def output_from_version(args):
-    assert isinstance(args, Namespace), invalid_arguments(args)
-    assert hasattr(args, "version"), missing_version(args)
-    output = "0.2.0"
-    return output
-
-
-def invalid_arguments(args):
-    return "args parameter must be an argparse.Namespace, %s received instead" % type(args)
-
-
-def missing_version(args):
-    return "args parameter must have a version property, received: %s" % args
-#+end_src
-
-***** 6. Casos de prueba
-
-- Caso exitoso, un =Namespace= con la propiedad =version=
-- Un objeto que no es un =argparse.Namespace=
-- Un =Namespace= que no tiene la propiedad =version=
-
-#+begin_src python :tangle cli/output/tests/test_output_from_version.py
-from cli.output import output_from_version
-from cli.output.tests.examples_output_from_version import *
-
-
-def test_arguments_with_version():
-    args = arguments_with_version()
-    output = output_from_version(args)
-    assert "0.2.0" in output
-
-
-def test_invalid_arguments():
-    args = invalid_arguments()
-    try:
-        output = output_from_version(args)
-    except AssertionError:
-        assert True
-
-
-def test_arguments_without_version():
-    args = arguments_without_version()
-    try:
-        output = output_from_version(args)
-    except AssertionError:
-        assert True
-#+end_src
-
-****** Run tests
-
-#+begin_src sh
-pytest ./cli/output/tests/test_output_from_version.py
 #+end_src
 
 * Herramientas
