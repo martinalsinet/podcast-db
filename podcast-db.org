@@ -5976,13 +5976,13 @@ podcast-db show-episode --episode franceinter/darwin/2018-04-16
 
 ** TODO Mejoras
 
+- [X] Argumentos opcionales --year y --month :: Actualmente las funciones =year_from_arguments= y =month_from_arguments= lanzan un =AssertionError= si no existe la propiedad =year= y =month= respectivamente. Esto obliga a preguntar si existe el atributo antes de usarlas, para no disparar la excepción, lo cual complica el código innecesariamente. Hay que modificar estas funciones para que devuelvan =False= si la propiedad necesaria no está presente en los argumentos.
+
 - [ ] =output_from_podcast_list= :: Está devolviendo mal los caracteres acentuados
 
 - [ ] Import de podcasts y episodios :: Hay que crear dos funciones en el módulo =sources= que permitan importar las funciones de podcasts y episodios del módulo correspondiente a una fuente determinada. Podrían llamarse =import_podcasts_from_source= e =import_episodes_from_source=
 
 - [ ] Inyectar el base URL de la fuente en los podcasts :: La función =episodes_from_podcast= utiliza el URL del podcast para ir a buscar los episodios. El problema es que el base URL de los podcasts de France Inter (=https://www.franceinter.fr/=) está harcodeado en la función =url_from_tag= del módulo =franceinter.podcasts= y eso nos causa problemas en las pruebas unitarias de =output_from_episode_list=. El objetivo de las pruebas unitarias es que no realicen ninguna petición HTTP a servicios externos, pero con ese URL fijo dentro del podcast se hace difícil evitarlo. Como solución provisoria se agregó un =if= que modifica el base URL del podcast si la fuente es =testing=, pero esa no es la manera correcta de hacerlo. Se podría agregar en la clase =Podcast= un método para reemplazar el base URL o para agregar la fuente.
-
-- [ ] Argumentos opcionales --year y --month :: Actualmente las funciones =year_from_arguments= y =month_from_arguments= lanzan un =AssertionError= si no existe la propiedad =year= y =month= respectivamente. Esto obliga a preguntar si existe el atributo antes de usarlas, para no disparar la excepción, lo cual complica el código innecesariamente. Hay que modificar estas funciones para que devuelvan =False= si la propiedad necesaria no está presente en los argumentos.
 
 - [ ] Entender el import circular en =handler_from_command= :: Si se ponen los imports de las funciones =output_from_*= al inicio de =handler_from_command= fallan los tests de la mayoría de las funciones =cli/arguments/*_from_arguments=. El error que devuelven es =TypeError: 'module' object is not callable=, que por lo que entiendo se produce por un import circular.
 
@@ -7217,13 +7217,9 @@ def year_from_arguments(args):
     month = argument_from_namespace(args, "month")
     if not year and month:
         year = year_from_month(month)
-    assert year, missing_year(args)
-    assert (year > 1900), invalid_year(args)
+    if year:
+        assert (year > 1900), invalid_year(args)
     return year
-
-
-def missing_year(args):
-    return "arguments parameter must have a year property, received %s" % args
 
 
 def invalid_year(args):
@@ -7279,10 +7275,8 @@ def test_invalid_arguments():
 
 def test_arguments_without_year():
     args = arguments_without_year()
-    try:
-        year = year_from_arguments(args)
-    except AssertionError:
-        assert True
+    year = year_from_arguments(args)
+    assert (year==False)
 
 def test_invalid_year():
     args = arguments_with_year(1816)
@@ -7371,16 +7365,12 @@ from cli.arguments import argument_from_namespace
 def month_from_arguments(args):
     year = False
     month = False
-    attr = argument_from_namespace(args, "month", is_required=True)
+    attr = argument_from_namespace(args, "month")
     if attr:
         (year, month) = month_from_attribute(attr)
-    assert year and month, missing_month(args)
-    assert (0 < month) and (month < 13), invalid_month(args.month)
+    if month:
+        assert (0 < month) and (month < 13), invalid_month(args.month)
     return (year, month)
-
-
-def missing_month(args):
-    return "arguments parameter must have a month property, received %s" % args
 
 
 def invalid_month(args):
@@ -7425,10 +7415,9 @@ def test_invalid_arguments():
 
 def test_arguments_without_month():
     args = arguments_without_month()
-    try:
-        (year, month) = month_from_arguments(args)
-    except AssertionError:
-        assert True
+    (year, month) = month_from_arguments(args)
+    assert (year==False)
+    assert (month==False)
 
 def test_arguments_with_zero_month():
     args = arguments_with_month("2019-00")
@@ -8239,42 +8228,29 @@ from argparse import Namespace
 def arguments_with_podcast(podcast):
     args = Namespace()
     args.podcast = podcast
-    args.keyword = None
-    args.year = None
-    args.month = None
     return args
 
 def arguments_with_podcast_and_source(podcast, source):
     args = Namespace()
     args.podcast = podcast
     args.source = source
-    args.keyword = None
-    args.year = None
-    args.month = None
     return args
 
 def arguments_with_podcast_and_keyword(podcast, keyword):
     args = Namespace()
     args.podcast = podcast
     args.keyword = keyword
-    args.keyword = None
-    args.year = None
-    args.month = None
     return args
 
 def arguments_with_podcast_and_year(podcast, year):
     args = Namespace()
     args.podcast = podcast
-    args.keyword = None
     args.year = year
-    args.month = None
     return args
 
 def arguments_with_podcast_and_month(podcast, month):
     args = Namespace()
     args.podcast = podcast
-    args.keyword = None
-    args.year = None
     args.month = month
     return args
 
@@ -8371,15 +8347,9 @@ def filter_episodes(episodes, args):
     
 
 def filters_from_arguments(args):
-    keyword = False
-    year = False
-    month = False
-    if args.keyword:
-        keyword = keyword_from_arguments(args)
-    if args.year:
-        year = year_from_arguments(args)
-    if args.month:
-        (year, month) = month_from_arguments(args)
+    keyword = keyword_from_arguments(args)
+    year = year_from_arguments(args)
+    (year, month) = month_from_arguments(args)
     return (keyword, year, month)
 
 
