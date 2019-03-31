@@ -170,12 +170,12 @@ Quiero que mi base de datos pueda consultar las siguientes fuentes de podcasts:
 - Consulta de podcasts y episodios
 - Fuente FranceInter
 
-** Roadmap
-*** 0.2.0
+*** 0.2.0 - 2019-03-31
 
 - Interface desde línea de comandos (CLI)
 - Generar un ejecutable en un solo archivo
 
+** Roadmap
 *** 0.3.0
 
 - Agregar fuente France Culture
@@ -5976,8 +5976,6 @@ podcast-db show-episode --episode franceinter/darwin/2018-04-16
 
 ** TODO Mejoras
 
-- [X] Argumentos opcionales --year y --month :: Actualmente las funciones =year_from_arguments= y =month_from_arguments= lanzan un =AssertionError= si no existe la propiedad =year= y =month= respectivamente. Esto obliga a preguntar si existe el atributo antes de usarlas, para no disparar la excepción, lo cual complica el código innecesariamente. Hay que modificar estas funciones para que devuelvan =False= si la propiedad necesaria no está presente en los argumentos. ([[https://github.com/martinalsinet/podcast-db/commit/25eb9145ed938d2702813b01ad45bed89e3294bc][25eb914]])
-
 - [ ] =output_from_podcast_list= :: Está devolviendo mal los caracteres acentuados
 
 - [ ] Import de podcasts y episodios :: Hay que crear dos funciones en el módulo =sources= que permitan importar las funciones de podcasts y episodios del módulo correspondiente a una fuente determinada. Podrían llamarse =import_podcasts_from_source= e =import_episodes_from_source=
@@ -9941,3 +9939,5 @@ AssertionError: received tag has an invalid episode URL
 - [X] =argument_from_namespace= :: Encontramos un patrón de código que se repite en las funciones del módulo =cli.arguments=. Todas las funciones reciben un objeto =argparse.Namespace=, verifican su tipo y extraen de éste uno o más argumentos que pueden ser obligatorios u opcionales. Hay que agregar una nueva función que implemente esas verificaciones. ([[https://github.com/martinalsinet/podcast-db/commit/50dc9b166b5f68f89bec987c9c2b064d634226a6][50dc9b1]])
 
 - [X] Búsqueda de podcast o episodio :: Dentro del módulo =cli.output= están las funciones que muestran el detalle de un podcast o episodio. Estas funciones reciben el identificador del registro buscado, y puede suceder que cuando se realice la búsqueda se encuentre más de un resultado (o ninguno). En ese caso es necesario mostrar un mensaje de error ("Multiple/No records found"). Hay que crear una función =output_from_non_unique_record= que reciba un listado de resultados y devuelva un =str= con el mensaje correspondiente. ([[https://github.com/martinalsinet/podcast-db/commit/19f31e63e33fd547c9c8a473aa18567f4b232cca][19f31e6]])
+
+- [X] Argumentos opcionales --year y --month :: Actualmente las funciones =year_from_arguments= y =month_from_arguments= lanzan un =AssertionError= si no existe la propiedad =year= y =month= respectivamente. Esto obliga a preguntar si existe el atributo antes de usarlas, para no disparar la excepción, lo cual complica el código innecesariamente. Hay que modificar estas funciones para que devuelvan =False= si la propiedad necesaria no está presente en los argumentos. ([[https://github.com/martinalsinet/podcast-db/commit/25eb9145ed938d2702813b01ad45bed89e3294bc][25eb914]])
