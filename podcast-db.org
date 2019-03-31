@@ -5976,7 +5976,7 @@ podcast-db show-episode --episode franceinter/darwin/2018-04-16
 
 ** TODO Mejoras
 
-- [X] Argumentos opcionales --year y --month :: Actualmente las funciones =year_from_arguments= y =month_from_arguments= lanzan un =AssertionError= si no existe la propiedad =year= y =month= respectivamente. Esto obliga a preguntar si existe el atributo antes de usarlas, para no disparar la excepción, lo cual complica el código innecesariamente. Hay que modificar estas funciones para que devuelvan =False= si la propiedad necesaria no está presente en los argumentos.
+- [X] Argumentos opcionales --year y --month :: Actualmente las funciones =year_from_arguments= y =month_from_arguments= lanzan un =AssertionError= si no existe la propiedad =year= y =month= respectivamente. Esto obliga a preguntar si existe el atributo antes de usarlas, para no disparar la excepción, lo cual complica el código innecesariamente. Hay que modificar estas funciones para que devuelvan =False= si la propiedad necesaria no está presente en los argumentos. ([[https://github.com/martinalsinet/podcast-db/commit/25eb9145ed938d2702813b01ad45bed89e3294bc][25eb914]])
 
 - [ ] =output_from_podcast_list= :: Está devolviendo mal los caracteres acentuados
 
@@ -8294,6 +8294,7 @@ def output_from_episode_list(args):
 ***** 5. Definición
 
 #+begin_src python :tangle cli/output/output_from_episode_list.py
+from calendar import month_name
 from cli.output import output_from_non_unique_record
 from cli.arguments import (
     source_from_arguments,
@@ -8330,8 +8331,11 @@ def output_from_episode_list(args):
             )
         all_episodes = episodes_from_podcast(podcast)
         episodes = filter_episodes(all_episodes, args)
-        lines = map(line_from_episode, episodes)
-        output = help_message(podcast) + "\n\n" + "\n".join(lines)
+        lines = list(map(line_from_episode, episodes))
+        if (len(lines) == 0):
+            output = help_message(podcast, args) + "\n\n" + "No episodes found"
+        else:
+            output = help_message(podcast, args) + "\n\n" + "\n".join(lines)
     return output
 
 
@@ -8339,17 +8343,17 @@ def filter_episodes(episodes, args):
     (keyword, year, month) = filters_from_arguments(args)
     if keyword:
         episodes = episodes_with_keyword(episodes, keyword)
-    if year:
+    if year and not month:
         episodes = episodes_from_year(episodes, year)
-    if month:
+    if year and month:
         episodes = episodes_from_month(episodes, year, month)
     return episodes
     
 
 def filters_from_arguments(args):
     keyword = keyword_from_arguments(args)
-    year = year_from_arguments(args)
     (year, month) = month_from_arguments(args)
+    year = year_from_arguments(args)
     return (keyword, year, month)
 
 
@@ -8358,11 +8362,19 @@ def import_from_source(source):
 
 
 def line_from_episode(episode):
-    return "- %s [%s]" % (episode.identifier, episode.title)
+    return "- %s: %s" % (episode.identifier, episode.title)
 
 
-def help_message(podcast):
-    return "Episode list for podcast: %s" % podcast.title
+def help_message(podcast, args):
+    message = "Episode list for podcast: %s" % podcast.title
+    (keyword, year, month) = filters_from_arguments(args)
+    if keyword:
+        message+= "\nkeyword: %s" % keyword
+    if year:
+        message+= "\n   year: %s" % year
+    if month:
+        message+= "\n  month: %s" % month_name[month]
+    return message
 #+end_src
 
 ***** 6. Casos de prueba
@@ -8450,6 +8462,14 @@ def test_arguments_with_unknown_podcast(http_server):
     args = arguments_with_unknown_podcast()
     output = output_from_episode_list(args)
     assert "No record was found" in output
+
+
+def test_arguments_without_results(http_server):
+    podcast = "testing/3d-le-journal"
+    keyword = "this-string-will-not-be-found"
+    args = arguments_with_podcast_and_keyword(podcast, keyword)
+    output = output_from_episode_list(args)
+    assert "No episodes found" in output
 
 
 @pytest.fixture(scope="module")
