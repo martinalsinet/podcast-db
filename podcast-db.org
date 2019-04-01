@@ -163,17 +163,17 @@ Quiero que mi base de datos pueda consultar las siguientes fuentes de podcasts:
 
 * Versionado
 ** ChangeLog
+*** 0.2.0 - 2019-03-31
+
+- Interface desde línea de comandos (CLI)
+- Generar un ejecutable en un solo archivo
+
 *** 0.1.0 - 2019-03-01
 
 - Versión inicial
 - Consulta de fuentes disponibles
 - Consulta de podcasts y episodios
 - Fuente FranceInter
-
-*** 0.2.0 - 2019-03-31
-
-- Interface desde línea de comandos (CLI)
-- Generar un ejecutable en un solo archivo
 
 ** Roadmap
 *** 0.3.0
@@ -381,15 +381,25 @@ def list_sources():
 #+begin_src python :tangle sources/list_sources.py
 from sources.source import Source
 
+
 def list_sources():
     sources = [franceinter(), testing()]
     return sources
+
 
 def franceinter():
     name = "franceinter"
     code = "fri"
     url = "https://www.franceinter.fr/emissions"
     return Source(name, code, url)
+
+
+def franceculture():
+    name = "franceculture"
+    code = "frc"
+    url = "https://www.franceculture.fr/emissions"
+    return Source(name, code, url)
+
 
 def testing():
     name = "testing"
