@@ -314,6 +314,7 @@ cli
 coverage
 dist
 downloads
+franceculture
 franceinter
 podcast-db
 podcast-db.spec
@@ -5968,6 +5969,7 @@ Ahora estamos trabajando con nuestra segunda fuente de podcasts y encontramos qu
 
 #+begin_src python :tangle franceculture/podcasts/__init__.py
 from franceculture.podcasts.url_from_tag import url_from_tag
+from franceculture.podcasts.title_from_tag import title_from_tag
 #+end_src
 
 **** Tests
@@ -6072,13 +6074,90 @@ def test_html_not_str():
 pytest ./franceculture/podcasts/tests/test_url_from_tag.py
 #+end_src
 
-*** TODO title_from_tag
+*** title_from_tag
 **** 1. Objetivo
+
+Obtener el título de un podcast a partir de un fragmento de HTML.
+
+El título se encuentra en el contenido de un tag =<span>= que tiene las clases =title= y =name=
+
 **** 2. Firma
+
+La función recibe un =str= con el fragmento de HTML y devuelve otro =str= el título del podcast.
+
 **** 3. Ejemplos
+
+- Caso exitoso, un fragmento de HTML que tiene un tag =<span>= con la clase =<title>= y un título en el contenido del =<span>=
+- Un fragmento de HTML que no tiene el tag =<span>=
+- Un fragmento de HTML que no tiene la clase =title=
+- Un fragmento de HTML que no es un =str=
+
+#+begin_src python :tangle franceculture/podcasts/tests/examples_title_from_tag.py
+def html_with_tag_class_value(tag, cls, value):
+    return f'''<{tag} class="{cls}">{value}</{tag}>'''
+#+end_src
+
 **** 4. Boceto
+
+#+begin_src python
+def title_from_tag(html):
+    # obtener el título con content_from_tag ("span", "title")
+    return title
+#+end_src
+
 **** 5. Definición
+
+#+begin_src python :tangle franceculture/podcasts/title_from_tag.py
+from utils.html import content_from_tag
+
+def title_from_tag(html):
+    title = content_from_tag(html, "span", "title")
+    return title
+#+end_src
+
 **** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un fragmento de HTML que tiene un tag =<span>= con la clase =<title>= y un título en el contenido del =<span>=, devuelve un =str= con el título del podcast
+- Cuando recibe un fragmento de HTML que no tiene el tag =<span>=, devuelve =False=
+- Cuando recibe un fragmento de HTML que no tiene la clase =title=, devuelve =False=
+- Cuando recibe un fragmento de HTML que no es un =str=, lanza un =AssertionError=
+
+#+begin_src python :tangle franceculture/podcasts/tests/test_title_from_tag.py
+from franceculture.podcasts import title_from_tag
+from franceculture.podcasts.tests.examples_title_from_tag import *
+
+def test_html_with_tag_class_value():
+    expected = "Fictions / Le Feuilleton"
+    html = html_with_tag_class_value("span", "title", expected)
+    title = title_from_tag(html)
+    assert title == expected
+
+def test_html_without_tag():
+    expected = "Fictions / Le Feuilleton"
+    html = html_with_tag_class_value("div", "title", expected)
+    title = title_from_tag(html)
+    assert title == False
+    
+def test_html_without_class():
+    expected = "Fictions / Le Feuilleton"
+    html = html_with_tag_class_value("span", "footer", expected)
+    title = title_from_tag(html)
+    assert title == False
+    
+def test_html_not_str():
+    html = 42
+    try:
+        title = title_from_tag(html)
+    except AssertionError:
+        assert True
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest ./franceculture/podcasts/tests/test_title_from_tag.py
+#+end_src
+
 *** TODO podcast_from_tag
 **** 1. Objetivo
 **** 2. Firma
