@@ -9165,6 +9165,7 @@ class LocalFolderHTTPServer(BaseHTTPServer):
 
 #+begin_src python :tangle utils/html/__init__.py
 from utils.html.attribute_from_tag import attribute_from_tag
+from utils.html.content_from_tag import content_from_tag
 #+end_src
 
 **** Tests
@@ -9346,6 +9347,145 @@ def test_attr_not_str():
 
 #+begin_src sh
 pytest ./utils/html/tests/test_attribute_from_tag.py
+#+end_src
+
+*** content_from_tag
+**** 1. Objetivo
+
+Obtener el valor del contenido de un tag HTML que tenga una clase determinada buscando en un fragmento de HTML.
+
+**** 2. Firma
+
+La función recibe tres argumentos:
+
+- Un =str= con un fragmento de html
+- Un =str= con el nombre del tag buscado
+- Un =str= con el nombre de la clase del tag
+
+Y devuelve un =str= con el contenido. Si no puede encontrar el tag o la clase, devuelve =False=
+
+**** 3. Ejemplos
+
+- Caso exitoso, un fragmento de HTML que tiene el tag y la clase buscados
+- Un fragmento de HTML que no tiene el tag buscado
+- Un fragmento de HTML que no tiene la clase buscada
+- Un fragmento de HTML que no es un =str=
+- Un nombre de tag que no es un =str=
+- Un nombre de clase que no es un =str=
+
+#+begin_src python :tangle utils/html/tests/examples_content_from_tag.py
+def html_with_tag_class_value(tag, cls, value):
+    return f'''<{tag} class="{cls}">{value}</{tag}>'''
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+from bs4 import BeautifulSoup
+
+
+def attribute_from_tag(html, tag, cls, attr):
+    # validar que html sea un str
+    # validar que tag sea un str
+    # validar que cls sea un str
+    # buscar el tag con la clase en el html
+    # devolver el contenido del tag
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle utils/html/content_from_tag.py
+from bs4 import BeautifulSoup
+
+
+def content_from_tag(html, tag, cls):
+    assert isinstance(html, str), invalid_str("html", html)
+    assert isinstance(tag, str), invalid_str("tag", tag)
+    assert isinstance(cls, str), invalid_str("cls", cls)
+    value = False
+    soup = BeautifulSoup(html, "html.parser")
+    tag = soup.find(tag, class_=cls)
+    if tag:
+        value = tag.string
+    return value
+
+
+def invalid_str(param, html):
+    return "%s parameter must be a str, received %s instead" % (param, str(type(html)))
+#+end_src
+
+**** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un fragmento de HTML que tiene el tag y la clase buscados, devuelve el contenido del tag
+- Cuando recibe un fragmento de HTML que no tiene el tag buscado, devuelve =False=
+- Cuando recibe un fragmento de HTML que no tiene la clase buscada, devuelve =False=
+- Cuando recibe un fragmento de HTML que no es un =str=, lanza un =AssertionError=
+- Cuando recibe un nombre de tag que no es un =str=, lanza un =AssertionError=
+- Cuando recibe un nombre de clase que no es un =str=, lanza un =AssertionError=
+
+#+begin_src python :tangle utils/html/tests/test_content_from_tag.py
+from utils.html import content_from_tag
+from utils.html.tests.examples_content_from_tag import *
+
+def test_html_with_tag_class_value():
+    tag = "div"
+    cls = "sidebar-left"
+    value = "News!"
+    html = html_with_tag_class_value(tag, cls, value)
+    title = content_from_tag(html, tag, cls)
+    assert title == value
+
+def test_html_without_tag():
+    tag = "div"
+    cls = "sidebar-left"
+    value = "News!"
+    html = html_with_tag_class_value(tag, cls, value)
+    title = content_from_tag(html, "span", cls)
+    assert title == False
+
+def test_html_without_class():
+    tag = "div"
+    cls = "sidebar-left"
+    value = "News!"
+    html = html_with_tag_class_value(tag, cls, value)
+    title = content_from_tag(html, tag, "sidebar-right")
+    assert title == False
+
+def test_html_not_str():
+    tag = "div"
+    cls = "sidebar-left"
+    value = "News!"
+    html = html_with_tag_class_value(tag, cls, value)
+    try:
+        title = content_from_tag(42, tag, cls)
+    except AssertionError:
+        assert True
+
+def test_tag_not_str():
+    tag = "div"
+    cls = "sidebar-left"
+    value = "News!"
+    html = html_with_tag_class_value(tag, cls, value)
+    try:
+        title = content_from_tag(html, 42, cls)
+    except AssertionError:
+        assert True
+
+def test_class_not_str():
+    tag = "div"
+    cls = "sidebar-left"
+    value = "News!"
+    html = html_with_tag_class_value(tag, cls, value)
+    try:
+        title = content_from_tag(html, tag, 42)
+    except AssertionError:
+        assert True
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest ./utils/html/tests/test_content_from_tag.py
 #+end_src
 
 * Tests
