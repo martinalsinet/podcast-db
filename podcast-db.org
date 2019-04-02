@@ -5948,19 +5948,26 @@ drwxr-xr-x  11 martin  staff   352B Mar 19 00:02 emissions
 #+end_src
 
 ** Podcasts
+*** Diseño
+
+Ahora estamos trabajando con nuestra segunda fuente de podcasts y encontramos que hay funcionalidades que podemos reutilizar de lo hecho en la fuente France Inter.
+
 *** Wishlist
 
-- [ ] Obtener el listado de los podcasts de France Inter
-- [ ] Para cada podcast obtener el nombre, el url y el autor
+- [ ] Obtener el listado de los podcasts de France Culture
+- [ ] Para cada podcast obtener el nombre y el url
 - [ ] Filtrar el listado de podcasts por una palabra clave
 - [ ] Asignarle un identificador a cada podcast
 
 *** TODO Mejoras
+
+- [ ] Extraer las funciones =podcasts_from_*= :: Hay que crear un módulo genérico =podcasts= que tenga las funciones que obtienen y filtran los podcasts que se diseñaron en el módulo FranceInter. Este nuevo módulo debe llamar a las funciones correspondientes que saben como parsear cada fuente.
+
 *** =__init.py__=
 **** Funciones
 
 #+begin_src python :tangle franceculture/podcasts/__init__.py
-
+from franceculture.podcasts.url_from_tag import url_from_tag
 #+end_src
 
 **** Tests
@@ -5969,6 +5976,123 @@ drwxr-xr-x  11 martin  staff   352B Mar 19 00:02 emissions
 
 #+end_src
 
+*** url_from_tag
+**** 1. Objetivo
+
+Obtener el URL de un podcast a partir de un fragmento de HTML.
+
+El URL se encuentra en el atributo =href= de un tag =<a>= que tiene la clase =content=
+
+**** 2. Firma
+
+La función recibe un =str= con el fragmento de HTML y devuelve el URL del podcast.
+
+**** 3. Ejemplos
+
+- Caso exitoso, un fragmento de HTML que tiene un tag =<a>= con la clase =<content>= y un link en el atributo =href=
+- Un fragmento de HTML que no tiene el tag =<a>=
+- Un fragmento de HTML que no tiene la clase =content=
+- Un fragmento de HTML que no tiene el atributo =href=
+- Un fragmento de HTML que no es un =str=
+
+#+begin_src python :tangle franceculture/podcasts/tests/examples_url_from_tag.py
+def html_with_tag_class_attr(tag, cls, attr, value):
+    return f'''<{tag} {attr}="{value}" class="{cls}"></{tag}>'''
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+def url_from_tag(html):
+    # obtener el path con attribute_from_tag ("a", "content", "href")
+    # agregar el base URL de France Culture
+    return url
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle franceculture/podcasts/url_from_tag.py
+from utils.html import attribute_from_tag
+
+def url_from_tag(html):
+    url = False
+    path = attribute_from_tag(html, "a", "content", "href")
+    if path:
+        url = "https://www.franceculture.fr/" + path
+    return url
+#+end_src
+
+**** 6. Casos de prueba
+
+- Caso exitoso, un fragmento de HTML que tiene un tag =<a>= con la clase =<content>= y un link en el atributo =href=
+- Un fragmento de HTML que no tiene el tag =<a>=
+- Un fragmento de HTML que no tiene la clase =content=
+- Un fragmento de HTML que no tiene el atributo =href=
+- Un fragmento de HTML que no es un =str=
+
+#+begin_src python :tangle franceculture/podcasts/tests/test_url_from_tag.py
+from franceculture.podcasts import url_from_tag
+from franceculture.podcasts.tests.examples_url_from_tag import *
+
+def test_html_with_tag_class_attr():
+    path = "emissions/fictions-le-feuilleton"
+    html = html_with_tag_class_attr("a", "content", "href", path)
+    url = url_from_tag(html)
+    assert path in url
+
+def test_html_without_tag():
+    path = "emissions/fictions-le-feuilleton"
+    html = html_with_tag_class_attr("div", "content", "href", path)
+    url = url_from_tag(html)
+    assert url == False
+    
+def test_html_without_class():
+    path = "emissions/fictions-le-feuilleton"
+    html = html_with_tag_class_attr("div", "left", "href", path)
+    url = url_from_tag(html)
+    assert url == False
+    
+def test_html_without_attr():
+    date = "2019-02-02"
+    html = html_with_tag_class_attr("div", "content", "date", date)
+    url = url_from_tag(html)
+    assert url == False
+    
+def test_html_not_str():
+    html = 42
+    try:
+        url = url_from_tag(html)
+    except AssertionError:
+        assert True
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest ./franceculture/podcasts/tests/test_url_from_tag.py
+#+end_src
+
+*** TODO title_from_tag
+**** 1. Objetivo
+**** 2. Firma
+**** 3. Ejemplos
+**** 4. Boceto
+**** 5. Definición
+**** 6. Casos de prueba
+*** TODO podcast_from_tag
+**** 1. Objetivo
+**** 2. Firma
+**** 3. Ejemplos
+**** 4. Boceto
+**** 5. Definición
+**** 6. Casos de prueba
+*** TODO tags_from_html
+**** 1. Objetivo
+**** 2. Firma
+**** 3. Ejemplos
+**** 4. Boceto
+**** 5. Definición
+**** 6. Casos de prueba
 *** TODO podcasts_from_url
 **** 1. Objetivo
 **** 2. Firma
@@ -5998,34 +6122,6 @@ drwxr-xr-x  11 martin  staff   352B Mar 19 00:02 emissions
 **** 5. Definición
 **** 6. Casos de prueba
 *** TODO podcasts_from_filename
-**** 1. Objetivo
-**** 2. Firma
-**** 3. Ejemplos
-**** 4. Boceto
-**** 5. Definición
-**** 6. Casos de prueba
-*** TODO tags_from_html
-**** 1. Objetivo
-**** 2. Firma
-**** 3. Ejemplos
-**** 4. Boceto
-**** 5. Definición
-**** 6. Casos de prueba
-*** TODO podcast_from_tag
-**** 1. Objetivo
-**** 2. Firma
-**** 3. Ejemplos
-**** 4. Boceto
-**** 5. Definición
-**** 6. Casos de prueba
-*** TODO title_from_tag
-**** 1. Objetivo
-**** 2. Firma
-**** 3. Ejemplos
-**** 4. Boceto
-**** 5. Definición
-**** 6. Casos de prueba
-*** TODO url_from_tag
 **** 1. Objetivo
 **** 2. Firma
 **** 3. Ejemplos
