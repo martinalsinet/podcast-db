@@ -5962,14 +5962,17 @@ Ahora estamos trabajando con nuestra segunda fuente de podcasts y encontramos qu
 
 *** TODO Mejoras
 
+- [ ] Reemplazar la función =title_from_tag= :: Vemos que las funciones =title_from_tag=, =author_from_tag= y =description_from_tag= se pueden reemplazar por un llamado a =utils.html.content_from_tag==, dado que lo único que hacen es extraer el contenido de un tag con una clase en particular.
+
 - [ ] Extraer las funciones =podcasts_from_*= :: Hay que crear un módulo genérico =podcasts= que tenga las funciones que obtienen y filtran los podcasts que se diseñaron en el módulo FranceInter. Este nuevo módulo debe llamar a las funciones correspondientes que saben como parsear cada fuente.
 
 *** =__init.py__=
 **** Funciones
 
 #+begin_src python :tangle franceculture/podcasts/__init__.py
+from franceculture.podcasts.podcast import Podcast
 from franceculture.podcasts.url_from_tag import url_from_tag
-from franceculture.podcasts.title_from_tag import title_from_tag
+from franceculture.podcasts.podcast_from_tag import podcast_from_tag
 #+end_src
 
 **** Tests
@@ -6074,97 +6077,215 @@ def test_html_not_str():
 pytest ./franceculture/podcasts/tests/test_url_from_tag.py
 #+end_src
 
-*** title_from_tag
+*** podcast_from_tag
 **** 1. Objetivo
 
-Obtener el título de un podcast a partir de un fragmento de HTML.
+Obtener un podcast de un fragmento de HTML. 
 
-El título se encuentra en el contenido de un tag =<span>= que tiene las clases =title= y =name=
+Un podcast tiene cuatro propiedades principales, a saber:
+
+- título :: es un =str= y es obligatorio
+- url :: es un =str=, es obligatorio y debe ser un URL válido
+- descripción :: es un =str=, pero puede estar vacía
 
 **** 2. Firma
 
-La función recibe un =str= con el fragmento de HTML y devuelve otro =str= el título del podcast.
+La función recibe un =str= con un fragmento de HTML y devuelve un objeto =franceculture.podcasts.podcast=
+
+Necesitamos entonces definir la clase =podcast=
+
+#+begin_src python :tangle franceculture/podcasts/podcast.py
+class Podcast:
+    def __init__(self, title, url, description=""):
+        self.title = title
+        self.url = url
+        self.description = description
+
+
+    @property
+    def identifier(self):
+        return self.url.lower().replace(
+            "https://www.franceculture.fr/emissions/", ""
+        )
+
+
+    def __repr__(self):
+        return "Podcast(title='%s', url='%s')" % (self.title, self.url)
+#+end_src
 
 **** 3. Ejemplos
 
-- Caso exitoso, un fragmento de HTML que tiene un tag =<span>= con la clase =<title>= y un título en el contenido del =<span>=
-- Un fragmento de HTML que no tiene el tag =<span>=
-- Un fragmento de HTML que no tiene la clase =title=
-- Un fragmento de HTML que no es un =str=
+- Un fragmento de HTML que tiene todos los elementos para generar un podcast válido (título, URL y descripción)
+- Un HTML que no es un =str=
+- Un HTML que no tiene el elemento del título
+- Un HTML que no tiene el elemento del URL
+- Un HTML que tiene el elemento del URL, pero el URL no es válido
+- Un HTML que no tiene el elemento de la descripción
 
-#+begin_src python :tangle franceculture/podcasts/tests/examples_title_from_tag.py
-def html_with_tag_class_value(tag, cls, value):
-    return f'''<{tag} class="{cls}">{value}</{tag}>'''
+#+begin_src python :tangle franceculture/podcasts/tests/examples_podcast_from_tag.py
+def html_with_title_and_href(title, href):
+    html = f'''<a href="{href}" class="content">
+<span class="title name">{title}</span>
+<p class="text">30 minutes d’espace de création radiophonique, de grandes adaptations d’œuvres du patrimoine classique et contemporain pour mêler tous les métiers et les...</p>
+    </a>'''
+    return html
+
+
+def html_without_title():
+    html = '''<a href="/emissions/fictions-le-feuilleton" class="content">
+<p class="text">30 minutes d’espace de création radiophonique, de grandes adaptations d’œuvres du patrimoine classique et contemporain pour mêler tous les métiers et les...</p>
+    </a>'''
+    return html
+
+
+def html_without_url():
+    html = '''<a class="content">
+<span class="title name">Fictions / Le Feuilleton</span>
+<p class="text">30 minutes d’espace de création radiophonique, de grandes adaptations d’œuvres du patrimoine classique et contemporain pour mêler tous les métiers et les...</p>
+    </a>'''
+    return html
+
+
+def html_with_invalid_url():
+    html = '''<a href="/emi:\\ hht :0393; ee" class="content">
+<span class="title name">Fictions / Le Feuilleton</span>
+<p class="text">30 minutes d’espace de création radiophonique, de grandes adaptations d’œuvres du patrimoine classique et contemporain pour mêler tous les métiers et les...</p>
+    </a>'''
+    return html
+
+
+def html_without_description():
+    html = '''<a href="/emissions/fictions-le-feuilleton" class="content">
+<span class="title name">Fictions / Le Feuilleton</span>
+    </a>'''
+    return html
+
 #+end_src
 
 **** 4. Boceto
 
 #+begin_src python
-def title_from_tag(html):
-    # obtener el título con content_from_tag ("span", "title")
-    return title
+def podcast_from_tag(tag):
+    # validar que el tag sea un =str= 
+
+    # extraer el título usando content_from_tag
+    # validar que el título no sea un string vacío
+
+    # extraer el url usando url_from_tag
+    # validar que el url no sea un string vacío
+    # validar el url
+
+    # extraer la descripción usando content_from_tag
+
+    # crear una instancia de franceculture.podcasts.podcast
+    # con el título, el url y la descripción
+    return podcast
 #+end_src
 
 **** 5. Definición
 
-#+begin_src python :tangle franceculture/podcasts/title_from_tag.py
-from utils.html import content_from_tag
+Usamos la biblioteca [[https://validators.readthedocs.io/][validators]] para validar el URL del podcast
 
-def title_from_tag(html):
-    title = content_from_tag(html, "span", "title")
-    return title
+#+begin_src python :tangle franceculture/podcasts/podcast_from_tag.py
+from utils.html import content_from_tag
+from validators.url import url as is_valid_url
+from franceculture.podcasts import (
+    url_from_tag, 
+    Podcast
+)
+
+def podcast_from_tag(tag):
+    assert isinstance(tag, str), invalid_tag(tag)
+    title = content_from_tag(tag, "span", "title")
+    assert (title != ""), no_title(tag)
+    url = url_from_tag(tag)
+    assert (url != False), no_url(tag)
+    assert is_valid_url(url), invalid_url(tag)
+    description = content_from_tag(tag, "p", "text")
+    return Podcast(title, url, description)
+
+def no_url(tag):
+    return "received tag does not have a podcast URL\n %s" % str(tag)
+
+def invalid_url(tag):
+    return "received tag has an invalid podcast URL\n %s" % str(tag)
+
+def no_title(tag):
+    return "received tag does not have a podcast title\n %s" % str(tag)
+
+def invalid_tag(tag):
+    return "tag parameter must be an instance of str, received %s instead" % str(type(tag))
 #+end_src
 
 **** 6. Casos de prueba
 
-- Caso exitoso, cuando recibe un fragmento de HTML que tiene un tag =<span>= con la clase =<title>= y un título en el contenido del =<span>=, devuelve un =str= con el título del podcast
-- Cuando recibe un fragmento de HTML que no tiene el tag =<span>=, devuelve =False=
-- Cuando recibe un fragmento de HTML que no tiene la clase =title=, devuelve =False=
-- Cuando recibe un fragmento de HTML que no es un =str=, lanza un =AssertionError=
+- Cuando recibe un fragmento de HTML que tiene todos los elementos para generar un podcast válido (título, URL y descripción), devuelve un objeto =Podcast= con las propiedades correctas
+- Cuando recibe un HTML que no es un =str=, lanza un =AssertionError=
+- Cuando recibe un HTML que no tiene el elemento del título, lanza un =AssertionError=
+- Cuando recibe un HTML que no tiene el elemento del URL, lanza un =AssertionError=
+- Cuando recibe un HTML que tiene el elemento del URL, pero el URL no es válido, lanza un =AssertionError=
+- Cuando recibe un HTML que no tiene el elemento de la descripción, devuelve un =Podcast= con la descripción vacía
 
-#+begin_src python :tangle franceculture/podcasts/tests/test_title_from_tag.py
-from franceculture.podcasts import title_from_tag
-from franceculture.podcasts.tests.examples_title_from_tag import *
+#+begin_src python :tangle franceculture/podcasts/tests/test_podcast_from_tag.py
+from franceculture.podcasts import podcast_from_tag
+from franceculture.podcasts.tests.examples_podcast_from_tag import *
 
-def test_html_with_tag_class_value():
-    expected = "Fictions / Le Feuilleton"
-    html = html_with_tag_class_value("span", "title", expected)
-    title = title_from_tag(html)
-    assert title == expected
 
-def test_html_without_tag():
-    expected = "Fictions / Le Feuilleton"
-    html = html_with_tag_class_value("div", "title", expected)
-    title = title_from_tag(html)
-    assert title == False
-    
-def test_html_without_class():
-    expected = "Fictions / Le Feuilleton"
-    html = html_with_tag_class_value("span", "footer", expected)
-    title = title_from_tag(html)
-    assert title == False
-    
-def test_html_not_str():
-    html = 42
+def test_html_with_title_and_href():
+    title = "Fictions / Le Feuilleton"
+    href = "/emissions/fictions-le-feuilleton"
+    html = html_with_title_and_href(title, href)
+    podcast = podcast_from_tag(html)
+    assert title == podcast.title
+    assert href in podcast.url
+
+
+def test_invalid_html():
+    title = "Fictions / Le Feuilleton"
+    href = "/emissions/fictions-le-feuilleton"
+    html = html_with_title_and_href(title, href)
     try:
-        title = title_from_tag(html)
+        podcast = podcast_from_tag(html)
     except AssertionError:
         assert True
+
+
+def test_html_without_title():
+    html = html_without_title()
+    try:
+        podcast = podcast_from_tag(html)
+    except AssertionError:
+        assert True
+
+
+def test_html_without_url():
+    html = html_without_url()
+    try:
+        podcast = podcast_from_tag(html)
+    except AssertionError:
+        assert True
+
+
+def test_html_with_invalid_url():
+    html = html_with_invalid_url()
+    try:
+        podcast = podcast_from_tag(html)
+    except AssertionError:
+        assert True
+
+
+def test_html_without_description():
+    html = html_without_description()
+    podcast = podcast_from_tag(html)
+    assert podcast.description == False
 #+end_src
 
 ***** Run tests
 
 #+begin_src sh
-pytest ./franceculture/podcasts/tests/test_title_from_tag.py
+pytest ./franceculture/podcasts/tests/test_podcast_from_tag.py
 #+end_src
 
-*** TODO podcast_from_tag
-**** 1. Objetivo
-**** 2. Firma
-**** 3. Ejemplos
-**** 4. Boceto
-**** 5. Definición
-**** 6. Casos de prueba
 *** TODO tags_from_html
 **** 1. Objetivo
 **** 2. Firma
