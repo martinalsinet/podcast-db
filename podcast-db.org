@@ -31,6 +31,11 @@
   - [[#podcasts][Podcasts]]
   - [[#episodes][Episodes]]
   - [[#html][HTML]]
+- [[#france-culture][France Culture]]
+  - [[#módulos-1][Módulos]]
+  - [[#podcasts-1][Podcasts]]
+  - [[#episodes-1][Episodes]]
+  - [[#html-1][HTML]]
 - [[#interface-desde-línea-de-comandos][Interface desde línea de comandos]]
   - [[#diseño-2][Diseño]]
   - [[#wishlist][Wishlist]]
@@ -437,11 +442,6 @@ pytest sources/tests/test_list_sources.py
 
 * France Inter
 ** Módulos
-
-El módulo actual es =franceinter=, y tiene los siguientes submódulos:
-
-- podcasts
-- episodes
 
 #+begin_src python :tangle franceinter/__init__.py
 
@@ -5938,6 +5938,123 @@ drwxr-xr-x  11 martin  staff   352B Mar 19 00:02 emissions
 -rw-r--r--   1 martin  staff    85K Mar 19 01:05 podcast-list-short.html
 -rw-r--r--   1 martin  staff   4.1M Mar 19 01:05 podcast-list.html
 -rw-r--r--   1 martin  staff    20K Mar 19 01:05 wrong-page.html
+:end:
+
+* France Culture
+** Módulos
+
+#+begin_src python :tangle franceculture/__init__.py
+
+#+end_src
+
+** Podcasts
+*** Wishlist
+
+- [ ] Obtener el listado de los podcasts de France Inter
+- [ ] Para cada podcast obtener el nombre, el url y el autor
+- [ ] Filtrar el listado de podcasts por una palabra clave
+- [ ] Asignarle un identificador a cada podcast
+
+*** TODO Mejoras
+*** =__init.py__=
+**** Funciones
+
+#+begin_src python :tangle franceculture/podcasts/__init__.py
+
+#+end_src
+
+**** Tests
+
+#+begin_src python :tangle franceculture/podcasts/tests/__init__.py
+
+#+end_src
+
+*** TODO podcasts_from_url
+**** 1. Objetivo
+**** 2. Firma
+**** 3. Ejemplos
+**** 4. Boceto
+**** 5. Definición
+**** 6. Casos de prueba
+*** TODO podcasts_with_keyword
+**** 1. Objetivo
+**** 2. Firma
+**** 3. Ejemplos
+**** 4. Boceto
+**** 5. Definición
+**** 6. Casos de prueba
+*** TODO podcasts_from_response
+**** 1. Objetivo
+**** 2. Firma
+**** 3. Ejemplos
+**** 4. Boceto
+**** 5. Definición
+**** 6. Casos de prueba
+*** TODO podcasts_from_tags
+**** 1. Objetivo
+**** 2. Firma
+**** 3. Ejemplos
+**** 4. Boceto
+**** 5. Definición
+**** 6. Casos de prueba
+*** TODO podcasts_from_filename
+**** 1. Objetivo
+**** 2. Firma
+**** 3. Ejemplos
+**** 4. Boceto
+**** 5. Definición
+**** 6. Casos de prueba
+*** TODO tags_from_html
+**** 1. Objetivo
+**** 2. Firma
+**** 3. Ejemplos
+**** 4. Boceto
+**** 5. Definición
+**** 6. Casos de prueba
+*** TODO podcast_from_tag
+**** 1. Objetivo
+**** 2. Firma
+**** 3. Ejemplos
+**** 4. Boceto
+**** 5. Definición
+**** 6. Casos de prueba
+*** TODO title_from_tag
+**** 1. Objetivo
+**** 2. Firma
+**** 3. Ejemplos
+**** 4. Boceto
+**** 5. Definición
+**** 6. Casos de prueba
+*** TODO url_from_tag
+**** 1. Objetivo
+**** 2. Firma
+**** 3. Ejemplos
+**** 4. Boceto
+**** 5. Definición
+**** 6. Casos de prueba
+** Episodes
+** HTML
+
+#+begin_src sh
+mkdir -p ./franceculture/html
+curl -o ./franceculture/html/podcast-list.html https://www.franceculture.fr/emissions
+head -n 1000 ./franceculture/html/podcast-list.html > franceculture/html/podcast-list-short.html
+curl -o ./franceculture/html/episode-list.html https://www.franceculture.fr/emissions/les-chemins-de-la-philosophie
+head -n 1000 ./franceculture/html/episode-list.html > franceculture/html/episode-list-short.html
+curl -o ./franceculture/html/wrong-page.html https://www.pagina12.com.ar
+ls -alh ./franceculture/html
+#+end_src
+
+#+RESULTS:
+:results:
+total 1856
+drwxr-xr-x  7 martin  staff   224B Apr  1 17:54 .
+drwxr-xr-x  3 martin  staff    96B Apr  1 17:54 ..
+-rw-r--r--  1 martin  staff   183K Apr  1 17:54 episode-list-short.html
+-rw-r--r--  1 martin  staff   183K Apr  1 17:54 episode-list.html
+-rw-r--r--  1 martin  staff   143K Apr  1 17:54 podcast-list-short.html
+-rw-r--r--  1 martin  staff   347K Apr  1 17:54 podcast-list.html
+-rw-r--r--  1 martin  staff    20K Apr  1 17:54 wrong-page.html
 :end:
 
 * Interface desde línea de comandos
