@@ -6400,6 +6400,8 @@ podcast-db show-episode --episode franceinter/darwin/2018-04-16
 
 ** TODO Mejoras
 
+- [X] Cobertura de tests en cli.arguments :: Luego de los cambios que se hicieron en las funciones =year_from_arguments= y =month_from_arguments= hay que actualizar algunos tests que antes esperaban una excepción y ahora reciben un =False=
+
 - [ ] =output_from_podcast_list= :: Está devolviendo mal los caracteres acentuados
 
 - [ ] Import de podcasts y episodios :: Hay que crear dos funciones en el módulo =sources= que permitan importar las funciones de podcasts y episodios del módulo correspondiente a una fuente determinada. Podrían llamarse =import_podcasts_from_source= e =import_episodes_from_source=
@@ -7715,11 +7717,8 @@ def test_invalid_year_in_month():
 
 def test_arguments_with_alphabetic_year():
     args = arguments_with_year("twenty-two")
-    try:
-        year = year_from_arguments(args)
-    except AssertionError:
-        assert True
-
+    year = year_from_arguments(args)
+    assert (year == False)
 #+end_src
 
 ****** Run tests
@@ -7789,7 +7788,7 @@ def month_from_arguments(args):
     attr = argument_from_namespace(args, "month")
     if attr:
         (year, month) = month_from_attribute(attr)
-    if month:
+    if year:
         assert (0 < month) and (month < 13), invalid_month(args.month)
     return (year, month)
 
@@ -7856,11 +7855,9 @@ def test_arguments_with_month_14():
 
 def test_arguments_with_alphabetic_month():
     args = arguments_with_month("twelve-oh-four")
-    try:
-        (year, month) = month_from_arguments(args)
-    except AssertionError:
-        assert True
-
+    (year, month) = month_from_arguments(args)
+    assert (year == False)
+    assert (month == False)
 #+end_src
 
 ****** Run tests
