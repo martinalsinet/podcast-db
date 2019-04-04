@@ -9363,6 +9363,7 @@ class LocalFolderHTTPServer(BaseHTTPServer):
 #+begin_src python :tangle utils/html/__init__.py
 from utils.html.attribute_from_tag import attribute_from_tag
 from utils.html.content_from_tag import content_from_tag
+from utils.html.tags_from_html import tags_from_html
 #+end_src
 
 **** Tests
@@ -9683,6 +9684,177 @@ def test_class_not_str():
 
 #+begin_src sh
 pytest ./utils/html/tests/test_content_from_tag.py
+#+end_src
+
+*** tags_from_html
+**** 1. Objetivo
+
+Obtener un array de =str= con los fragmentos de HTML que tengan un tag determinado y un a clase determinada.
+
+**** 2. Firma
+
+La función recibe tres =str=, uno con un fragmento de HTML, y dos con el tag y la clase buscados, y devuelve un =GeneratorType= de =str=
+
+**** 3. Ejemplos
+
+- Un html que tiene varios tags con la clase buscada
+- Un html que no es un =str=
+- Un tag que no es un =str=
+- Una clase que no es un =str=
+- Un html que no tiene ningún tag buscado
+- Un html que tiene varios tags buscados pero que ninguno tenga la clase correcta
+- Un html que tiene algunos tags con la clase buscada y otros que no la tienen
+
+#+begin_src python :tangle utils/html/tests/examples_tags_from_html.py
+def html_with_tags_and_class(tag, cls, how_many):
+    tags = map(lambda x: tag_with_class(tag, cls), range(how_many))
+    return html(tags)
+
+
+def tag_with_class(tag, cls):
+    return f'''<{tag} class="{cls}">this is the tag content</{tag}>'''
+
+
+def html(tags):
+    content = "".join(tags)
+    html = f'''<header><h1>dummy title</h1></header>
+<p>bla bla bla</p>
+{content}
+<ul>
+  <li> item 1 </li>
+  <li> item 2 </li>
+</ul>
+<footer>All rights reserved!</footer>
+    '''
+    return html
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+def tags_from_html(html):
+    # validar que el html sea un string
+    # validar que el html sea un string
+    # validar que el html sea un string
+    tags = []
+    # instanciar un objeto BeautifulSoup
+    # filtrar los tag <div> que tienen la clase "rich-section-list-item-content"
+    return tags
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle utils/html/tags_from_html.py
+from bs4 import BeautifulSoup
+
+
+def tags_from_html(html, tag, cls):
+    assert isinstance(html, str), invalid_parameter("html", html)
+    assert isinstance(tag, str), invalid_parameter("tag", tag)
+    assert isinstance(cls, str), invalid_parameter("cls", cls)
+    soup = BeautifulSoup(html, "html.parser")
+    tags = soup.find_all(tag, class_=cls)
+    for tag in tags:
+        yield str(tag)
+
+
+def invalid_parameter(param, value):
+    return "%s parameter must be a string, received %s instead" % (
+        param, type(value)
+    )
+#+end_src
+
+**** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un HTML que tiene varios tags con la clase buscada, devuelve un =GeneratorType= de =str= con los tags del HTML
+- Cuando recibe un html que no es un =str=, lanza un =AssertionError=
+- Cuando recibe un tag que no es un =str=, lanza un =AssertionError=
+- Cuando recibe una clase que no es un =str=, lanza un =AssertionError=
+- Cuando recibe un html que no tiene ningún tag buscado, devuelve un =GeneratorType= vacío
+- Cuando recibe un html que tiene varios tags buscados pero que ninguno tenga la clase correcta, devuelve un =GeneratorType= vacío
+- Cuando recibe un html que tiene algunos tags con la clase buscada y otros que no la tienen, devuelve un =GeneratorType= con los tags que tienen la clase buscada
+
+#+begin_src python :tangle utils/html/tests/test_tags_from_html.py
+import types
+from utils.html import tags_from_html
+from utils.html.tests.examples_tags_from_html import *
+
+
+def test_html_with_tags():
+    how_many = 5
+    tag = "p"
+    cls = "article"
+    html = html_with_tags_and_class(tag, cls, how_many)
+    tags = tags_from_html(html, tag, cls)
+    assert isinstance(tags, types.GeneratorType)
+    assert (len(list(tags)) == how_many)
+
+
+def test_html_is_not_string():
+    how_many = 5
+    tag = "p"
+    cls = "article"
+    html = 42
+    try:
+        tags = tags_from_html(html, tag, cls)
+    except AssertionError:
+        assert True
+
+
+def test_tag_is_not_string():
+    how_many = 5
+    tag = "p"
+    cls = "article"
+    html = html_with_tags_and_class(tag, cls, how_many)
+    try:
+        tags = tags_from_html(html, 42, cls)
+    except AssertionError:
+        assert True
+
+
+def test_class_is_not_string():
+    how_many = 5
+    tag = "p"
+    cls = "article"
+    html = html_with_tags_and_class(tag, cls, how_many)
+    try:
+        tags = tags_from_html(html, tag, 42)
+    except AssertionError:
+        assert True
+
+
+def test_html_without_tags():
+    how_many = 5
+    tag = "p"
+    cls = "article"
+    html = html_with_tags_and_class(tag, cls, how_many)
+    tags = tags_from_html(html, "header", cls)
+    assert isinstance(tags, types.GeneratorType)
+    assert (len(list(tags)) == 0)
+
+
+def test_html_without_class():
+    how_many = 5
+    tag = "p"
+    cls = "article"
+    html = html_with_tags_and_class(tag, cls, how_many)
+    tags = tags_from_html(html, tag, "title")
+    assert isinstance(tags, types.GeneratorType)
+    assert (len(list(tags)) == 0)
+
+
+def test_some_html_with_tags():
+    html = html_with_tags_and_class("p", "article", 5)
+    html += html_with_tags_and_class("p", "title", 12)
+    tags = tags_from_html(html, "p", "title")
+    assert isinstance(tags, types.GeneratorType)
+    assert (len(list(tags)) == 12)
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest utils/html/tests/test_tags_from_html.py
 #+end_src
 
 * Tests
