@@ -32,12 +32,13 @@
   - [[#episodes][Episodes]]
   - [[#html][HTML]]
 - [[#france-culture][France Culture]]
+  - [[#diseño-2][Diseño]]
   - [[#módulos-1][Módulos]]
   - [[#podcasts-1][Podcasts]]
   - [[#episodes-1][Episodes]]
   - [[#html-1][HTML]]
 - [[#interface-desde-línea-de-comandos][Interface desde línea de comandos]]
-  - [[#diseño-2][Diseño]]
+  - [[#diseño-3][Diseño]]
   - [[#wishlist][Wishlist]]
   - [[#mejoras][Mejoras]]
   - [[#implementación-1][Implementación]]
@@ -2509,12 +2510,6 @@ Episode(title='Le plomb et l'argent', date='2018-06-02')
 *** TODO Mejoras
 
 - [ ] =autopep8= :: Aplicar el estándar PEP8 a todas las funciones
-
-- [ ] =attribute_from_tag= :: Crear una nueva función =attribute_from_tag= para extraer un atributo de un tag con una clase determinada
-
-Luego de la implementación de varias funciones vemos que hay un patrón de código que se repite: Se busca un tag HTML con una clase determinada, y de ese tag se extrae un atributo específico. Podemos ver ejemplos de este patrón en las funciones =title_from_tag=, =url_from_tag= y =author_from_tag= del módulo podcasts y otros tantos en las funciones de este módulo que extraen los atributos del episodio (p.ej. =title_from_tag=). Quizás sea necesario crear un nuevo módulo /Tags/ que contenga la lógica que se encarga de extraer datos de los tags HTML.
-
-Una ventaja adicional de crear un nuevo módulo para manipular los tags es que podemos encapsular el uso de la biblioteca =BeautifulSoup=, y eso nos haría más sencillo el poder reemplazarla llegado el caso. Idealmente, no deberíamos hacer referencia a los objetos o clases de =BeautifulSoup= (p.ej. =bs4.elements.Tag=) en el resto de la aplicación.
 
 - [ ] Módulo =HTML= :: Crear un nuevo módulo =HTML= dentro de =Utils= que tenga la función =html_from_url=
 
@@ -5942,6 +5937,14 @@ drwxr-xr-x  11 martin  staff   352B Mar 19 00:02 emissions
 :end:
 
 * France Culture
+** Diseño
+
+Ahora estamos trabajando con nuestra segunda fuente de podcasts y encontramos que hay funcionalidades que podemos reutilizar de lo hecho con France Inter.
+
+La mayoría de las funciones =podcasts_from_*= y =episodes_from_*= se pueden generalizar a partir de las ya existentes en el módulo France Inter, para poder usarlas en ambos módulos (y en los que vendrán).
+
+El objetivo es que en cada módulo de una fuente queden unicamente las funciones que se usan para extraer los atributos que necesitamos de los podcasts y los episodios a partir del HTML de la fuente.
+
 ** Módulos
 
 #+begin_src python :tangle franceculture/__init__.py
@@ -5949,10 +5952,6 @@ drwxr-xr-x  11 martin  staff   352B Mar 19 00:02 emissions
 #+end_src
 
 ** Podcasts
-*** Diseño
-
-Ahora estamos trabajando con nuestra segunda fuente de podcasts y encontramos que hay funcionalidades que podemos reutilizar de lo hecho en la fuente France Inter.
-
 *** Wishlist
 
 - [ ] Obtener el listado de los podcasts de France Culture
@@ -6399,8 +6398,6 @@ podcast-db show-episode --episode franceinter/darwin/2018-04-16
 - [X] Mostrar el mensaje con la versión
 
 ** TODO Mejoras
-
-- [X] Cobertura de tests en cli.arguments :: Luego de los cambios que se hicieron en las funciones =year_from_arguments= y =month_from_arguments= hay que actualizar algunos tests que antes esperaban una excepción y ahora reciben un =False=
 
 - [ ] =output_from_podcast_list= :: Está devolviendo mal los caracteres acentuados
 
@@ -10850,6 +10847,12 @@ AssertionError: received tag has an invalid episode URL
 
 - [X] Refactor :: Refactor de =episodes_from_year=, =episodes_from_month= y =episodes_from_day= para que usen =episodes_between_dates= ([[https://github.com/martinalsinet/podcast-db/commit/e547e44753d5f4fc3a89646ab41cccff0196dec3][f4dacab]], [[https://github.com/martinalsinet/podcast-db/commit/8f4d980ea26990e66d30d2559c434390b42d0d5b][8f4d980]], [[https://github.com/martinalsinet/podcast-db/commit/e547e44753d5f4fc3a89646ab41cccff0196dec3][e547e44]])
 
+- [X] =attribute_from_tag= :: Crear una nueva función =attribute_from_tag= para extraer un atributo de un tag con una clase determinada
+
+Luego de la implementación de varias funciones vemos que hay un patrón de código que se repite: Se busca un tag HTML con una clase determinada, y de ese tag se extrae un atributo específico. Podemos ver ejemplos de este patrón en las funciones =title_from_tag=, =url_from_tag= y =author_from_tag= del módulo podcasts y otros tantos en las funciones de este módulo que extraen los atributos del episodio (p.ej. =title_from_tag=). Quizás sea necesario crear un nuevo módulo /Tags/ que contenga la lógica que se encarga de extraer datos de los tags HTML.
+
+Una ventaja adicional de crear un nuevo módulo para manipular los tags es que podemos encapsular el uso de la biblioteca =BeautifulSoup=, y eso nos haría más sencillo el poder reemplazarla llegado el caso. Idealmente, no deberíamos hacer referencia a los objetos o clases de =BeautifulSoup= (p.ej. =bs4.elements.Tag=) en el resto de la aplicación. ([[https://github.com/martinalsinet/podcast-db/commit/2d1cd88d02256b114c61bbe923571ddc149434c9][2d1cd88]])
+
 *** CLI
 
 - [X] Corregir los imports :: Declarar las funciones que se exportan en cada módulo dentro del archivo =__init.py__= ([[https://github.com/martinalsinet/podcast-db/commit/d79cf61f6cdaf127c3969c0a73b4880206f9a854][d79cf61]])
@@ -10863,3 +10866,6 @@ AssertionError: received tag has an invalid episode URL
 - [X] Búsqueda de podcast o episodio :: Dentro del módulo =cli.output= están las funciones que muestran el detalle de un podcast o episodio. Estas funciones reciben el identificador del registro buscado, y puede suceder que cuando se realice la búsqueda se encuentre más de un resultado (o ninguno). En ese caso es necesario mostrar un mensaje de error ("Multiple/No records found"). Hay que crear una función =output_from_non_unique_record= que reciba un listado de resultados y devuelva un =str= con el mensaje correspondiente. ([[https://github.com/martinalsinet/podcast-db/commit/19f31e63e33fd547c9c8a473aa18567f4b232cca][19f31e6]])
 
 - [X] Argumentos opcionales --year y --month :: Actualmente las funciones =year_from_arguments= y =month_from_arguments= lanzan un =AssertionError= si no existe la propiedad =year= y =month= respectivamente. Esto obliga a preguntar si existe el atributo antes de usarlas, para no disparar la excepción, lo cual complica el código innecesariamente. Hay que modificar estas funciones para que devuelvan =False= si la propiedad necesaria no está presente en los argumentos. ([[https://github.com/martinalsinet/podcast-db/commit/25eb9145ed938d2702813b01ad45bed89e3294bc][25eb914]])
+
+- [X] Cobertura de tests en cli.arguments :: Luego de los cambios que se hicieron en las funciones =year_from_arguments= y =month_from_arguments= hay que actualizar algunos tests que antes esperaban una excepción y ahora reciben un =False= ([[https://github.com/martinalsinet/podcast-db/commit/e2f978029da3ccee9c939af81648cdee3330d553][e2f9780]])
+
