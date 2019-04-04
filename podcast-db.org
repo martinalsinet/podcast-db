@@ -2511,7 +2511,7 @@ Episode(title='Le plomb et l'argent', date='2018-06-02')
 
 - [ ] =autopep8= :: Aplicar el estándar PEP8 a todas las funciones
 
-- [ ] Módulo =HTML= :: Crear un nuevo módulo =HTML= dentro de =Utils= que tenga la función =html_from_url=
+- [X] Módulo =HTML= :: Crear un nuevo módulo =HTML= dentro de =Utils= que tenga la función =html_from_url=
 
 A primera vista, la función =html_from_url= parecería ser una función trivial que quizás no debiera existir. Sin embargo, al encapsular las peticiones HTTP en esta función ganamos la posibilidad de cambiar la dependencia de la biblioteca =requests= en caso que sea necesario. Por ahora la colocamos en el módulo episodes, pero la idea es extraerla en un nuevo módulo =HTML= dentro de =Utils= para poder utilizarla en otras partes de la aplicación. Así podríamos utilizarla, por ejemplo, en la función =podcasts_from_url=.
 
@@ -2529,7 +2529,6 @@ from franceinter.episodes.url_from_tag import url_from_tag
 from franceinter.episodes.date_from_tag import date_from_tag
 from franceinter.episodes.duration_from_tag import duration_from_tag
 from franceinter.episodes.episode_from_tag import episode_from_tag
-from franceinter.episodes.html_from_url import html_from_url
 from franceinter.episodes.lastpage_from_html import lastpage_from_html
 from franceinter.episodes.pages_from_podcast import pages_from_podcast
 from franceinter.episodes.tags_from_html import tags_from_html
@@ -4335,7 +4334,8 @@ def pages_from_podcast(podcast):
 
 #+begin_src python :tangle franceinter/episodes/pages_from_podcast.py
 from franceinter.podcasts import Podcast
-from franceinter.episodes import html_from_url, lastpage_from_html
+from franceinter.episodes import lastpage_from_html
+from utils.html import html_from_url
 
 def pages_from_podcast(podcast):
     assert isinstance(podcast, Podcast), invalid_podcast(podcast)
@@ -4558,150 +4558,6 @@ def test_html_without_link():
 
 #+begin_src sh
 pytest franceinter/episodes/tests/test_lastpage_from_html.py
-#+end_src
-
-*** html_from_url
-**** 1. Objetivo
-
-Obtener el HTML de un URL
-
-**** 2. Firma
-
-La función recibe un =str= con un URL válido y devuelve otro =str= con el HTML del URL
-
-**** 3. Ejemplos
-
-- Caso exitoso, un URL válido
-- Un URL que no es un =str=
-- Un URL inválido
-- Un URL válido, pero que causa un =ConnectionError= porque el host no existe
-- Un URL válido, pero de una página que no existe
-
-#+begin_src python :tangle franceinter/episodes/tests/examples_html_from_url.py
-
-def valid_url():
-    url = "http://localhost:3000/episode-list.html"
-    return url
-
-def not_str_url():
-    url = 1234
-    return url
-
-def invalid_url():
-    url = "ghu:\\{this]url^is((not?valid.com"
-    return url
-
-def not_found_url():
-    url = "http://localhost:3000/this-page-does-not-exist.html"
-    return url
-
-def connection_error_url():
-    url = "http://host.local:3000/this-page-does-not-exist.html"
-    return url
-
-#+end_src
-
-**** 4. Boceto
-
-#+begin_src python
-
-def html_from_url(url):
-    # validar el URL
-    # ejecutar la petición HTTP
-    # si no hay error de conexión
-    # devolver el texto de la respuesta
-
-#+end_src
-
-**** 5. Definición
-
-#+begin_src python :tangle franceinter/episodes/html_from_url.py
-import requests
-from validators.url import url as is_valid_url
-
-def html_from_url(url):
-    assert isinstance(url, str), invalid_str(url)
-    assert is_valid_url(url), invalid_url(url)
-    try:
-        response = requests.get(url)
-        return response.text
-    except requests.ConnectionError:
-        assert False, connection_error(url)
-        
-def invalid_str(url):
-    return "url parameter must be string, received %s instead" % str(type(url))
-
-def invalid_url(url):
-    return "url parameter must be a valid URL, received %s instead" % url
-
-def connection_error(url):
-    return "request to %s failed with a connection error" % url
-
-#+end_src
-
-**** 6. Casos de prueba
-
-- Caso exitoso, cuando recibe un URL válido devuelve el HTML de la página
-- Cuando recibe un URL que no es un =str=, lanza un =AssertionError=
-- Cuando recibe un URL inválido, lanza un =AssertionError=
-- Cuando recibe un URL válido pero cuyo host no existe, lanza un =AssertionError=
-- Cuando recibe un URL válido pero cuya página, devuelve un =str= vacío
-
-#+begin_src python :tangle franceinter/episodes/tests/test_html_from_url.py
-import os
-import re
-import pytest
-import threading
-from franceinter.episodes import html_from_url
-from franceinter.episodes.tests.examples_html_from_url import *
-from utils.http_server import LocalFolderHTTPServer as HTTPServer
-
-def test_url_ok(http_server):
-    url = valid_url()
-    html = html_from_url(url)
-    assert isinstance(html, str)
-    assert (len(html) > 0)
-
-def test_not_str_url(http_server):
-    url = not_str_url()
-    try:
-        html = html_from_url(url)
-    except AssertionError:
-        assert True
-
-def test_invalid_url():
-    url = invalid_url()
-    try:
-        html = html_from_url(url)
-    except AssertionError:
-        assert True
-
-def test_not_found_url(http_server):
-    url = not_found_url()
-    html = html_from_url(url)
-    assert re.search("NOT_FOUND", html)
-
-@pytest.mark.skipif(os.environ.get('ENV') == 'DEV', reason="Slow test (~10 sec) waiting for DNS error")
-def test_wrong_site_url(http_server):
-    url = connection_error_url()
-    try:
-        html = html_from_url(url)
-    except AssertionError:
-        assert True
-
-@pytest.fixture(scope="module")
-def http_server():
-    web_dir = './franceinter/html'
-    httpd = HTTPServer(web_dir, ("", 3000))
-    threading.Thread(target=httpd.serve_forever).start()
-    yield httpd
-    httpd.shutdown()
-#+end_src
-
-***** Run tests
-
-#+begin_src sh
-pytest franceinter/episodes/tests/test_html_from_url.py
 #+end_src
 
 *** tags_from_html
@@ -5961,8 +5817,6 @@ El objetivo es que en cada módulo de una fuente queden unicamente las funciones
 
 *** TODO Mejoras
 
-- [ ] Reemplazar la función =title_from_tag= :: Vemos que las funciones =title_from_tag=, =author_from_tag= y =description_from_tag= se pueden reemplazar por un llamado a =utils.html.content_from_tag==, dado que lo único que hacen es extraer el contenido de un tag con una clase en particular.
-
 - [ ] Extraer las funciones =podcasts_from_*= :: Hay que crear un módulo genérico =podcasts= que tenga las funciones que obtienen y filtran los podcasts que se diseñaron en el módulo FranceInter. Este nuevo módulo debe llamar a las funciones correspondientes que saben como parsear cada fuente.
 
 *** =__init.py__=
@@ -6285,13 +6139,6 @@ def test_html_without_description():
 pytest ./franceculture/podcasts/tests/test_podcast_from_tag.py
 #+end_src
 
-*** TODO tags_from_html
-**** 1. Objetivo
-**** 2. Firma
-**** 3. Ejemplos
-**** 4. Boceto
-**** 5. Definición
-**** 6. Casos de prueba
 *** TODO podcasts_from_url
 **** 1. Objetivo
 **** 2. Firma
@@ -9361,6 +9208,7 @@ class LocalFolderHTTPServer(BaseHTTPServer):
 from utils.html.attribute_from_tag import attribute_from_tag
 from utils.html.content_from_tag import content_from_tag
 from utils.html.tags_from_html import tags_from_html
+from utils.html.html_from_url import html_from_url
 #+end_src
 
 **** Tests
@@ -9852,6 +9700,159 @@ def test_some_html_with_tags():
 
 #+begin_src sh
 pytest utils/html/tests/test_tags_from_html.py
+#+end_src
+
+*** html_from_url
+**** 1. Objetivo
+
+Obtener el HTML de un URL
+
+**** 2. Firma
+
+La función recibe un =str= con un URL válido y devuelve otro =str= con el HTML del URL
+
+**** 3. Ejemplos
+
+- Caso exitoso, un URL válido
+- Un URL que no es un =str=
+- Un URL inválido
+- Un URL válido, pero que causa un =ConnectionError= porque el host no existe
+- Un URL válido, pero de una página que no existe
+
+#+begin_src python :tangle utils/html/tests/examples_html_from_url.py
+def valid_url():
+    url = "http://localhost:3000/episode-list.html"
+    return url
+
+
+def not_str_url():
+    url = 1234
+    return url
+
+
+def invalid_url():
+    url = "ghu:\\{this]url^is((not?valid.com"
+    return url
+
+
+def not_found_url():
+    url = "http://localhost:3000/this-page-does-not-exist.html"
+    return url
+
+
+def connection_error_url():
+    url = "http://host.local:3000/this-page-does-not-exist.html"
+    return url
+#+end_src
+
+**** 4. Boceto
+
+#+begin_src python
+def html_from_url(url):
+    # validar el URL
+    # ejecutar la petición HTTP
+    # si no hay error de conexión
+    # devolver el texto de la respuesta
+#+end_src
+
+**** 5. Definición
+
+#+begin_src python :tangle utils/html/html_from_url.py
+import requests
+from validators.url import url as is_valid_url
+
+
+def html_from_url(url):
+    assert isinstance(url, str), invalid_str(url)
+    assert is_valid_url(url), invalid_url(url)
+    try:
+        response = requests.get(url)
+        return response.text
+    except requests.ConnectionError:
+        assert False, connection_error(url)
+
+        
+def invalid_str(url):
+    return "url parameter must be string, received %s instead" % str(type(url))
+
+
+def invalid_url(url):
+    return "url parameter must be a valid URL, received %s instead" % url
+
+
+def connection_error(url):
+    return "request to %s failed with a connection error" % url
+#+end_src
+
+**** 6. Casos de prueba
+
+- Caso exitoso, cuando recibe un URL válido devuelve el HTML de la página
+- Cuando recibe un URL que no es un =str=, lanza un =AssertionError=
+- Cuando recibe un URL inválido, lanza un =AssertionError=
+- Cuando recibe un URL válido pero cuyo host no existe, lanza un =AssertionError=
+- Cuando recibe un URL válido pero cuya página, devuelve un =str= vacío
+
+#+begin_src python :tangle utils/html/tests/test_html_from_url.py
+import os
+import re
+import pytest
+import threading
+from utils.html import html_from_url
+from utils.html.tests.examples_html_from_url import *
+from utils.http_server import LocalFolderHTTPServer as HTTPServer
+
+
+def test_url_ok(http_server):
+    url = valid_url()
+    html = html_from_url(url)
+    assert isinstance(html, str)
+    assert (len(html) > 0)
+
+
+def test_not_str_url(http_server):
+    url = not_str_url()
+    try:
+        html = html_from_url(url)
+    except AssertionError:
+        assert True
+
+
+def test_invalid_url():
+    url = invalid_url()
+    try:
+        html = html_from_url(url)
+    except AssertionError:
+        assert True
+
+
+def test_not_found_url(http_server):
+    url = not_found_url()
+    html = html_from_url(url)
+    assert re.search("NOT_FOUND", html)
+
+
+@pytest.mark.skipif(os.environ.get('ENV') == 'DEV', reason="Slow test (~10 sec) waiting for DNS error")
+def test_wrong_site_url(http_server):
+    url = connection_error_url()
+    try:
+        html = html_from_url(url)
+    except AssertionError:
+        assert True
+
+
+@pytest.fixture(scope="module")
+def http_server():
+    web_dir = './franceinter/html'
+    httpd = HTTPServer(web_dir, ("", 3000))
+    threading.Thread(target=httpd.serve_forever).start()
+    yield httpd
+    httpd.shutdown()
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest utils/html/tests/test_html_from_url.py
 #+end_src
 
 * Tests
@@ -10852,6 +10853,10 @@ AssertionError: received tag has an invalid episode URL
 Luego de la implementación de varias funciones vemos que hay un patrón de código que se repite: Se busca un tag HTML con una clase determinada, y de ese tag se extrae un atributo específico. Podemos ver ejemplos de este patrón en las funciones =title_from_tag=, =url_from_tag= y =author_from_tag= del módulo podcasts y otros tantos en las funciones de este módulo que extraen los atributos del episodio (p.ej. =title_from_tag=). Quizás sea necesario crear un nuevo módulo /Tags/ que contenga la lógica que se encarga de extraer datos de los tags HTML.
 
 Una ventaja adicional de crear un nuevo módulo para manipular los tags es que podemos encapsular el uso de la biblioteca =BeautifulSoup=, y eso nos haría más sencillo el poder reemplazarla llegado el caso. Idealmente, no deberíamos hacer referencia a los objetos o clases de =BeautifulSoup= (p.ej. =bs4.elements.Tag=) en el resto de la aplicación. ([[https://github.com/martinalsinet/podcast-db/commit/2d1cd88d02256b114c61bbe923571ddc149434c9][2d1cd88]])
+
+*** France Culture
+
+- [X] Reemplazar la función =title_from_tag= :: Vemos que las funciones =title_from_tag=, =author_from_tag= y =description_from_tag= se pueden reemplazar por un llamado a =utils.html.content_from_tag==, dado que lo único que hacen es extraer el contenido de un tag con una clase en particular. ([[https://github.com/martinalsinet/podcast-db/commit/d69434e39ece9bfe91b1e0fa113b2a85621aa5d0][d69434e]])
 
 *** CLI
 
