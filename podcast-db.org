@@ -650,7 +650,7 @@ def http_server():
 pytest podcasts/tests/test_podcasts_from_url.py
 #+end_src
 
-*** podcasts_with_keyword
+*** DONE podcasts_with_keyword
 **** 1. Objetivo
 
 Filtrar un listado de podcasts y obtener solamente los que contienen una palabra clave en el título o en el autor
@@ -674,7 +674,7 @@ Para el listado de podcasts vamos a recibir cualquier objeto que sea iterable, c
 
 #+begin_src python :tangle podcasts/tests/examples_podcasts_with_keyword.py
 import random
-from franceinter.podcasts import Podcast
+from podcasts import Podcast
 
 
 def podcasts_with_word_in_title(word):
