@@ -27,6 +27,9 @@
   - [[#diseño-1][Diseño]]
   - [[#implementación][Implementación]]
 - [[#podcasts][Podcasts]]
+  - [[#diseño-2][Diseño]]
+  - [[#wishlist][Wishlist]]
+  - [[#mejoras][Mejoras]]
   - [[#implementación-1][Implementación]]
 - [[#france-inter][France Inter]]
   - [[#módulos][Módulos]]
@@ -34,15 +37,15 @@
   - [[#episodes][Episodes]]
   - [[#html][HTML]]
 - [[#france-culture][France Culture]]
-  - [[#diseño-2][Diseño]]
+  - [[#diseño-3][Diseño]]
   - [[#módulos-1][Módulos]]
   - [[#podcasts-2][Podcasts]]
   - [[#episodes-1][Episodes]]
   - [[#html-1][HTML]]
 - [[#interface-desde-línea-de-comandos][Interface desde línea de comandos]]
-  - [[#diseño-3][Diseño]]
-  - [[#wishlist][Wishlist]]
-  - [[#mejoras][Mejoras]]
+  - [[#diseño-4][Diseño]]
+  - [[#wishlist-1][Wishlist]]
+  - [[#mejoras-1][Mejoras]]
   - [[#implementación-2][Implementación]]
 - [[#herramientas][Herramientas]]
   - [[#módulos-2][Módulos]]
@@ -319,6 +322,7 @@ dist
 downloads
 franceculture
 franceinter
+podcasts
 podcast-db
 podcast-db.spec
 requirements.txt
@@ -445,6 +449,26 @@ pytest sources/tests/test_list_sources.py
 #+end_src
 
 * Podcasts
+** Diseño
+
+Al agregar la segunda fuente de podcasts (France Culture) surge la necesidad de crear un módulo genérico de Podcasts para no tener que duplicar muchas funciones que ya se hicieron para la fuente France Inter. Por ejemplo, la función =podcasts_with_keyword=, que filtra los podcasts por palabra clave, se puede usar con cualquier fuente, no solamente con los de France Inter. Sin embargo, actualmente esa función junto con varias otras están dentro del módulo franceinter.
+
+Por lo tanto, el objetivo de este módulo es contener todas las funciones que manipulan los podcasts de manera genérica, sin importar la fuente.
+
+** Wishlist
+
+- [ ] Agregar la función =podcast_from_url=
+- [ ] Agregar la función =podcast_with_keyword=
+- [ ] Agregar la función =podcast_from_response=
+- [ ] Agregar la función =podcast_from_tags=
+- [ ] Agregar la función =podcast_from_filename=
+- [ ] Crear una nueva función =podcasts_from_source=
+- [ ] Crear una nueva función =tags_from_html=
+- [ ] Integrar este módulo con la fuente FranceCulture
+- [ ] Integrar este módulo con la fuente FranceInter
+- [ ] Integrar este módulo con el módulo CLI
+
+** TODO Mejoras
 ** Implementación
 *** =__init.py__=
 **** Funciones
