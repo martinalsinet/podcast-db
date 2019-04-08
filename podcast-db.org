@@ -3153,7 +3153,7 @@ def test_title_not_found():
 pytest ./franceinter/podcasts/tests/test_url_from_tag.py
 #+end_src
 
-*** author_from_tag
+*** TODO author_from_tag
 **** 1. Objetivo
 
 Obtener el autor del podcast de un fragmento de html. 
@@ -3162,7 +3162,7 @@ El autor se encuentra en el atributo =title= de un =<a>= que está dentro de un 
 
 **** 2. Firma
 
-La funcion recibe un objeto =bs4.element.Tag= y devuelve un =str=
+La funcion recibe un objeto =str= con un fragmento de HTML y devuelve un =str= con el autor del podcast
 
 **** 3. Ejemplos
 
@@ -3172,8 +3172,6 @@ La funcion recibe un objeto =bs4.element.Tag= y devuelve un =str=
 - El tag tiene un =<span>= que contiene un =<a>=, pero éste no tiene el atributo =title=
 
 #+begin_src python :tangle franceinter/podcasts/tests/examples_author_from_tag.py
-from bs4 import BeautifulSoup
-
 def tag_with_author():
     html = '''<div>
 <p>Lorem ipsum</p>
@@ -3181,17 +3179,15 @@ def tag_with_author():
 <a title="William Shakespeare"></a>
 </span>
     </div>'''
-    soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
-    return tag
+    return html
+
 
 def tag_without_span():
     html = '''<div class="boldest">
 Extremely bold
     </div>'''
-    soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
-    return tag
+    return html
+
 
 def tag_without_link():
     html = '''<div>
@@ -3200,9 +3196,8 @@ def tag_without_link():
 <p title="William Shakespeare"></p>
 </span>
     </div>'''
-    soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
-    return tag
+    return html
+
 
 def tag_without_title():
     html = '''<div>
@@ -3211,23 +3206,14 @@ def tag_without_title():
 <a subtitle="William Shakespeare"></a>
 </span>
     </div>'''
-    soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
-    return tag
-
+    return html
 #+end_src
-
-#+RESULTS:
-:results:
-True
-:end:
 
 **** 4. Boceto
 
 #+begin_src python
-
 def author_from_tag(tag):
-    # validar que el tag sea un bs4.element.Tag
+    # validar que el tag sea un str
     # devuelve un string
     author = ""
     # hay que buscar un span con la clase "rich-section..."
@@ -3235,49 +3221,47 @@ def author_from_tag(tag):
     # si existe el a hay que revisar si tiene el atributo title
     # si tiene el atributo title se guarda en la variable author
     return author
-    
 #+end_src
-
-#+RESULTS:
-:results:
-None
-:end:
 
 **** 5. Definición
 
 #+begin_src python :tangle franceinter/podcasts/author_from_tag.py
-import bs4
+from utils.html import (
+    html_from_tag,
+    attribute_from_tag
+)
 
 def author_from_tag(tag):
-    assert isinstance(tag, bs4.element.Tag), invalid_tag(tag)
+    assert isinstance(tag, str), invalid_tag(tag)
+    author = False
+    tag_name = "span"
     cls = "rich-section-list-item-content-infos-author"
-    span = tag.find("span", class_=cls)
-    author = ""
-    if span:
-        link = span.find("a")
-        if link and "title" in link.attrs:
-            author = link.attrs["title"]
+    html = html_from_tag(tag, tag_name, cls)
+    if html:
+        author = attribute_from_tag(html, "a", "", "title")
     return author
 
 def invalid_tag(tag):
-    return "tag parameter must be an instance of bs4.element.Tag, received %s instead" % str(type(tag))
+    return "tag parameter must be an instance of str, received %s instead" % str(type(tag))
 #+end_src
 
 **** 6. Casos de prueba
 
 - Caso exitoso, devuelve el autor
 - Cuando recibe un tag que no es un bs4.element.tag, lanza un =AssertionError=
-- Cuando recibe un tag que no tiene un tag =<span>= con la clase buscada, devuelve un string vacío
-- Cuando recibe un tag que tiene el =<span>= pero éste no contiene un =<a>=, devuelve un string vacío
-- Cuando recibe un tag que tiene el =<span>= y el =<a>= pero éste último no tiene el atributo =title=, devuelve un string vacío
+- Cuando recibe un tag que no tiene un tag =<span>= con la clase buscada, devuelve =False=
+- Cuando recibe un tag que tiene el =<span>= pero éste no contiene un =<a>=, devuelve =False=
+- Cuando recibe un tag que tiene el =<span>= y el =<a>= pero éste último no tiene el atributo =title=, devuelve =False=
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_author_from_tag.py
 from franceinter.podcasts import author_from_tag
 from franceinter.podcasts.tests.examples_author_from_tag import *
 
+
 def test_author_ok():
     tag = tag_with_author()
     assert ("William Shakespeare" == author_from_tag(tag))
+
 
 def test_invalid_tag():
     try:
@@ -3285,24 +3269,21 @@ def test_invalid_tag():
     except AssertionError:
         assert True
 
+
 def test_span_not_found():
     tag = tag_without_span()
-    assert ("" == author_from_tag(tag))
+    assert (False == author_from_tag(tag))
+
 
 def test_a_not_found():
     tag = tag_without_link()
-    assert ("" == author_from_tag(tag))
+    assert (False == author_from_tag(tag))
+
 
 def test_title_not_found():
     tag = tag_without_title()
-    assert ("" == author_from_tag(tag))
-
+    assert (False == author_from_tag(tag))
 #+end_src
-
-#+RESULTS:
-:results:
-None
-:end:
 
 ***** Run tests
 
