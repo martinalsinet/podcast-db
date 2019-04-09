@@ -397,7 +397,7 @@ from sources.source import Source
 
 
 def list_sources():
-    sources = [franceinter(), testing()]
+    sources = [franceinter(), franceculture(), testing()]
     return sources
 
 
@@ -432,11 +432,13 @@ from sources import Source
 
 def test_sources_ok():
     sources = list_sources()
-    assert (len(sources) == 2)
+    assert (len(sources) == 3)
     assert (sources[0].name == "franceinter")
     assert (sources[0].code == "fri")
-    assert (sources[1].name == "testing")
-    assert (sources[1].code == "tst")
+    assert (sources[1].name == "franceculture")
+    assert (sources[1].code == "frc")
+    assert (sources[2].name == "testing")
+    assert (sources[2].code == "tst")
     for source in sources:
         assert isinstance(source, Source)
         assert len(str(source)) > 0
