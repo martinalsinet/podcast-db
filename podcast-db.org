@@ -10195,6 +10195,7 @@ class LocalFolderHTTPServer(BaseHTTPServer):
 #+begin_src python :tangle utils/html/__init__.py
 from utils.html.attribute_from_tag import attribute_from_tag
 from utils.html.content_from_tag import content_from_tag
+from utils.html.html_from_tag import html_from_tag
 from utils.html.tags_from_html import tags_from_html
 from utils.html.html_from_url import html_from_url
 #+end_src
@@ -10261,14 +10262,14 @@ def attribute_from_tag(html, tag, cls, attr):
 from bs4 import BeautifulSoup
 
 
-def attribute_from_tag(html, tag, cls, attr):
+def attribute_from_tag(html, tag_name, cls, attr):
     assert isinstance(html, str), invalid_str("html", html)
-    assert isinstance(tag, str), invalid_str("tag", tag)
+    assert isinstance(tag_name, str), invalid_str("tag", tag_name)
     assert isinstance(cls, str), invalid_str("cls", cls)
     assert isinstance(attr, str), invalid_str("attr", attr)
     value = False
     soup = BeautifulSoup(html, "html.parser")
-    tag = soup.find(tag, class_=cls)
+    tag = soup.find(tag_name, class_=cls)
     if tag and attr in tag.attrs:
         value = tag.attrs[attr]
     return value
