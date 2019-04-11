@@ -1295,121 +1295,108 @@ def test_invalid_filename():
 pytest ./podcasts/tests/test_podcasts_from_filename.py
 #+end_src
 
-*** tags_from_html
+*** DOING tags_from_html
 **** 1. Objetivo
 
-Obtener un array de tags con el fragmento de html que tiene el detalle del podcast (título, URL y autor) a partir del html de la página con el listado de podcasts
+Obtener un array de tags con los fragmentos de html que tienen el detalle del podcast (título, URL, autor y descripción) a partir del html de la página con el listado de podcasts de una fuente
 
 **** 2. Firma
 
-La función recibe un =str= con el html de la página y devuelve un =GeneratorType= de =str= con los fragmentos de HTML buscados
+La función recibe un =str= con el HTML de la página y un objeto =sources.Source= con la fuente de podcasts, y devuelve un =GeneratorType= de =str= con los fragmentos de HTML encontrados
 
 **** 3. Ejemplos
 
-- Un html que tiene varios =<div>= con la clase buscada
+- Caso exitoso, un html que tiene varios tags con la clase buscada
 - Un html que no es un =str=
-- Un html que no tiene ningún =<div>=
-- Un html que tiene varios =<div>= pero que ninguno tenga la clase =rich-section-list-item-content=
-- Un html que tiene algunos =<div>= con la clase buscada y otros que no la tienen
+- Una fuente que no es un =sources.Source=
+- Una fuente desconocida
+- Un html que no tiene ningún tag
+- Un html que tiene varios tags pero que ninguno tenga la clase buscada
+- Un html que tiene algunos tags con la clase buscada y otros que no la tienen
 
 #+begin_src python :tangle podcasts/tests/examples_tags_from_html.py
-from bs4 import BeautifulSoup
-import random
+def html_with_tag_and_class(tag, cls, how_many):
+    tags = map(lambda x: tag_with_class(tag, cls), range(how_many))
+    return html(tags)
 
-def html_with_divs(how_many):
-    class_name = "rich-section-list-item-content"
-    divs = map(lambda x: div(class_name), range(how_many))
-    return html(divs)
 
-def html_is_not_string():
-    return 42
+def tag_with_class(tag, cls):
+    return f'''<{tag} %s>tag body</{tag}>'''
 
-def html_without_divs():
-    html = '''<header><h1>dummy title</h1></header>
+
+def html(tags):
+    tag_str = "".join(tags)
+    html = f'''<header><h1>dummy title</h1></header>
 <p>bla bla bla</p>
+{tag_str}
 <ul>
   <li> item 1 </li>
   <li> item 2 </li>
 </ul>
 <footer>All rights reserved!</footer>'''
     return html
-
-def html_divs_without_class(how_many):
-    divs = map(lambda x: div(), range(how_many))
-    return html(divs)
-
-def html_some_divs_with_class(how_many_with, how_many_without):
-    class_name = "rich-section-list-item-content"
-    divs_with = list(map(lambda x: div(class_name), range(how_many_with)))
-    divs_without = list(map(lambda x: div(), range(how_many_without)))
-    divs = divs_with + divs_without
-    random.shuffle(divs)
-    return html(divs)
-
-def div(class_name=""):
-    attr = ""
-    if class_name:
-        attr = "class=%s" % class_name
-    html = '''<div %s>
-    here goes the div body
-</div>''' % attr
-    soup = BeautifulSoup(html, "html.parser")
-    return soup.div
-
-def html(divs):
-    div_str = "".join(map(lambda div: str(div), divs))
-    html = '''<header><h1>dummy title</h1></header>
-<p>bla bla bla</p>
-%s
-<ul>
-  <li> item 1 </li>
-  <li> item 2 </li>
-</ul>
-<footer>All rights reserved!</footer>
-    ''' % div_str
-    return html
-    
 #+end_src
 
 **** 4. Boceto
 
 #+begin_src python
-from bs4 import BeautifulSoup
-
-def tags_from_html(html):
+def tags_from_html(html, source):
     # validar que el html sea un string
+    # validar que la fuente sea un sources.Source
     tags = []
-    # instanciar un objeto BeautifulSoup
-    # filtrar los tag <div> que tienen la clase "rich-section-list-item-content"
+    # obtener la función tags_from_html de la fuente correcta
+    # extraer los tags llaman
     return tags
-
 #+end_src
 
 **** 5. Definición
 
 #+begin_src python :tangle podcasts/tags_from_html.py
-from bs4 import BeautifulSoup
+from sources import Source, list_sources
 
-def tags_from_html(html):
+
+def tags_from_html(html, source):
     assert isinstance(html, str), invalid_html(html)
-    soup = BeautifulSoup(html, "html.parser")
-    cls = "rich-section-list-item-content"
-    tags = soup.find_all("div", class_=cls)
+    assert isinstance(source, Source), invalid_source(source)
+    tags_from_html = handler(source)
+    tags = tags_from_html(html)
     for tag in tags:
         yield tag
+
+
+def handler(source):
+    assert source in list_sources(), unknown_source(source)
+    import franceinter, testing, franceculture
+    handlers = {
+        "franceinter": franceinter.tags_from_html, 
+        "testing": franceinter.tags_from_html,
+        "franceculture": franceculture.tags_from_html
+    }
+    return handlers[source.name]
+
 
 def invalid_html(html):
     return "html parameter must be a string, received %s instead" % type(html)
 
+
+def invalid_source(source):
+    return "source parameter must be a sources.Source, received %s instead" % type(source)
+
+
+def unknown_source(source):
+    return "source parameter is unknown: %s" % source
 #+end_src
 
 **** 6. Casos de prueba
 
-- Caso exitoso, cuando recibe un html que tiene varios =<div>= con la clase buscada, devuelve un =GeneratorType= de tantos elementos como =<div>= hay en el html
-- Cuando recibe un html que no es un string, lanza un =AssertionError=
-- Cuando recibe un html que no tiene ningún =<div>=, devuelve un =GeneratorType= vacío
-- Cuando recibe un html que tiene varios =<div>= pero ninguno tiene la clase =rich-section-list-item-content=, devuelve un =GeneratorType= vacío
-- Cuando recibe un html que tiene algunos =<div>= con la clase buscada y otros que no la tienen, devuelve un =GeneratorType= con solamente los =<div>= que tienen la clase
+- Caso exitoso, cuando recibe un fragmento de HTML que tiene varios =<div>= con la clase =rich-section-list-item-content= y un =sources.Source= con la fuente France Inter, devuelve un =GeneratorType= de tantos =str= como tags encontrados
+- Caso exitoso, cuando recibe un fragmento de HTML que tiene varios =<div>= con la clase =rich-section-list-item-content= y un =sources.Source= con la fuente France Culture, devuelve un =GeneratorType= de tantos =str= como tags encontrados
+- Cuando recibe un html que no es un =str=, lanza un =AssertionError=
+- Cuando recibe una fuente que no es un =sources.Source=, lanza un =AssertionError=
+- Cuando recibe una fuente desconocida, lanza un =AssertionError=
+- Cuando recibe un html que no tiene ningún tag buscado, devuelve un =GeneratorType= vacío
+- Un html que tiene varios tags pero que ninguno tenga la clase buscada, devuelve un =GeneratorType= vacío
+- Un html que tiene algunos tags con la clase buscada y otros que no la tienen, devuelve un =GeneratorType= con tantos =str= como tags tengan la clase buscada
 
 #+begin_src python :tangle podcasts/tests/test_tags_from_html.py
 import types
