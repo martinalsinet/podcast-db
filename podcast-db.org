@@ -466,9 +466,9 @@ Por lo tanto, el objetivo de este módulo es contener todas las funciones que ma
 - [ ] Agregar la función =podcast_from_filename=
 - [ ] Crear una nueva función =podcasts_from_source=
 - [ ] Crear una nueva función =tags_from_html=
-- [ ] Integrar este módulo con la fuente FranceCulture
-- [ ] Integrar este módulo con la fuente FranceInter
-- [ ] Integrar este módulo con el módulo CLI
+- [ ] Integrar el módulo Podcasts con la fuente FranceCulture
+- [ ] Integrar el módulo Podcasts con la fuente FranceInter
+- [ ] Integrar el módulo Podcasts con el módulo CLI
 
 ** TODO Mejoras
 ** Implementación
@@ -7129,41 +7129,6 @@ def test_html_without_description():
 pytest ./franceculture/podcasts/tests/test_podcast_from_tag.py
 #+end_src
 
-*** TODO podcasts_from_url
-**** 1. Objetivo
-**** 2. Firma
-**** 3. Ejemplos
-**** 4. Boceto
-**** 5. Definición
-**** 6. Casos de prueba
-*** TODO podcasts_with_keyword
-**** 1. Objetivo
-**** 2. Firma
-**** 3. Ejemplos
-**** 4. Boceto
-**** 5. Definición
-**** 6. Casos de prueba
-*** TODO podcasts_from_response
-**** 1. Objetivo
-**** 2. Firma
-**** 3. Ejemplos
-**** 4. Boceto
-**** 5. Definición
-**** 6. Casos de prueba
-*** TODO podcasts_from_tags
-**** 1. Objetivo
-**** 2. Firma
-**** 3. Ejemplos
-**** 4. Boceto
-**** 5. Definición
-**** 6. Casos de prueba
-*** TODO podcasts_from_filename
-**** 1. Objetivo
-**** 2. Firma
-**** 3. Ejemplos
-**** 4. Boceto
-**** 5. Definición
-**** 6. Casos de prueba
 ** Episodes
 ** HTML
 
