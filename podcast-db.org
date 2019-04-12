@@ -512,8 +512,8 @@ class Podcast:
         return "Podcast(title='%s', url='%s')" % (self.title, self.url)
 #+end_src
 
-*** podcasts_from_source
-*** podcasts_from_url
+*** TODO podcasts_from_source
+*** TODO podcasts_from_url
 **** 1. Objetivo
 
 Extraer el listado de podcasts desde un URL
@@ -909,7 +909,7 @@ def test_podcasts_with_identifier():
 pytest podcasts/tests/test_podcasts_with_keyword.py
 #+end_src
 
-*** podcasts_from_response
+*** TODO podcasts_from_response
 **** 1. Objetivo
 
 Extraer el listado de podcasts de la respuesta de una petición HTTP
@@ -1023,7 +1023,7 @@ def test_wrong_page_response():
 pytest podcasts/tests/test_podcasts_from_response.py
 #+end_src
 
-*** podcasts_from_tags
+*** TODO podcasts_from_tags
 **** 1. Objetivo
 
 Generar un listado de podcasts a partir de un listado de fragmentos de HTML tomados de la página
@@ -1169,7 +1169,7 @@ def test_list_with_invalid_tag():
 pytest podcasts/tests/test_podcasts_from_tags.py
 #+end_src
 
-*** podcasts_from_filename
+*** TODO podcasts_from_filename
 **** 1. Objetivo
 
 Extraer un listado de podcasts desde un archivo
@@ -2869,7 +2869,7 @@ def test_invalid_tag():
 pytest franceinter/podcasts/tests/test_podcast_from_tag.py
 #+end_src
 
-*** title_from_tag
+*** TODO title_from_tag
 **** 1. Objetivo
 
 Obtener el título del podcast de un fragmento de html.
@@ -3022,7 +3022,7 @@ print(title)
 pytest ./franceinter/podcasts/tests/test_title_from_tag.py
 #+end_src
 
-*** url_from_tag
+*** TODO url_from_tag
 **** 1. Objetivo
 
 Obtener el URL del podcast de un fragmento de html.
