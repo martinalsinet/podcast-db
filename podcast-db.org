@@ -3,7 +3,7 @@
 #+date: 2019
 #+options: ^:nil num:nil ':t
 #+language: es
-#+property: header-args:python :python python-3.6 :results output drawer :mkdirp yes
+#+property: header-args:python :python python-3.7 :results output drawer :mkdirp yes
 #+property: header-args:sh :results raw drawer
 #+todo: TODO DOING | DONE
 
@@ -268,13 +268,13 @@ unidecode
 
 #+begin_src sh
 rm -Rf ./venv
-virtualenv-3.6 ./venv
+virtualenv-3.7 ./venv
 #+end_src
 
 **** 2. Instalar dependencias con =pip=
 
 #+begin_src sh
-pip-3.6 install -r requirements.txt
+pip-3.7 install -r requirements.txt
 #+end_src
 
 ** Generar el ejecutable
@@ -7230,7 +7230,7 @@ __version__ = "0.2.0"
 Generamos el script =./podcast-db= que será la interface desde línea de comandos de la aplicación, parseando los parámetros recibidos y ejecutando las acciones correspondientes.
 
 #+begin_src python :tangle podcast-db :tangle-mode (identity #o755)
-#!/usr/bin/env python-3.6
+#!/usr/bin/env python-3.7
 import requests
 import requests_cache
 from cli.arguments import parser
@@ -11845,7 +11845,7 @@ print_identifier(podcasts)
 
 ** Implementación de referencia
 
-#+begin_src python :python python-3.6 :results output
+#+begin_src python :python python-3.7 :results output
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
 import re
