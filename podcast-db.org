@@ -1345,7 +1345,7 @@ def tags_from_html(html, source):
     # validar que la fuente sea un sources.Source
     tags = []
     # obtener la función tags_from_html de la fuente correcta
-    # extraer los tags llaman
+    # extraer los tags llamando a la función tags_from_html
     return tags
 #+end_src
 
@@ -1395,49 +1395,14 @@ def unknown_source(source):
 - Cuando recibe una fuente que no es un =sources.Source=, lanza un =AssertionError=
 - Cuando recibe una fuente desconocida, lanza un =AssertionError=
 - Cuando recibe un html que no tiene ningún tag buscado, devuelve un =GeneratorType= vacío
-- Un html que tiene varios tags pero que ninguno tenga la clase buscada, devuelve un =GeneratorType= vacío
-- Un html que tiene algunos tags con la clase buscada y otros que no la tienen, devuelve un =GeneratorType= con tantos =str= como tags tengan la clase buscada
+- Cuando recibe  html que tiene varios tags pero que ninguno tenga la clase buscada, devuelve un =GeneratorType= vacío
+- Cuando recibe html que tiene algunos tags con la clase buscada y otros que no la tienen, devuelve un =GeneratorType= con tantos =str= como tags tengan la clase buscada
 
 #+begin_src python :tangle podcasts/tests/test_tags_from_html.py
 import types
 from podcasts import tags_from_html
 from podcasts.tests.examples_tags_from_html import *
 
-
-def test_html_with_divs():
-    html = html_with_divs(5)
-    tags = tags_from_html(html)
-    assert isinstance(tags, types.GeneratorType)
-    assert (len(list(tags)) == 5)
-
-
-def test_html_is_not_string():
-    try:
-        html = html_is_not_string()
-        tags = list(tags_from_html(html))
-    except AssertionError:
-        assert True
-
-
-def test_html_without_divs():
-    html = html_without_divs()
-    tags = tags_from_html(html)
-    assert isinstance(tags, types.GeneratorType)
-    assert (len(list(tags)) == 0)
-
-
-def test_divs_without_class():
-    html = html_divs_without_class(4)
-    tags = tags_from_html(html)
-    assert isinstance(tags, types.GeneratorType)
-    assert (len(list(tags)) == 0)
-
-
-def test_some_divs_with_class():
-    html = html_some_divs_with_class(2,3)
-    tags = tags_from_html(html)
-    assert isinstance(tags, types.GeneratorType)
-    assert (len(list(tags)) == 2)
 #+end_src
 
 ***** Run tests
@@ -8654,7 +8619,7 @@ pytest ./cli/arguments/tests/test_month_from_arguments.py
 
 *** Commands
 
-En este módulo hay solamente dos funciones, por un lado =known_commands= que tiene el listado de comandos válidos aceptados por la aplicación, y por el otro =handlers_from_commands= que devuelve el nombre de la función encargada de procesar cada comando.
+En este módulo hay solamente dos funciones, por un lado =known_commands= que tiene el listado de comandos válidos aceptados por la aplicación, y por el otro =handlers_from_commands= que devuelve la función encargada de procesar cada comando.
 
 **** =__init.py__=
 ***** Funciones
