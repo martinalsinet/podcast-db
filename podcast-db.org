@@ -3,7 +3,7 @@
 #+date: 2019
 #+options: ^:nil num:nil ':t
 #+language: es
-#+property: header-args:python :python python-3.7 :results output drawer :mkdirp yes
+#+property: header-args:python :python python-3.8 :results output drawer :mkdirp yes
 #+property: header-args:sh :results raw drawer
 #+todo: TODO DOING | DONE
 
@@ -42,7 +42,7 @@
   - [[#podcasts-2][Podcasts]]
   - [[#episodes-1][Episodes]]
   - [[#html-1][HTML]]
-- [[#interface-desde-línea-de-comandos][Interface desde línea de comandos]]
+- [[#interface-desde-línea-de-comandos-cli][Interface desde línea de comandos (CLI)]]
   - [[#diseño-4][Diseño]]
   - [[#wishlist-1][Wishlist]]
   - [[#mejoras-1][Mejoras]]
@@ -268,13 +268,13 @@ unidecode
 
 #+begin_src sh
 rm -Rf ./venv
-virtualenv-3.7 ./venv
+virtualenv-3.8 ./venv
 #+end_src
 
 **** 2. Instalar dependencias con =pip=
 
 #+begin_src sh
-pip-3.7 install -r requirements.txt
+pip-3.8 install -r requirements.txt
 #+end_src
 
 ** Generar el ejecutable
@@ -6723,15 +6723,14 @@ ls -alh ./franceinter/html
 
 #+RESULTS:
 :results:
-total 11568
-drwxr-xr-x   8 martin  staff   256B Mar 18 23:57 .
-drwxr-xr-x   7 martin  staff   224B Mar 19 00:52 ..
-drwxr-xr-x  11 martin  staff   352B Mar 19 00:02 emissions
--rw-r--r--   1 martin  staff    82K Mar 19 01:05 episode-list-short.html
--rw-r--r--   1 martin  staff   275K Mar 19 01:05 episode-list.html
--rw-r--r--   1 martin  staff    85K Mar 19 01:05 podcast-list-short.html
--rw-r--r--   1 martin  staff   4.1M Mar 19 01:05 podcast-list.html
--rw-r--r--   1 martin  staff    20K Mar 19 01:05 wrong-page.html
+total 11896
+drwxr-xr-x  7 martin  staff   224B Jun 14 18:15 .
+drwxr-xr-x  7 martin  staff   224B Jun 14 18:14 ..
+-rw-r--r--  1 martin  staff    80K Jun 14 18:15 episode-list-short.html
+-rw-r--r--  1 martin  staff   310K Jun 14 18:15 episode-list.html
+-rw-r--r--  1 martin  staff    83K Jun 14 18:14 podcast-list-short.html
+-rw-r--r--  1 martin  staff   4.8M Jun 14 18:14 podcast-list.html
+-rw-r--r--  1 martin  staff   322K Jun 14 18:15 wrong-page.html
 :end:
 
 * France Culture
@@ -7096,17 +7095,17 @@ ls -alh ./franceculture/html
 
 #+RESULTS:
 :results:
-total 1856
-drwxr-xr-x  7 martin  staff   224B Apr  1 17:54 .
-drwxr-xr-x  3 martin  staff    96B Apr  1 17:54 ..
--rw-r--r--  1 martin  staff   183K Apr  1 17:54 episode-list-short.html
--rw-r--r--  1 martin  staff   183K Apr  1 17:54 episode-list.html
--rw-r--r--  1 martin  staff   143K Apr  1 17:54 podcast-list-short.html
--rw-r--r--  1 martin  staff   347K Apr  1 17:54 podcast-list.html
--rw-r--r--  1 martin  staff    20K Apr  1 17:54 wrong-page.html
+total 2744
+drwxr-xr-x  7 martin  staff   224B Jun 14 18:15 .
+drwxr-xr-x  6 martin  staff   192B Jun 14 18:15 ..
+-rw-r--r--  1 martin  staff   213K Jun 14 18:15 episode-list-short.html
+-rw-r--r--  1 martin  staff   213K Jun 14 18:15 episode-list.html
+-rw-r--r--  1 martin  staff   268K Jun 14 18:15 podcast-list-short.html
+-rw-r--r--  1 martin  staff   303K Jun 14 18:15 podcast-list.html
+-rw-r--r--  1 martin  staff   322K Jun 14 18:15 wrong-page.html
 :end:
 
-* Interface desde línea de comandos
+* Interface desde línea de comandos (CLI)
 ** Diseño
 *** Consulta de podcasts y episodios
 
