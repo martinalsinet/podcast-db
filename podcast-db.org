@@ -347,6 +347,9 @@ Hay dos fuentes disponibles:
 
 #+begin_src python :tangle sources/__init__.py
 from sources.list_sources import list_sources
+from sources.list_sources import franceinter
+from sources.list_sources import franceculture
+from sources.list_sources import testing
 from sources.source import Source
 #+end_src
 
@@ -407,7 +410,6 @@ def list_sources():
     sources = [franceinter(), franceculture(), testing()]
     return sources
 
-
 def franceinter():
     name = "franceinter"
     code = "fri"
@@ -431,7 +433,7 @@ def testing():
 
 **** 6. Casos de prueba
 
-- Caso exitoso, devuelve una lista de dos elementos (franceinter y testing).
+- Caso exitoso, devuelve una lista de tres elementos (franceinter, franceculture y testing).
 
 #+begin_src python :tangle sources/tests/test_list_sources.py
 from sources import list_sources
@@ -477,7 +479,7 @@ Por lo tanto, el objetivo de este módulo es contener todas las funciones que ma
 - [ ] Integrar el módulo Podcasts con la fuente FranceInter
 - [ ] Integrar el módulo Podcasts con el módulo CLI
 
-** DONE Mejoras
+** Mejoras
 
 - [X] Extraer la función =tags_from_html= de los módulos FranceInter y FranceCulture al módulo Utils.HTML
 
@@ -492,7 +494,7 @@ from podcasts.podcasts_from_response import podcasts_from_response
 from podcasts.podcasts_from_url import podcasts_from_url
 from podcasts.podcasts_from_filename import podcasts_from_filename
 from podcasts.podcasts_with_keyword import podcasts_with_keyword
-from podcasts.tags_from_source import tags_from_source
+from podcasts.tags_from_html import tags_from_html
 #+end_src
 
 **** Tests
@@ -755,7 +757,7 @@ def test_podcasts_with_identifier():
 pytest podcasts/tests/test_podcasts_with_keyword.py
 #+end_src
 
-*** DONE Función tags_from_source
+*** DONE Función tags_from_html
 **** 1. Objetivo
 
 Obtener un array de tags con los fragmentos de html que tienen el detalle del podcast (título, URL, autor y descripción) a partir del html de la página con el listado de podcasts de una fuente
@@ -774,16 +776,8 @@ La función recibe un =str= con el HTML de la página y un objeto =sources.Sourc
 - Un html que tiene varios tags pero que ninguno tenga la clase buscada
 - Un html que tiene algunos tags con la clase buscada y otros que no la tienen
 
-#+begin_src python :tangle podcasts/tests/examples_tags_from_source.py
-from sources import Source, list_sources
-
-
-def source_franceinter():
-    return next(src for src in list_sources() if src.code == "fri")
-
-
-def source_franceculture():
-    return next(src for src in list_sources() if src.code == "frc")
+#+begin_src python :tangle podcasts/tests/examples_tags_from_html.py
+from sources import *
 
 
 def html_from_franceinter():
@@ -813,34 +807,12 @@ def unknown_source():
     code = "unk"
     url = "http://unknown-site.com/404"
     return Source(name, code, url)
-
-
-def html_with_tag_and_class(tag, cls, how_many):
-    tags = map(lambda x: tag_with_class(tag, cls), range(how_many))
-    return html(tags)
-
-
-def tag_with_class(tag, cls):
-    return f'''<{tag} %s>tag body</{tag}>'''
-
-
-def html(tags):
-    tag_str = "".join(tags)
-    html = f'''<header><h1>dummy title</h1></header>
-<p>bla bla bla</p>
-{tag_str}
-<ul>
-  <li> item 1 </li>
-  <li> item 2 </li>
-</ul>
-<footer>All rights reserved!</footer>'''
-    return html
 #+end_src
 
 **** 4. Boceto
 
 #+begin_src python
-def tags_from_source(html, source):
+def tags_from_html(html, source):
     # validar que el html sea un string
     # validar que la fuente sea un sources.Source
     tags = []
@@ -851,12 +823,13 @@ def tags_from_source(html, source):
 
 **** 5. Definición
 
-#+begin_src python :tangle podcasts/tags_from_source.py
+#+begin_src python :tangle podcasts/tags_from_html.py
 from sources import Source, list_sources
 import franceinter.podcasts.tags_from_html as franceinter_handler
 import franceculture.podcasts.tags_from_html as franceculture_handler
 
-def tags_from_source(html, source):
+
+def tags_from_html(html, source):
     assert isinstance(html, str), invalid_html(html)
     assert isinstance(source, Source), invalid_source(source)
     tags_from_html = handler(source)
@@ -898,32 +871,42 @@ def unknown_source(source):
 - Cuando recibe  html que tiene varios tags pero que ninguno tenga la clase buscada, devuelve un =GeneratorType= vacío
 - Cuando recibe html que tiene algunos tags con la clase buscada y otros que no la tienen, devuelve un =GeneratorType= con tantos =str= como tags tengan la clase buscada
 
-#+begin_src python :tangle podcasts/tests/test_tags_from_source.py
-import types
-from sources import Source, list_sources
-from podcasts import tags_from_source
-from podcasts.tests.examples_tags_from_source import *
+#+begin_src python :tangle podcasts/tests/test_tags_from_html.py
+from sources import franceinter, franceculture
+from podcasts import tags_from_html
+from podcasts.tests.examples_tags_from_html import *
 
 
 def test_tags_franceinter_ok():
     html = html_from_franceinter()
-    source = source_franceinter()
-    tags = tags_from_source(html, source)
+    source = franceinter()
+    tags = tags_from_html(html, source)
     assert len(list(tags)) > 0
 
 
 def test_tags_franceculture_ok():
     html = html_from_franceculture()
-    source = source_franceculture()
-    tags = tags_from_source(html, source)
+    source = franceculture()
+    tags = tags_from_html(html, source)
     assert len(list(tags)) > 0
 
 
+def test_tags_wrong_source():
+    html = html_from_franceculture()
+    source = franceinter()
+    tags = tags_from_html(html, source)
+    assert len(list(tags)) == 0
+    html = html_from_franceinter()
+    source = franceculture()
+    tags = tags_from_html(html, source)
+    assert len(list(tags)) == 0
+
+
 def test_html_not_str():
-    source = list_sources()[0]
+    source = franceculture()
     html = 42
     try:
-        tags = tags_from_source(html, source)
+        tags = tags_from_html(html, source)
     except AssertionError:
         assert True
     
@@ -931,7 +914,17 @@ def test_param_not_source():
     source = 42
     html = html_from_franceinter()
     try:
-        tags = tags_from_source(html, source)
+        tags = tags_from_html(html, source)
+    except AssertionError:
+        assert True
+#+end_src
+
+***** Run tests
+
+#+begin_src sh
+pytest ./podcasts/tests/test_tags_from_html.py
+#+end_src
+
     except AssertionError:
         assert True
     
@@ -10816,6 +10809,7 @@ def test_class_not_str():
 #+begin_src sh
 pytest ./utils/html/tests/test_html_from_tag.py
 #+end_src
+
 
 *** tags_from_html
 **** 1. Objetivo
