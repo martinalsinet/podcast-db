@@ -356,14 +356,7 @@ from sources.source import Source
 
 #+end_src
 
-*** list_sources
-**** 1. Objetivo
-
-Obtener el listado de fuentes de podcasts disponibles.
-
-**** 2. Firma
-
-La función no recibe argumentos y devuelve una lista de objetos =sources.Source=
+*** Clase Source
 
 #+begin_src python :tangle sources/source.py
 class Source:
@@ -374,7 +367,21 @@ class Source:
 
     def __repr__(self):
         return "Source(name='%s', code='%s')" % (self.name, self.code)
+
+    def __eq__(self, other): 
+        if not isinstance(other, Source):
+            return NotImplemented
+        return self.code == other.code
 #+end_src
+
+*** Función list_sources
+**** 1. Objetivo
+
+Obtener el listado de fuentes de podcasts disponibles.
+
+**** 2. Firma
+
+La función no recibe argumentos y devuelve una lista de objetos =sources.Source=
 
 **** 3. Ejemplos
 
@@ -459,11 +466,11 @@ Por lo tanto, el objetivo de este módulo es contener todas las funciones que ma
 
 ** Wishlist
 
-- [ ] Agregar la función =podcast_from_url=
-- [ ] Agregar la función =podcast_with_keyword=
-- [ ] Agregar la función =podcast_from_response=
-- [ ] Agregar la función =podcast_from_tags=
-- [ ] Agregar la función =podcast_from_filename=
+- [ ] Agregar la función =podcasts_from_url=
+- [ ] Agregar la función =podcasts_with_keyword=
+- [ ] Agregar la función =podcasts_from_response=
+- [ ] Agregar la función =podcasts_from_tags=
+- [ ] Agregar la función =podcasts_from_filename=
 - [ ] Crear una nueva función =podcasts_from_source=
 - [ ] Crear una nueva función =tags_from_html=
 - [ ] Integrar el módulo Podcasts con la fuente FranceCulture
