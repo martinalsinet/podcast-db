@@ -768,13 +768,9 @@ La función recibe un =str= con el HTML de la página y un objeto =sources.Sourc
 
 **** 3. Ejemplos
 
-- Caso exitoso, un html que tiene varios tags con la clase buscada
-- Un html que no es un =str=
-- Una fuente que no es un =sources.Source=
+- Caso exitoso, un html que tiene varios tags con los fragmentos de HTML del listado de podcasts de la fuente franceinter
+- Caso exitoso, un html que tiene varios tags con los fragmentos de HTML del listado de podcasts de la fuente franceculture
 - Una fuente desconocida
-- Un html que no tiene ningún tag
-- Un html que tiene varios tags pero que ninguno tenga la clase buscada
-- Un html que tiene algunos tags con la clase buscada y otros que no la tienen
 
 #+begin_src python :tangle podcasts/tests/examples_tags_from_html.py
 from sources import *
@@ -816,8 +812,8 @@ def tags_from_html(html, source):
     # validar que el html sea un string
     # validar que la fuente sea un sources.Source
     tags = []
-    # obtener la función tags_from_html de la fuente correcta
-    # extraer los tags llamando a la función tags_from_html
+    # obtener la función tags_from_html que corresponde a la fuente
+    # extraer los tags llamando a esa función tags_from_html
     return tags
 #+end_src
 
@@ -863,13 +859,12 @@ def unknown_source(source):
 **** 6. Casos de prueba
 
 - Caso exitoso, cuando recibe un fragmento de HTML que tiene varios =<div>= con la clase =rich-section-list-item-content= y un =sources.Source= con la fuente France Inter, devuelve un =GeneratorType= de tantos =str= como tags encontrados
-- Caso exitoso, cuando recibe un fragmento de HTML que tiene varios =<div>= con la clase =rich-section-list-item-content= y un =sources.Source= con la fuente France Culture, devuelve un =GeneratorType= de tantos =str= como tags encontrados
+- Caso exitoso, cuando recibe un fragmento de HTML que tiene varios =<div>= con la clase =teaser-content= y un =sources.Source= con la fuente France Culture, devuelve un =GeneratorType= de tantos =str= como tags encontrados
+- Cuando recibe un html de France Culture y una fuente de France Inter, devuelve un =GeneratorType= vacío.
+- Cuando recibe un html de France Inter y una fuente de France Culture, devuelve un =GeneratorType= vacío.
 - Cuando recibe un html que no es un =str=, lanza un =AssertionError=
 - Cuando recibe una fuente que no es un =sources.Source=, lanza un =AssertionError=
 - Cuando recibe una fuente desconocida, lanza un =AssertionError=
-- Cuando recibe un html que no tiene ningún tag buscado, devuelve un =GeneratorType= vacío
-- Cuando recibe  html que tiene varios tags pero que ninguno tenga la clase buscada, devuelve un =GeneratorType= vacío
-- Cuando recibe html que tiene algunos tags con la clase buscada y otros que no la tienen, devuelve un =GeneratorType= con tantos =str= como tags tengan la clase buscada
 
 #+begin_src python :tangle podcasts/tests/test_tags_from_html.py
 from sources import franceinter, franceculture
@@ -910,8 +905,18 @@ def test_html_not_str():
     except AssertionError:
         assert True
     
+
 def test_param_not_source():
     source = 42
+    html = html_from_franceinter()
+    try:
+        tags = tags_from_html(html, source)
+    except AssertionError:
+        assert True
+
+
+def test_param_unknown_source():
+    source = unknown_source
     html = html_from_franceinter()
     try:
         tags = tags_from_html(html, source)
