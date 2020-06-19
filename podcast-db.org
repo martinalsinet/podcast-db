@@ -489,6 +489,7 @@ from podcasts.podcast import Podcast
 from podcasts.tags_from_html import tags_from_html
 from podcasts.podcasts_with_keyword import podcasts_with_keyword
 from podcasts.podcasts_from_source import podcasts_from_source
+from podcasts.podcast_from_tag import podcast_from_tag
 #+end_src
 
 **** Tests
@@ -924,7 +925,7 @@ def test_param_unknown_source():
 pytest ./podcasts/tests/test_tags_from_html.py
 #+end_src
 
-*** DOING Función podcast_from_tag
+*** DONE Función podcast_from_tag
 **** 1. Objetivo
 
 Obtener un podcast a partir de un fragmento de HTML tomado de la página que tiene el listado de podcasts.
@@ -935,7 +936,45 @@ La función recibe como parámetros un =str= con un fragmento de HTML y un objet
 
 **** 3. Ejemplos
 
+- Caso exitoso, un html que tiene un tag con un podcast de la fuente France Inter
+- Caso exitoso, un html que tiene un tag con un podcast de la fuente France Culture
+- Una fuente desconocida
+
 #+begin_src python :tangle podcasts/tests/examples_podcast_from_tag.py
+from sources import franceinter, franceculture
+from podcasts import tags_from_html
+
+def tag_from_franceinter():
+    html = content_from_file("./franceinter/html/podcast-list-short.html")
+    tags = tags_from_html(html, franceinter())
+    return list(tags)[0]
+
+
+def tag_from_franceculture():
+    html = content_from_file("./franceculture/html/podcast-list-short.html")
+    tags = tags_from_html(html, franceculture())
+    return list(tags)[0]
+
+
+def content_from_file(filename):
+    html = ""
+    try:
+        with open(filename, "r") as f:
+            html = f.read()
+    except (OSError, IOError) as error:
+        assert False, not_found(filename, error)
+    return html
+
+
+def not_found(filename, error):
+    return "filename %s cannot be read, thrown error :\n%s" % (filename, error)
+
+
+def unknown_source():
+    name = "Unknown source"
+    code = "unk"
+    url = "http://unknown-site.com/404"
+    return Source(name, code, url)
 #+end_src
 
 **** 4. Boceto
@@ -943,41 +982,105 @@ La función recibe como parámetros un =str= con un fragmento de HTML y un objet
 #+begin_src python
 from sources import Source
 
-def podcast_from_tag(tag):
+def podcast_from_tag(tag, source):
     # validar que tags sea un str
     # validar que source sea un sources.Source
     # obtener la función podcast_from_tag que corresponde a la fuente
     # y usando esa función obtener el objeto podcast
+    return tag
 #+end_src
 
 **** 5. Definición
 
 #+begin_src python :tangle podcasts/podcast_from_tag.py
 from podcasts import podcast_from_tag
+from sources import list_sources, Source
+import franceinter.podcasts.podcast_from_tag as franceinter_handler
+import franceculture.podcasts.podcast_from_tag as franceculture_handler
 
 
 def podcast_from_tag(tag, source):
-    try:
-        it = iter(tags)
-    except TypeError:
-        assert False, invalid_tags(tags)
-    for tag in tags:
-        yield podcast_from_tag(tag)
+    assert isinstance(tag, str), invalid_tag(tag)
+    assert isinstance(source, Source), invalid_source(source)
+    get_podcast_from_tag = handler(source)
+    return get_podcast_from_tag(tag)
 
 
-def invalid_tags(tags):
-    return "tags parameter must be iterable, received %s instead" % type(tags)
+def handler(source):
+    assert source in list_sources(), unknown_source(source)
+    handlers = {
+        "franceinter": franceinter_handler, 
+        "testing": franceinter_handler,
+        "franceculture": franceculture_handler
+    }
+    return handlers[source.name]
+
+
+def invalid_tag(tag):
+    return "tag parameter must be a string, received %s instead" % type(tag)
+
+
+def invalid_source(source):
+    return "source parameter must be a sources.Source, received %s instead" % type(source)
+
+
+def unknown_source(source):
+    return "source parameter is unknown: %s" % source
 #+end_src
 
 **** 6. Casos de prueba
 
-- Si recibe un objeto que no es iterable, lanza un =AssertionError=
-- Si recibe una lista vacía, devuelve un =GeneratorType= vacío
-- Si recibe una lista de tags válidos, devuelve un =GeneratorType= de objetos =podcasts.Podcast=
-- Si recibe una lista con objetos que no son del tipo =str=, lanza un =AssertionError=
-- Si recibe una lista con algún tag inválido (que no tenga el título o el URL), lanza un =AssertionError=
+- Caso exitoso, cuando recibe un fragmento de HTML que tiene un =<div>= con la clase =rich-section-list-item-content= y un =sources.Source= con la fuente France Inter, devuelve un objeto =podcasts.Podcast= cargado con los datos obtenidos desde el tag
+- Caso exitoso, cuando recibe un fragmento de HTML que tiene un =<div>= con la clase =teaser-content= y un =sources.Source= con la fuente France Culture, devuelve un objeto =podcasts.Podcast= cargado con los datos obtenidos desde el tag
+- Cuando recibe un html de France Culture y una fuente de France Inter, lanza un =AssertionError=
+- Cuando recibe un html de France Inter y una fuente de France Culture, lanza un =AssertionError=
+- Cuando recibe un html que no es un =str=, lanza un =AssertionError=
+- Cuando recibe una fuente que no es un =sources.Source=, lanza un =AssertionError=
+- Cuando recibe una fuente desconocida, lanza un =AssertionError=
 
 #+begin_src python :tangle podcasts/tests/test_podcast_from_tag.py
+from sources import franceinter, franceculture
+from podcasts import podcast_from_tag
+from podcasts.tests.examples_podcast_from_tag import *
+
+
+def test_podcast_franceinter_ok():
+    tag = tag_from_franceinter()
+    source = franceinter()
+    podcast = podcast_from_tag(tag, source)
+    assert (len(podcast.title) > 0)
+    assert (len(podcast.url) > 0)
+    assert (len(podcast.author) > 0)
+    assert (len(podcast.identifier) > 0)
+    assert (len(str(podcast)) > 0)
+
+
+def test_podcast_franceculture_ok():
+    tag = tag_from_franceculture()
+    source = franceculture()
+    podcast = podcast_from_tag(tag, source)
+    assert (len(podcast.title) > 0)
+    assert (len(podcast.url) > 0)
+    assert (len(podcast.identifier) > 0)
+    assert (len(str(podcast)) > 0)
+
+
+def test_wrong_tag_franceinter():
+    tag = tag_from_franceculture()
+    source = franceinter()
+    try:
+        podcast = podcast_from_tag(tag, source)
+    except AssertionError:
+        assert True
+
+
+def test_wrong_tag_franceculture():
+    tag = tag_from_franceinter()
+    source = franceinter()
+    try:
+        podcast = podcast_from_tag(tag, source)
+    except AssertionError:
+        assert True
 #+end_src
 
 ***** Run tests
