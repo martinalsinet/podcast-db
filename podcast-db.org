@@ -2214,22 +2214,20 @@ Un podcast tiene tres propiedades principales, a saber:
 
 **** 2. Firma
 
-La función recibe un =str= con un fragmento de HTML y devuelve un objeto =franceinter.podcasts.podcast=
+La función recibe un =str= con un fragmento de HTML y devuelve un objeto =podcasts.Podcast=
 
 **** 3. Ejemplos
 
 - Un tag que tiene todos los elementos para generar un podcast válido (título, URL y autor)
-- Un tag que no es un =bs4.element.Tag=
+- Un tag que no es un =str=
 - Un tag que no tiene el elemento del título
 - Un tag que no tiene el elemento del URL
 - Un tag que tiene el elemento del URL, pero el URL no es válido
 - Un tag que no tiene el elemento del autor
 
 #+begin_src python :tangle franceinter/podcasts/tests/examples_podcast_from_tag.py
-from bs4 import BeautifulSoup
-
 def tag_ok():
-    html = '''<div class="rich-section-list-item-content">
+    tag = '''<div class="rich-section-list-item-content">
   <div class="rich-section-list-item-content-show">
     <header>
       <div>
@@ -2248,15 +2246,15 @@ def tag_ok():
     </div>
   </div>
 </div>'''
-    soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
     return tag
+
 
 def invalid_tag():
     return "I am not a tag"
 
+
 def tag_without_title():
-    html = '''<div class="rich-section-list-item-content">
+    tag = '''<div class="rich-section-list-item-content">
   <div class="rich-section-list-item-content-show">
     <header>
       <div>
@@ -2274,12 +2272,11 @@ def tag_without_title():
     </div>
   </div>
 </div>'''
-    soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
     return tag
 
+
 def tag_without_url():
-    html = '''<div class="rich-section-list-item-content">
+    tag = '''<div class="rich-section-list-item-content">
   <div class="rich-section-list-item-content-show">
     <header>
       <div>
@@ -2297,12 +2294,11 @@ def tag_without_url():
     </div>
   </div>
 </div>'''
-    soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
     return tag
 
+
 def tag_with_invalid_url():
-    html = '''<div class="rich-section-list-item-content">
+    tag = '''<div class="rich-section-list-item-content">
   <div class="rich-section-list-item-content-show">
     <header>
       <div>
@@ -2321,12 +2317,11 @@ def tag_with_invalid_url():
     </div>
   </div>
 </div>'''
-    soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
     return tag
 
+
 def tag_without_author():
-    html = '''<div class="rich-section-list-item-content">
+    tag = '''<div class="rich-section-list-item-content">
   <div class="rich-section-list-item-content-show">
     <header>
       <div>
@@ -2344,10 +2339,7 @@ def tag_without_author():
     </div>
   </div>
 </div>'''
-    soup = BeautifulSoup(html, "html.parser")
-    tag = soup.div
     return tag
-
 #+end_src
 
 **** 4. Boceto
@@ -2355,7 +2347,7 @@ def tag_without_author():
 #+begin_src python
 
 def podcast_from_tag(tag):
-    # validar que el tag sea un bs4.element.Tag
+    # validar que el tag sea un str
 
     # extraer el título con title_from_tag
     # validar que el título no sea un string vacío
@@ -2377,17 +2369,17 @@ def podcast_from_tag(tag):
 Usamos la biblioteca [[https://validators.readthedocs.io/][validators]] para validar el URL del podcast
 
 #+begin_src python :tangle franceinter/podcasts/podcast_from_tag.py
+from podcasts import Podcast
 from franceinter.podcasts import (
     title_from_tag, 
     url_from_tag, 
-    author_from_tag, 
-    Podcast
+    author_from_tag
 )
 from validators.url import url as is_valid_url
-import bs4
+
 
 def podcast_from_tag(tag):
-    assert isinstance(tag, bs4.element.Tag), invalid_tag(tag)
+    assert isinstance(tag, str), invalid_tag(tag)
     title = title_from_tag(tag)
     assert (title != ""), no_title(tag)
 
@@ -2396,6 +2388,8 @@ def podcast_from_tag(tag):
     assert is_valid_url(url), invalid_url(tag)
 
     author = author_from_tag(tag)
+    if author == False:
+        author = ""
 
     return Podcast(title, url, author)
 
@@ -2409,7 +2403,7 @@ def no_title(tag):
     return "received tag does not have a podcast title\n %s" % str(tag)
 
 def invalid_tag(tag):
-    return "tag parameter must be an instance of bs4.element.Tag, received %s instead" % str(type(tag))
+    return "tag parameter must be an instance of str, received %s instead" % str(type(tag))
 #+end_src
 
 **** 6. Casos de prueba
@@ -2469,7 +2463,6 @@ def test_invalid_tag():
         podcast_from_tag(tag)
     except AssertionError:
         assert True
-
 #+end_src
 
 ***** Run tests
