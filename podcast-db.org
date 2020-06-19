@@ -2395,7 +2395,10 @@ def podcast_from_tag(tag):
     if author == False:
         author = ""
 
-    return Podcast(title, url, author)
+    description = ""
+    base_url = "https://www.franceinter.fr/emissions"
+
+    return Podcast(title, url, author, description, base_url)
 
 def no_url(tag):
     return "received tag does not have a podcast URL\n %s" % str(tag)
@@ -6596,7 +6599,7 @@ def url_from_tag(html):
     url = False
     path = attribute_from_tag(html, "a", "content", "href")
     if path:
-        url = "https://www.franceculture.fr/" + path
+        url = "https://www.franceculture.fr" + path
     return url
 #+end_src
 
@@ -6760,12 +6763,11 @@ def podcast_from_tag(tag):
 Usamos la biblioteca [[https://validators.readthedocs.io/][validators]] para validar el URL del podcast
 
 #+begin_src python :tangle franceculture/podcasts/podcast_from_tag.py
+from podcasts import Podcast
 from utils.html import content_from_tag
 from validators.url import url as is_valid_url
-from franceculture.podcasts import (
-    url_from_tag, 
-    Podcast
-)
+from franceculture.podcasts import url_from_tag
+
 
 def podcast_from_tag(tag):
     assert isinstance(tag, str), invalid_tag(tag)
@@ -6775,7 +6777,11 @@ def podcast_from_tag(tag):
     assert (url != False), no_url(tag)
     assert is_valid_url(url), invalid_url(tag)
     description = content_from_tag(tag, "p", "text")
-    return Podcast(title, url, description)
+
+    author = ""
+    base_url = "https://www.franceculture.fr/emissions"
+
+    return Podcast(title, url, author, description, base_url)
 
 def no_url(tag):
     return "received tag does not have a podcast URL\n %s" % str(tag)
