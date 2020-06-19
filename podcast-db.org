@@ -1388,7 +1388,7 @@ Un fixture es una función común y corriente como cualquier otra, a la que pyte
 
 Nótese en el código del fixture =http_server= que se levanta el servidor HTTP en otro thread para no bloquear la ejecución de los tests y que se utiliza =yield= para poder bajar el servidor luego de su uso.
 
-- Cuando recibe un URL con el listado de podcasts, devuelve un =GeneratorType= de objetos =Podcast=
+- Cuando recibe un URL con el listado de podcasts, devuelve un =GeneratorType= de objetos =podcasts.Podcast=
 - Cuando recibe un URL de otra página, que no tiene podcasts, devuelve un =GeneratorType= vacío
 - Cuando recibe un URL de una página inexistente, devuelve un =GeneratorType= vacío
 - Cuando recibe un URL de un sitio inexistente (error de DNS), lanza un =AssertionError=
@@ -1399,7 +1399,8 @@ import os
 import pytest
 import threading
 import types
-from franceinter.podcasts import Podcast, podcasts_from_url
+from podcasts import Podcast
+from franceinter.podcasts import podcasts_from_url
 from franceinter.podcasts.tests.examples_podcasts_from_url import *
 from utils.http_server import LocalFolderHTTPServer as HTTPServer
 
@@ -1681,7 +1682,7 @@ Extraer el listado de podcasts de la respuesta de una petición HTTP
 
 **** 2. Firma
 
-La función recibe una =requests.model.Response= y devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
+La función recibe una =requests.model.Response= y devuelve un =GeneratorType= de objetos =podcasts.Podcast=
 
 **** 3. Ejemplos
 
@@ -1750,13 +1751,14 @@ def invalid_type(resp):
 
 **** 6. Casos de prueba
 
-- Cuando recibe una respuesta válida, devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
+- Cuando recibe una respuesta válida, devuelve un =GeneratorType= de objetos =podcasts.Podcast=
 - Cuando recibe una respuesta que no es de la clase =requests.model.Response=, lanza un =AssertionError=
 - Cuando recibe una respuesta válida que tiene el HTML de otra página, devuelve un =GeneratorType= vacío
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_response.py
 import types
-from franceinter.podcasts import podcasts_from_response, Podcast
+from podcasts import Podcast
+from franceinter.podcasts import podcasts_from_response
 from franceinter.podcasts.tests.examples_podcasts_from_response import *
 
 def test_response_ok():
@@ -1871,13 +1873,14 @@ def invalid_tags(tags):
 
 - Si recibe un objeto que no es iterable, lanza un =AssertionError=
 - Si recibe una lista vacía, devuelve un =GeneratorType= vacío
-- Si recibe una lista de tags válidos, devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
-- Si recibe una lista con objetos que no son del tipo =bs4.element.Tag=, lanza un =AssertionError=
+- Si recibe una lista de tags válidos, devuelve un =GeneratorType= de objetos =podcasts.Podcast=
+- Si recibe una lista con objetos que no son del tipo =str=, lanza un =AssertionError=
 - Si recibe una lista con algún tag inválido (que no tenga el título o el URL), lanza un =AssertionError=
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_tags.py
 import types
-from franceinter.podcasts import podcasts_from_tags, Podcast
+from podcasts import Podcast
+from franceinter.podcasts import podcasts_from_tags
 from franceinter.podcasts.tests.examples_podcasts_from_tags import *
 
 def test_invalid_list():
@@ -1997,14 +2000,15 @@ def not_found(filename, error):
 
 **** 6. Casos de prueba
 
-- Caso exitoso, cuando recibe un archivo HTML que tiene un listado de podcasts, devuelve un =GeneratorType= de objetos =franceinter.podcasts.Podcast=
+- Caso exitoso, cuando recibe un archivo HTML que tiene un listado de podcasts, devuelve un =GeneratorType= de objetos =podcasts.Podcast=
 - Cuando recibe un archivo HTML de otra página, que no tiene podcasts, devuelve un =GeneratorType= vacío
 - Cuando recibe un archivo que no existe, lanza un =AssertionError=
 - Cuando recibe un nombre de archivo que no es un =str=, lanza un =AssertionError=
 
 #+begin_src python :tangle franceinter/podcasts/tests/test_podcasts_from_filename.py
 import types
-from franceinter.podcasts import podcasts_from_filename, Podcast
+from podcasts import Podcast
+from franceinter.podcasts import podcasts_from_filename
 from franceinter.podcasts.tests.examples_podcasts_from_filename import *
 
 def test_ok_filename():
