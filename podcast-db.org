@@ -5398,14 +5398,14 @@ El objetivo es que en cada módulo de una fuente queden unicamente las funciones
 ** Podcasts
 *** Wishlist
 
-- [ ] Obtener el listado de los podcasts de France Culture
-- [ ] Para cada podcast obtener el nombre y el url
-- [ ] Filtrar el listado de podcasts por una palabra clave
-- [ ] Asignarle un identificador a cada podcast
+- [X] Obtener el listado de los podcasts de France Culture
+- [X] Para cada podcast obtener el nombre y el url
+- [X] Filtrar el listado de podcasts por una palabra clave
+- [X] Asignarle un identificador a cada podcast
 
 *** TODO Mejoras
 
-- [ ] Extraer las funciones =podcasts_from_*= :: Hay que crear un módulo genérico =podcasts= que tenga las funciones que obtienen y filtran los podcasts que se diseñaron en el módulo FranceInter. Este nuevo módulo debe llamar a las funciones correspondientes que saben como parsear cada fuente.
+- [X] Extraer las funciones =podcasts_from_*= :: Hay que crear un módulo genérico =podcasts= que tenga las funciones que obtienen y filtran los podcasts que se diseñaron en el módulo FranceInter. Este nuevo módulo debe llamar a las funciones correspondientes que saben como parsear cada fuente.
 
 *** =__init.py__=
 **** Funciones
@@ -5413,7 +5413,6 @@ El objetivo es que en cada módulo de una fuente queden unicamente las funciones
 #+begin_src python :tangle franceculture/podcasts/__init__.py
 from franceculture.podcasts.podcast import Podcast
 from franceculture.podcasts.tags_from_html import tags_from_html
-from franceculture.podcasts.url_from_tag import url_from_tag
 from franceculture.podcasts.podcast_from_tag import podcast_from_tag
 #+end_src
 
@@ -5599,102 +5598,6 @@ def test_some_divs_with_class():
 pytest franceculture/podcasts/tests/test_tags_from_html.py
 #+end_src
 
-*** Función url_from_tag
-**** 1. Objetivo
-
-Obtener el URL de un podcast a partir de un fragmento de HTML.
-
-El URL se encuentra en el atributo =href= de un tag =<a>= que tiene la clase =content=
-
-**** 2. Firma
-
-La función recibe un =str= con el fragmento de HTML y devuelve el URL del podcast.
-
-**** 3. Ejemplos
-
-- Caso exitoso, un fragmento de HTML que tiene un tag =<a>= con la clase =<content>= y un link en el atributo =href=
-- Un fragmento de HTML que no tiene el tag =<a>=
-- Un fragmento de HTML que no tiene la clase =content=
-- Un fragmento de HTML que no tiene el atributo =href=
-- Un fragmento de HTML que no es un =str=
-
-#+begin_src python :tangle franceculture/podcasts/tests/examples_url_from_tag.py
-def html_with_tag_class_attr(tag, cls, attr, value):
-    return f'''<{tag} {attr}="{value}" class="{cls}"></{tag}>'''
-#+end_src
-
-**** 4. Boceto
-
-#+begin_src python
-def url_from_tag(html):
-    # obtener el path con attribute_from_tag ("a", "content", "href")
-    # agregar el base URL de France Culture
-    return url
-#+end_src
-
-**** 5. Definición
-
-#+begin_src python :tangle franceculture/podcasts/url_from_tag.py
-from utils.html import attribute_from_tag
-
-def url_from_tag(html):
-    url = False
-    path = attribute_from_tag(html, "a", "content", "href")
-    if path:
-        url = "https://www.franceculture.fr" + path
-    return url
-#+end_src
-
-**** 6. Casos de prueba
-
-- Caso exitoso, un fragmento de HTML que tiene un tag =<a>= con la clase =<content>= y un link en el atributo =href=
-- Un fragmento de HTML que no tiene el tag =<a>=
-- Un fragmento de HTML que no tiene la clase =content=
-- Un fragmento de HTML que no tiene el atributo =href=
-- Un fragmento de HTML que no es un =str=
-
-#+begin_src python :tangle franceculture/podcasts/tests/test_url_from_tag.py
-from franceculture.podcasts import url_from_tag
-from franceculture.podcasts.tests.examples_url_from_tag import *
-
-def test_html_with_tag_class_attr():
-    path = "emissions/fictions-le-feuilleton"
-    html = html_with_tag_class_attr("a", "content", "href", path)
-    url = url_from_tag(html)
-    assert path in url
-
-def test_html_without_tag():
-    path = "emissions/fictions-le-feuilleton"
-    html = html_with_tag_class_attr("div", "content", "href", path)
-    url = url_from_tag(html)
-    assert url == False
-    
-def test_html_without_class():
-    path = "emissions/fictions-le-feuilleton"
-    html = html_with_tag_class_attr("div", "left", "href", path)
-    url = url_from_tag(html)
-    assert url == False
-    
-def test_html_without_attr():
-    date = "2019-02-02"
-    html = html_with_tag_class_attr("div", "content", "date", date)
-    url = url_from_tag(html)
-    assert url == False
-    
-def test_html_not_str():
-    html = 42
-    try:
-        url = url_from_tag(html)
-    except AssertionError:
-        assert True
-#+end_src
-
-***** Run tests
-
-#+begin_src sh
-pytest ./franceculture/podcasts/tests/test_url_from_tag.py
-#+end_src
-
 *** Función podcast_from_tag
 **** 1. Objetivo
 
@@ -5785,9 +5688,8 @@ Usamos la biblioteca [[https://validators.readthedocs.io/][validators]] para val
 
 #+begin_src python :tangle franceculture/podcasts/podcast_from_tag.py
 from podcasts import Podcast
-from utils.html import content_from_tag
+from utils.html import content_from_tag, attribute_from_tag
 from validators.url import url as is_valid_url
-from franceculture.podcasts import url_from_tag
 
 
 def podcast_from_tag(tag):
@@ -5806,6 +5708,15 @@ def podcast_from_tag(tag):
     base_url = "https://www.franceculture.fr/emissions"
 
     return Podcast(title, url, author, description, base_url)
+
+
+def url_from_tag(html):
+    url = False
+    path = attribute_from_tag(html, "a", "content", "href")
+    if path:
+        url = "https://www.franceculture.fr" + path
+    return url
+
 
 def no_url(tag):
     return "received tag does not have a podcast URL\n %s" % str(tag)
