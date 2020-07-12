@@ -470,11 +470,11 @@ Por lo tanto, el objetivo de este módulo es contener todas las funciones que ma
 
 - [X] Agregar la función =podcasts_with_keyword=
 - [X] Agregar la función =tags_from_html=
-- [ ] Agregar la función =podcasts_from_tag=
-- [ ] Agregar la función =podcasts_from_source=
-- [ ] Integrar el módulo Podcasts con la fuente FranceCulture
-- [ ] Integrar el módulo Podcasts con la fuente FranceInter
-- [ ] Integrar el módulo Podcasts con el módulo CLI
+- [X] Agregar la función =podcasts_from_tag=
+- [X] Agregar la función =podcasts_from_source=
+- [X] Integrar el módulo Podcasts con la fuente FranceCulture
+- [X] Integrar el módulo Podcasts con la fuente FranceInter
+- [X] Integrar el módulo Podcasts con el módulo CLI
 
 ** Mejoras
 
@@ -8167,8 +8167,8 @@ from cli.arguments import (
     year_from_arguments,
     month_from_arguments
 )
-from franceinter.podcasts import (
-    podcasts_from_url,
+from podcasts import (
+    podcasts_from_source,
     podcasts_with_keyword
 )
 from franceinter.episodes import (
@@ -8182,8 +8182,7 @@ from franceinter.episodes import (
 def output_from_episode_list(args):
     source = source_from_arguments(args)
     podcast_id = podcast_from_arguments(args)
-    import_from_source(source)
-    all_podcasts = podcasts_from_url(source.url)
+    all_podcasts = podcasts_from_source(source)
     podcasts = list(podcasts_with_keyword(all_podcasts, podcast_id))
     output = output_from_non_unique_record(podcasts, podcast_id)
     if not output:
@@ -8445,8 +8444,8 @@ from cli.arguments import (
     podcast_from_arguments,
     episode_from_arguments
 )
-from franceinter.podcasts import (
-    podcasts_from_url,
+from podcasts import (
+    podcasts_from_source,
     podcasts_with_keyword
 )
 from franceinter.episodes import (
@@ -8458,8 +8457,7 @@ from franceinter.episodes import (
 def output_from_episode_details(args):
     source = source_from_arguments(args)
     podcast_id = podcast_from_arguments(args)
-    import_from_source(source)
-    all_podcasts = podcasts_from_url(source.url)
+    all_podcasts = podcasts_from_source(source)
     podcasts = list(podcasts_with_keyword(all_podcasts, podcast_id))
     output = output_from_non_unique_record(podcasts, podcast_id)
     if not output:
