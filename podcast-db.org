@@ -488,8 +488,8 @@ Por lo tanto, el objetivo de este módulo es contener todas las funciones que ma
 from podcasts.podcast import Podcast
 from podcasts.tags_from_html import tags_from_html
 from podcasts.podcasts_with_keyword import podcasts_with_keyword
-from podcasts.podcasts_from_source import podcasts_from_source
 from podcasts.podcast_from_tag import podcast_from_tag
+from podcasts.podcasts_from_source import podcasts_from_source
 #+end_src
 
 **** Tests
@@ -993,7 +993,6 @@ def podcast_from_tag(tag, source):
 **** 5. Definición
 
 #+begin_src python :tangle podcasts/podcast_from_tag.py
-from podcasts import podcast_from_tag
 from sources import list_sources, Source
 import franceinter.podcasts.podcast_from_tag as franceinter_handler
 import franceculture.podcasts.podcast_from_tag as franceculture_handler
@@ -1089,11 +1088,7 @@ def test_wrong_tag_franceculture():
 pytest podcasts/tests/test_podcast_from_tag.py
 #+end_src
 
-#+RESULTS:
-:results:
-:end:
-
-*** TODO Función podcasts_from_source
+*** DONE Función podcasts_from_source
 **** 1. Objetivo
 
 Generar un listado de podcasts a partir de una fuente de podcasts
@@ -1109,6 +1104,23 @@ La función recibe un objeto =sources.Source= con una fuente válida de podcasts
 - Un objeto que no es un =sources.Source=
 
 #+begin_src python :tangle podcasts/tests/examples_podcasts_from_source.py
+from sources import franceinter, franceculture, Source
+
+def source_franceinter():
+    source = franceinter()
+    source.url = 'http://localhost:3000/podcast-list-short.html'
+    return source
+
+def source_franceculture():
+    source = franceculture()
+    source.url = 'http://localhost:3001/podcast-list-short.html'
+    return source
+
+def unknown_source():
+    name = "Unknown source"
+    code = "unk"
+    url = "http://unknown-site.com/404"
+    return Source(name, code, url)
 #+end_src
 
 **** 4. Boceto
@@ -1119,17 +1131,18 @@ from franceinter.podcasts import tags_from_html
 def podcasts_from_source(source):
     # validar que source sea un sources.Source
     # obtener el URL de la fuente
-    # usar podcasts_from_url() para obtener un podcast
-    # yield posdcast
+    # obtener el HTML del URL
+    # usar las funciones tags_from_html 
+    # y podcast_from_tag para obtener los podcasts
+    # yield podcast
 #+end_src
 
 **** 5. Definición
 
 #+begin_src python :tangle podcasts/podcasts_from_source.py
 from sources import Source
-#from podcasts import tags_from_html, podcast_from_tag
+from podcasts import tags_from_html, podcast_from_tag
 from utils.html import html_from_url
-
 
 def podcasts_from_source(source):
     assert isinstance(source, Source), invalid_source(source)
@@ -1138,26 +1151,87 @@ def podcasts_from_source(source):
     for tag in tags:
         yield podcast_from_tag(tag, source)
 
-
 def invalid_source(source):
     return "source parameter must be a sources.Source, received %s instead" % type(source)
 #+end_src
 
 **** 6. Casos de prueba
 
-- Si recibe un objeto que no es iterable, lanza un =AssertionError=
-- Si recibe una lista vacía, devuelve un =GeneratorType= vacío
-- Si recibe una lista de tags válidos, devuelve un =GeneratorType= de objetos =podcasts.Podcast=
-- Si recibe una lista con objetos que no son del tipo =str=, lanza un =AssertionError=
-- Si recibe una lista con algún tag inválido (que no tenga el título o el URL), lanza un =AssertionError=
+- Si recibe un objeto que no es un =sources.Source=, lanza un =AssertionError=
+- Si recibe una fuente cuyo url no tiene podcasts, devuelve un =GeneratorType= vacío
+- Si recibe una fuente desconocida, lanza un =AssertionError=
+- Si recibe una fuente válida, devuelve un =GeneratorType= de objetos =podcasts.Podcast= tomados del URL de la fuente
 
 #+begin_src python :tangle podcasts/tests/test_podcasts_from_source.py
+import os
+import pytest
+import threading
+import types
+from podcasts import podcasts_from_source, Podcast
+from podcasts.tests.examples_podcasts_from_source import *
+from utils.http_server import LocalFolderHTTPServer as HTTPServer
+
+
+def test_invalid_source():
+    invalid_source = "this is not a source"
+    try:
+        podcasts = podcasts_from_source(invalid_source)
+    except AssertionError:
+        assert True
+
+
+def test_source_without_podcasts(franceinter_server):
+    source = source_franceinter()
+    source.url = "http://localhost:3000/wrong-page.html"
+    podcasts = list(podcasts_from_source(source))
+    assert (len(podcasts) == 0)
+    
+
+def test_unknown_source():
+    unknown = unknown_source()
+    try:
+        podcasts = podcasts_from_source(unknown)
+    except AssertionError:
+        assert True
+
+
+def test_valid_franceinter_podcasts(franceinter_server):
+    source = source_franceinter()
+    podcasts = podcasts_from_source(source)
+    for p in podcasts:
+        assert isinstance(p, Podcast)
+
+
+def test_valid_franceculture_podcasts(franceculture_server):
+    source = source_franceculture()
+    podcasts = podcasts_from_source(source)
+    for p in podcasts:
+        assert isinstance(p, Podcast)
+
+
+@pytest.fixture(scope="module")
+def franceinter_server():
+    web_dir = './franceinter/html'
+    httpd = HTTPServer(web_dir, ("", 3000))
+    threading.Thread(target=httpd.serve_forever).start()
+    yield httpd
+    httpd.shutdown()
+
+
+@pytest.fixture(scope="module")
+def franceculture_server():
+    web_dir = './franceculture/html'
+    httpd = HTTPServer(web_dir, ("", 3001))
+    threading.Thread(target=httpd.serve_forever).start()
+    yield httpd
+    httpd.shutdown()
+
 #+end_src
 
 ***** Run tests
 
 #+begin_src sh
-pytest podcasts/tests/test_podcasts_from_tags.py
+pytest podcasts/tests/test_podcasts_from_source.py
 #+end_src
 
 #+RESULTS:
@@ -6505,6 +6579,27 @@ from franceculture.podcasts.podcast_from_tag import podcast_from_tag
 
 #+end_src
 
+*** Clase Podcast
+
+#+begin_src python :tangle franceculture/podcasts/podcast.py
+class Podcast:
+    def __init__(self, title, url, description=""):
+        self.title = title
+        self.url = url
+        self.description = description
+
+
+    @property
+    def identifier(self):
+        return self.url.lower().replace(
+            "https://www.franceculture.fr/emissions/", ""
+        )
+
+
+    def __repr__(self):
+        return "Podcast(title='%s', url='%s')" % (self.title, self.url)
+#+end_src
+
 *** Función tags_from_html
 **** 1. Objetivo
 
@@ -6770,27 +6865,6 @@ Un podcast tiene cuatro propiedades principales, a saber:
 **** 2. Firma
 
 La función recibe un =str= con un fragmento de HTML y devuelve un objeto =franceculture.podcasts.podcast=
-
-Necesitamos entonces definir la clase =podcast=
-
-#+begin_src python :tangle franceculture/podcasts/podcast.py
-class Podcast:
-    def __init__(self, title, url, description=""):
-        self.title = title
-        self.url = url
-        self.description = description
-
-
-    @property
-    def identifier(self):
-        return self.url.lower().replace(
-            "https://www.franceculture.fr/emissions/", ""
-        )
-
-
-    def __repr__(self):
-        return "Podcast(title='%s', url='%s')" % (self.title, self.url)
-#+end_src
 
 **** 3. Ejemplos
 
