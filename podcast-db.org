@@ -9039,30 +9039,18 @@ def output_from_podcast_list(args):
 
 #+begin_src python :tangle cli/output/output_from_podcast_list.py
 from cli.arguments import source_from_arguments, keyword_from_arguments
-from franceinter.podcasts import podcasts_from_url
-from franceinter.podcasts import podcasts_with_keyword
+from podcasts import podcasts_from_source, podcasts_with_keyword
 
 
 def output_from_podcast_list(args):
     source = source_from_arguments(args)
-    import_from_source(source)
-    podcasts = podcasts_from_url(source.url)
+    podcasts = podcasts_from_source(source)
     keyword = keyword_from_arguments(args)
     if keyword:
         podcasts = podcasts_with_keyword(podcasts, keyword)
     lines = map(line_from_podcast, podcasts)
     output = help_message(source) + "\n\n" + "\n".join(lines)
     return output
-
-
-def import_from_source(source):
-    return source.name
-    #if source.name == "local":
-    #    from franceinter.podcasts import podcasts_from_url
-    #    from franceinter.podcasts import podcasts_with_keyword
-    #else:
-    #    __import__(source.name).podcasts.podcasts_from_url
-    #    __import__(source.name).podcasts.podcasts_with_keyword
 
 
 def line_from_podcast(podcast):
@@ -9091,7 +9079,7 @@ def test_arguments_with_valid_source(http_server):
     args = arguments_with_valid_source()
     output = output_from_podcast_list(args)
     assert "mille-et-un-mondes" in output
-    assert "40-jours-en-france" in output
+    assert "rue-albert-londres" in output
     assert(len(output)>0)
 
 def test_arguments_with_source_and_keyword(http_server):
@@ -9209,8 +9197,8 @@ from cli.arguments import (
     source_from_arguments,
     podcast_from_arguments
 )
-from franceinter.podcasts import (
-    podcasts_from_url,
+from podcasts import (
+    podcasts_from_source,
     podcasts_with_keyword
 )
 
@@ -9218,24 +9206,13 @@ from franceinter.podcasts import (
 def output_from_podcast_details(args):
     source = source_from_arguments(args)
     keyword = podcast_from_arguments(args)
-    import_from_source(source)
-    all_podcasts = podcasts_from_url(source.url)
+    all_podcasts = podcasts_from_source(source)
     podcasts = list(podcasts_with_keyword(all_podcasts, keyword))
     output = output_from_non_unique_record(podcasts, keyword)
     if not output:
         podcast = podcasts[0]
         output = help_message(podcast) + podcast_details(podcast)
     return output
-
-
-def import_from_source(source):
-    return source.name
-    #if source.name == "local":
-    #    from franceinter.podcasts import podcasts_from_url
-    #    from franceinter.podcasts import podcasts_with_keyword
-    #else:
-    #    __import__(source.name).podcasts.podcasts_from_url
-    #    __import__(source.name).podcasts.podcasts_with_keyword
 
 
 def help_message(podcast):
